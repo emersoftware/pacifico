@@ -1,8 +1,6 @@
 <p align="center">
-  <img src="apps/site/public/media/pacifico-light-poster.png" alt="Blue and pink Pacifico waves on a white background" width="768" height="576">
+  <img src="docs/assets/pacifico-readme.png" alt="pacifico — blue and pink waves above the blue serif wordmark" width="380">
 </p>
-
-<h1 align="center">pacifico</h1>
 
 Pacifico keeps a searchable local archive of Claude Code, Codex, Pi, and OpenCode conversations, and lets your agents recall them through MCP.
 
