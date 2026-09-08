@@ -41,7 +41,7 @@ describe('collectClaudeUserTurns', () => {
   writeFileSync(
     join(root, 'proj', 'main.jsonl'),
     user('s1', '2026-03-04T20:00:00Z', 'fix the flaky test', { promptSource: 'typed' }) +
-      // Queued counts — the human typed it, even if it landed mid-run.
+      // Queued counts - the human typed it, even if it landed mid-run.
       user('s1', '2026-03-04T20:05:00Z', 'also update the docs', { promptSource: 'queued' }) +
       // Injected turns, tool results, and compaction summaries are not humans.
       user('s1', '2026-03-04T20:06:00Z', 'harness ping', { promptSource: null }) +
@@ -52,7 +52,7 @@ describe('collectClaudeUserTurns', () => {
       // Assistant lines are not turns.
       line({ type: 'assistant', sessionId: 's1', timestamp: '2026-03-04T20:01:00Z', message: { role: 'assistant' } }),
   );
-  // A resumed session copies history verbatim — same turn, same timestamp, second file.
+  // A resumed session copies history verbatim - same turn, same timestamp, second file.
   writeFileSync(
     join(root, 'proj', 'resume.jsonl'),
     user('s1', '2026-03-04T20:00:00Z', 'fix the flaky test', { promptSource: 'typed' }),
@@ -140,7 +140,7 @@ describe('computeLoops', () => {
   test('sessions with no genuine turns and junk cwds are invisible', () => {
     const loops = computeLoops(
       [
-        // No turns recorded for this session — automation end-to-end.
+        // No turns recorded for this session - automation end-to-end.
         ev('auto', T0),
         ev('auto', T0 + 4 * 3_600_000),
         // Has a turn, but ran from a throwaway dir.

@@ -1,7 +1,7 @@
 // Arg parsing and dispatch for the `vault` command group: `status` and `inspect`.
 //
 // Prose on stdout, progress/errors on stderr, non-zero exit on a bad invocation or an
-// unknown inspect target — the same CLI contract as src/memory/cli.ts. The report
+// unknown inspect target - the same CLI contract as src/memory/cli.ts. The report
 // builders (`statusReport`, `inspectReport`) are pure over an archive dir so they are
 // testable without driving process.exit.
 
@@ -18,7 +18,7 @@ function die(msg: string): never {
 }
 
 function help(): never {
-  process.stderr.write(`pacifico vault — inspect the durable transcript archive
+  process.stderr.write(`pacifico vault - inspect the durable transcript archive
 
 Every parseable transcript is copied into the vault on each index refresh, so a
 session survives its source file being garbage-collected by the vendor. The vault

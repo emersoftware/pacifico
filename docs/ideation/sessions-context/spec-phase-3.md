@@ -1,9 +1,9 @@
-# Implementation Spec: sessions context — Phase 3 (SessionStart Auto-Injection — Stretch)
+# Implementation Spec: sessions context - Phase 3 (SessionStart Auto-Injection - Stretch)
 
 **Contract**: ./contract.md
 **Estimated Effort**: M
 **Prereq**: Phase 2 (`sessions context` CLI + `get_context_primer`) merged and green.
-**Tier**: Stretch — this is the full re-injection vision, paid for on every session start, so it is **opt-in**.
+**Tier**: Stretch - this is the full re-injection vision, paid for on every session start, so it is **opt-in**.
 
 ## Technical Approach
 
@@ -14,7 +14,7 @@ The mechanism: an opt-in **SessionStart hook** that runs `sessions context --her
 Two deliberate constraints:
 
 1. **Opt-in only.** Auto-injection costs tokens on every session. `sessions setup` must not enable it silently; it's behind an explicit choice (`sessions setup --hooks`, or an interactive prompt when run without flags).
-2. **Cheap and bounded.** The hook calls the existing CLI with a tight default (`--limit` small) so startup stays fast and the injected context stays small. A slow or failing hook must never block session start — it degrades to injecting nothing.
+2. **Cheap and bounded.** The hook calls the existing CLI with a tight default (`--limit` small) so startup stays fast and the injected context stays small. A slow or failing hook must never block session start - it degrades to injecting nothing.
 
 The honest unknown here is the **hook registration surface per tool**: Claude Code, Codex, and Cursor expose session-start hooks differently (and some may not at all). This spec targets Claude Code first (best-understood), and treats other tools as follow-on once their hook contracts are confirmed.
 
@@ -24,7 +24,7 @@ The honest unknown here is the **hook registration surface per tool**: Claude Co
 
 **Playground**: The generated hook command, run by hand (`sessions context --here --limit 3`) to confirm its stdout is the exact payload the hook will inject; plus a unit test over the settings-merge logic.
 
-**Why this approach**: The risky logic is _editing the user's settings safely_ (idempotent enable/disable without clobbering existing hooks) — a logic layer best tested in isolation. The injection payload is just the Phase-2 CLI output, already covered.
+**Why this approach**: The risky logic is _editing the user's settings safely_ (idempotent enable/disable without clobbering existing hooks) - a logic layer best tested in isolation. The injection payload is just the Phase-2 CLI output, already covered.
 
 ## File Changes
 
@@ -32,7 +32,7 @@ The honest unknown here is the **hook registration surface per tool**: Claude Co
 
 | File Path           | Purpose                                                                                               |
 | ------------------- | ----------------------------------------------------------------------------------------------------- |
-| `src/hooks.ts`      | `enableSessionHook()` / `disableSessionHook()` — idempotent settings merge for the SessionStart hook. |
+| `src/hooks.ts`      | `enableSessionHook()` / `disableSessionHook()` - idempotent settings merge for the SessionStart hook. |
 | `src/hooks.test.ts` | Settings-merge unit tests (enable, re-enable, disable, preserve-existing-hooks).                      |
 
 ### Modified Files
@@ -50,7 +50,7 @@ None.
 
 ## Implementation Details
 
-### Component 1 — Hook payload (reuse `sessions context`)
+### Component 1 - Hook payload (reuse `sessions context`)
 
 **Overview**: The hook runs the Phase-2 CLI. No new rendering. A `--hook` mode may trim the output further (headlines-only or a hard size cap) so startup context stays minimal.
 
@@ -70,9 +70,9 @@ None.
 - **Experiment**: in a repo with history → small primer; in `/tmp` (no repo) → empty output, exit 0.
 - **Check command**: `bun run dev context --hook`
 
-### Component 2 — Idempotent settings merge (`src/hooks.ts`)
+### Component 2 - Idempotent settings merge (`src/hooks.ts`)
 
-**Pattern to follow**: `src/setup.ts` (existing config-writing: `writeMarketplaceJson`, MCP-config merge) — read JSON, merge, write, never clobber unrelated keys.
+**Pattern to follow**: `src/setup.ts` (existing config-writing: `writeMarketplaceJson`, MCP-config merge) - read JSON, merge, write, never clobber unrelated keys.
 
 **Overview**: Enable/disable the SessionStart hook in the target tool's settings without disturbing existing hooks.
 
@@ -86,7 +86,7 @@ export function disableSessionHook(tool: SupportedTool): { changed: boolean };
 **Key decisions**:
 
 - **Tag the entry** (a stable marker/comment field or a recognizable command string) so enable is idempotent and disable removes exactly our entry, never the user's other hooks.
-- **Claude Code first.** The Claude Code SessionStart hook injects the command's stdout as additional context. Confirm the exact settings location and schema (`~/.claude/settings.json` hooks block) during implementation — see Open Items.
+- **Claude Code first.** The Claude Code SessionStart hook injects the command's stdout as additional context. Confirm the exact settings location and schema (`~/.claude/settings.json` hooks block) during implementation - see Open Items.
 - **Fail safe.** If the settings file is missing/unparseable, create-or-skip with a clear message rather than corrupting it.
 
 **Implementation steps**:
@@ -102,7 +102,7 @@ export function disableSessionHook(tool: SupportedTool): { changed: boolean };
 - **Experiment**: enable on empty settings → entry present; enable twice → still one entry (idempotent); pre-existing unrelated hook survives enable+disable; disable → entry gone, others intact.
 - **Check command**: `bun test src/hooks.test.ts`
 
-### Component 3 — `setup --hooks` opt-in (`src/setup.ts`)
+### Component 3 - `setup --hooks` opt-in (`src/setup.ts`)
 
 **Overview**: Surface the choice during setup, off by default.
 
@@ -143,7 +143,7 @@ No schema changes. Configuration only.
 
 | Error Scenario                                 | Handling Strategy                                                         |
 | ---------------------------------------------- | ------------------------------------------------------------------------- |
-| Hook runs outside a git repo                   | `--hook` mode prints nothing, exits 0 — no session-start error.           |
+| Hook runs outside a git repo                   | `--hook` mode prints nothing, exits 0 - no session-start error.           |
 | `sessions` binary not on PATH at session start | Hook is a no-op for that session; document PATH requirement.              |
 | Settings file unparseable                      | Abort the enable/disable with a clear message; never write garbage.       |
 | Index rebuild mid-hook (post-upgrade)          | First session after upgrade may inject nothing; subsequent sessions fine. |
@@ -165,11 +165,11 @@ No schema changes. Configuration only.
 
 ## Open Items
 
-- [ ] **Confirm the Claude Code SessionStart hook contract** — exact settings path/schema and how stdout becomes `additionalContext`. This is the gating unknown for the whole phase.
+- [ ] **Confirm the Claude Code SessionStart hook contract** - exact settings path/schema and how stdout becomes `additionalContext`. This is the gating unknown for the whole phase.
 - [ ] Decide enablement UX: `--hooks` flag only, or also an interactive TTY prompt in `setup`.
 - [ ] Decide hook output shape: full primer vs headlines-only vs a hard token cap.
 - [ ] Defer/confirm Codex + Cursor support until their session-start hook contracts are verified (may be out of reach → Claude-only stretch).
 
 ---
 
-_This spec is ready for implementation, but resolve the Claude Code hook-contract Open Item first — it determines Component 2's entry shape._
+_This spec is ready for implementation, but resolve the Claude Code hook-contract Open Item first - it determines Component 2's entry shape._

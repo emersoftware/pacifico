@@ -29,7 +29,7 @@ if (Bun.argv[2] === '--preview' && Bun.argv[3]) {
 }
 
 // Commands dispatch on the positional word only. Matching anywhere in argv
-// (the old behavior) let a flag VALUE fire a command — `pacifico wrapped
+// (the old behavior) let a flag VALUE fire a command - `pacifico wrapped
 // --out cleanup` would have uninstalled the plugin and wiped the index.
 const command = Bun.argv[2];
 
@@ -163,7 +163,7 @@ if (!selection) process.exit(0);
 
 // TSV layout: filePath, cwd, tool, sessionId, exists, prompt, display
 // (filePath leads so fzf --preview can reference {1}; the display column is what
-// fzf shows and the builtin slices — both skip the leading metadata fields).
+// fzf shows and the builtin slices - both skip the leading metadata fields).
 const parts = selection.split('\t');
 const fullPath = parts[1]!;
 const tool = parts[2]!;
@@ -178,7 +178,7 @@ if (prompt) {
   process.stderr.write(`  ${C.dim}${prompt}${C.reset}\n`);
 }
 // Lineage (pi /tree forks + /fork parent) comes from the SessionResult, not the TSV
-// fields — match the selection back to its result by sessionId+tool. Display-only:
+// fields - match the selection back to its result by sessionId+tool. Display-only:
 // formatLineage basenames the raw parent path and never joins it back to the index.
 const selected = results.find((r) => r.sessionId === sessionId && r.tool === tool);
 const lineage = selected ? formatLineage(selected) : '';

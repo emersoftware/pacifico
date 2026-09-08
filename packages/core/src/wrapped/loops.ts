@@ -1,10 +1,10 @@
-// User-turn boundaries for wrapped's loop metric — the timestamps the report
+// User-turn boundaries for wrapped's loop metric - the timestamps the report
 // pipeline throws away. UsageEvents carry every assistant API call but nothing
 // about when the HUMAN spoke, so this pass re-walks the Claude Code root and
 // keeps exactly that. Claude Code only, deliberately: it is the one log format
 // that can distinguish a typed prompt from an injected one (promptSource), and
 // a superlative built on boundaries that might be agents prompting agents would
-// crown automation — the exact failure mode wrapped's junk rules exist to stop.
+// crown automation - the exact failure mode wrapped's junk rules exist to stop.
 
 import { walkJsonl, readJsonlLines } from '../report/parsers/util.ts';
 import { genuineUserTurnFromLine } from '../parser.ts';
@@ -12,7 +12,7 @@ import { genuineUserTurnFromLine } from '../parser.ts';
 export interface UserTurn {
   /** ms since epoch. */
   at: number;
-  /** Raw turn text, clamped — only a winning loop's trigger is ever shown. */
+  /** Raw turn text, clamped - only a winning loop's trigger is ever shown. */
   text: string;
 }
 
@@ -21,7 +21,7 @@ export interface UserTurn {
 const TURN_TEXT_CLAMP = 200;
 
 /**
- * Genuine human turns per `claude-code|sessionId` — the same session keying as
+ * Genuine human turns per `claude-code|sessionId` - the same session keying as
  * computeEventStats, so the two passes join cleanly. Duplicate timestamps
  * (resumed/forked session files copy history lines verbatim) collapse to one
  * boundary. Sorted ascending per session.

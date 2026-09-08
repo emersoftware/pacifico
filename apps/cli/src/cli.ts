@@ -6,7 +6,7 @@ import { resolveRepo } from '@pacifico/core/repo';
 const VALID_TOOLS = new Set<string>(['claude', 'codex', 'pi', 'opencode']);
 
 function usage(): never {
-  process.stderr.write(`${C.bold}pacifico${C.reset} — find and resume AI coding sessions
+  process.stderr.write(`${C.bold}pacifico${C.reset} - find and resume AI coding sessions
 
 Browse sessions from Claude Code, Codex, Pi, and OpenCode with fuzzy search.
 Scoped to the current git repo.
@@ -21,7 +21,7 @@ ${C.bold}Options:${C.reset}
   --tool <name>    Filter: claude, codex, pi, opencode
   --errored        Only sessions that hit an error
   --file <path>    Only sessions that touched or read this path (substring
-                   match; repeatable — every path must match). Newest first
+                   match; repeatable - every path must match). Newest first
                    when no query is given
   --mcp            Start as an MCP server (stdio transport)
   --clear-cache    Remove the search index (rebuilds on next use)
@@ -59,7 +59,7 @@ ${C.bold}Commands:${C.reset}
   memory approve   Record a triage decision for one candidate, by id from the
   memory reject    mine's batch. Rejected candidates stop being emitted; snoozed
   memory snooze    ones stay hidden until their date passes AND new distinct
-                   phrasings appear — no mine can produce that bump yet, so a
+                   phrasings appear - no mine can produce that bump yet, so a
                    snooze currently hides a candidate indefinitely.
                    approve takes --always-on (return this memory for every topic,
                    and first) and --scope group:<name> (assign a project group

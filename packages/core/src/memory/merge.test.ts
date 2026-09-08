@@ -6,7 +6,7 @@ import { dropSuppressed, mergeInto, snooze, suppressedMemories } from './triage'
 import { closeDatabases, makeTmp, setMemoryEnv } from './fixtures';
 import type { MemoryRecord } from './types';
 
-// Cluster write-back — the path that makes `distinctPhrasings` mean what its name says.
+// Cluster write-back - the path that makes `distinctPhrasings` mean what its name says.
 //
 // Before this existed, every record carried 1 forever: an id is a hash of that record's
 // own normalized text, so a new wording is a new row rather than a bigger count, and
@@ -30,7 +30,7 @@ function record(text: string, over: Partial<MemoryRecord> = {}): MemoryRecord {
   };
 }
 
-// One fact, three ways of saying it — the shape the triage skill clusters.
+// One fact, three ways of saying it - the shape the triage skill clusters.
 const CANON = record('Always run the migrations before you start the dev server', {
   evidence: {
     distinctPhrasings: 1,
@@ -110,7 +110,7 @@ describe('mergeInto', () => {
     expect(dropSuppressed([PARA_1], suppressed, '2026-06-01')).toEqual([]);
   });
 
-  test('is idempotent — re-merging an absorbed member changes nothing', () => {
+  test('is idempotent - re-merging an absorbed member changes nothing', () => {
     mergeInto(CANON.id, [PARA_1.id], '2026-06-01');
     const again = mergeInto(CANON.id, [PARA_1.id], '2026-06-01');
     expect(again.absorbed).toEqual([]);
@@ -131,8 +131,8 @@ describe('mergeInto', () => {
 
 describe('merged evidence survives the next mine', () => {
   // The write-back is only as durable as the next `upsertCandidates` lets it be. A mine
-  // cannot see a merge — it rebuilds each record from transcripts, so it always presents
-  // one phrasing and one session — and a replace-on-conflict write would therefore undo
+  // cannot see a merge - it rebuilds each record from transcripts, so it always presents
+  // one phrasing and one session - and a replace-on-conflict write would therefore undo
   // every merge on the next `memory mine`, silently, taking `shouldResurface`'s baseline
   // and the cluster's session paths with it. None of that is rebuildable: the clustering
   // judgment exists nowhere but the row it was written to.
@@ -160,7 +160,7 @@ describe('merged evidence survives the next mine', () => {
     ]);
 
     const evidence = stored(CANON.id).evidence;
-    // Union, not replace, and not "keep the old one either" — new evidence still lands.
+    // Union, not replace, and not "keep the old one either" - new evidence still lands.
     expect(evidence.sessions).toEqual(['/s/a.jsonl', '/s/b.jsonl', '/s/c.jsonl', '/s/d.jsonl']);
     expect(evidence.lastSeen).toBe('2026-04-02');
     expect(evidence.firstSeen).toBe('2026-01-10');
@@ -181,7 +181,7 @@ describe('merged evidence survives the next mine', () => {
     expect(evidence.lastSeen).toBe('2026-02-01');
   });
 
-  test('re-mining the same transcripts is idempotent — the count cannot inflate', () => {
+  test('re-mining the same transcripts is idempotent - the count cannot inflate', () => {
     // Summing instead of taking the max would climb here, and an ever-rising count
     // permanently suppresses a snoozed memory: `shouldResurface` needs the FRESH count to
     // exceed the stored one, which a sum makes impossible by construction.
@@ -194,7 +194,7 @@ describe('merged evidence survives the next mine', () => {
     mergeInto(CANON.id, [PARA_1.id], '2026-02-02'); // before the snooze expires
     upsertCandidates([freshMine()]);
 
-    // The stored baseline is 2 and a mine presents 1, so the batch filter drops it — the
+    // The stored baseline is 2 and a mine presents 1, so the batch filter drops it - the
     // union is what keeps that comparison honest across mines.
     const suppressed = suppressedMemories();
     expect(stored(CANON.id).evidence.distinctPhrasings).toBe(2);
@@ -212,7 +212,7 @@ describe('merge and snooze-resurface', () => {
 
     expect(result.resurfaced).toBe(true);
     expect(stored(CANON.id).state).toBe('candidate');
-    // The snooze is cleared, not merely stepped over — a resurfaced row is a live
+    // The snooze is cleared, not merely stepped over - a resurfaced row is a live
     // candidate again, and a stale expiry would make it look suppressed to a reader.
     expect(stored(CANON.id).snoozedUntil).toBeNull();
   });
@@ -224,7 +224,7 @@ describe('merge and snooze-resurface', () => {
     expect(stored(CANON.id).state).toBe('snoozed');
   });
 
-  test('does not resurface on expiry alone — that would make snooze a 30-day delay', () => {
+  test('does not resurface on expiry alone - that would make snooze a 30-day delay', () => {
     snooze(CANON.id, '2026-02-01');
     // A "merge" carrying no new phrasing: the member is already absorbed.
     mergeInto(CANON.id, [PARA_1.id], '2026-02-02');
@@ -234,7 +234,7 @@ describe('merge and snooze-resurface', () => {
     expect(stored(CANON.id).state).toBe('snoozed');
   });
 
-  test('never resurrects a rejected memory — reject stays terminal', () => {
+  test('never resurrects a rejected memory - reject stays terminal', () => {
     setState(CANON.id, 'rejected');
     const result = mergeInto(CANON.id, [PARA_1.id, PARA_2.id], '2026-06-01');
     expect(result.resurfaced).toBe(false);

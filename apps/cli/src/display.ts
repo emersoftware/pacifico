@@ -54,7 +54,7 @@ export function formatLine(r: SessionResult, cols: number): string {
 }
 
 /**
- * The session-detail lineage line: the /fork parent (BASENAME only — the stored path
+ * The session-detail lineage line: the /fork parent (BASENAME only - the stored path
  * is deliberately unresolved; the parent file may not exist on disk and no DB join
  * happens here) plus the in-file fork count. '' when the session has no lineage to
  * show, so the caller skips the line entirely.

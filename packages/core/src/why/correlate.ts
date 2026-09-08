@@ -39,7 +39,7 @@ export interface WhySessionEvidence {
 export interface WhyEvidence {
   commit: CommitInfo | null;
   sessions: WhySessionEvidence[];
-  /** Sessions that touched the target file but correlate to NO commit in its history —
+  /** Sessions that touched the target file but correlate to NO commit in its history -
    *  the local signature of an attempt that never landed (closed-unmerged PR, abandoned
    *  branch). Only populated for the file form; [] for commit and query forms. */
   unlandedAttempts: WhySessionEvidence[];
@@ -71,7 +71,7 @@ function splitLine(raw: string): PathLine {
  */
 export function parseTarget(raw: string, cwd: string, repo: RepoInfo | null): WhyTarget {
   const { path, line } = splitLine(raw);
-  // Commit-ish: any non-path token git confirms as a commit — bare SHAs plus HEAD,
+  // Commit-ish: any non-path token git confirms as a commit - bare SHAs plus HEAD,
   // HEAD~n, tags, and branch names. Gating on a hex pattern would silently route the
   // documented `pacifico why HEAD~2` to a literal text search. `git cat-file` is the
   // authority; a `path:line` token (line !== undefined) is never a commit-ish.
@@ -133,7 +133,7 @@ function excerptQuery(commit: CommitInfo): string {
 
 /**
  * Correlate one commit against the index: repo-scoped sessions whose time window contains
- * the commit, scored by file overlap. Deterministic — no LLM, no network.
+ * the commit, scored by file overlap. Deterministic - no LLM, no network.
  */
 function correlateCommit(repo: RepoInfo, commit: CommitInfo, rows: CandidateSessionRow[], limit: number): WhyEvidence {
   const authoredMs = ms(commit.authoredAt);
@@ -183,7 +183,7 @@ function correlateCommit(repo: RepoInfo, commit: CommitInfo, rows: CandidateSess
 
 /**
  * The abandoned-attempt bucket for the file form: indexed sessions that touched the
- * target file whose window contains NO commit from the file's history — work that never
+ * target file whose window contains NO commit from the file's history - work that never
  * landed. A session that ended less than SLACK_AFTER_MS ago is skipped: its commit may
  * still be coming, and branding in-flight work abandoned is a false accusation.
  */
@@ -225,7 +225,7 @@ async function findUnlandedAttempts(
       headline: row.custom_title || row.first_prompt,
       overlappingFiles: [relTarget],
       // The file overlap is verified above; 'files+time' would imply a commit window
-      // match, which is exactly what this bucket lacks — keep the weaker label.
+      // match, which is exactly what this bucket lacks - keep the weaker label.
       confidence: 'time-only',
       excerpts: sessionExcerpts(row.file_path, `"${basename(relTarget)}"`, 2).map((e) => ({
         msgIndex: e.msg_index,
@@ -254,7 +254,7 @@ function commitForFile(repo: RepoInfo, target: Extract<WhyTarget, { kind: 'file'
   return logForFile(repo, target.path, 20)[0] ?? null;
 }
 
-/** Query form: no git at all — reuse searchSessions scoped to the repo, present in the
+/** Query form: no git at all - reuse searchSessions scoped to the repo, present in the
  *  same evidence shape with a null commit. */
 async function correlateQuery(repo: RepoInfo | null, cwd: string, text: string, limit: number): Promise<WhyEvidence> {
   const project = repo ? repo.container : cwd;
@@ -275,7 +275,7 @@ async function correlateQuery(repo: RepoInfo | null, cwd: string, text: string, 
 }
 
 /**
- * Answer "why does this code exist" for `raw` — read-only on both git and the index. Returns
+ * Answer "why does this code exist" for `raw` - read-only on both git and the index. Returns
  * either structured evidence or a clean error message (non-repo, unknown ref, unknown path).
  */
 export async function why(raw: string, cwd: string, limit = MAX_SESSIONS): Promise<WhyOutcome> {
@@ -303,7 +303,7 @@ export async function why(raw: string, cwd: string, limit = MAX_SESSIONS): Promi
   const evidence = correlateCommit(repo, commit, rows, cap);
 
   if (target.kind === 'file') {
-    // ponytail: 500-commit history cap — a session whose landing commit fell off the
+    // ponytail: 500-commit history cap - a session whose landing commit fell off the
     // tail gets misflagged as abandoned. Raise the cap if a repo ever trips it.
     evidence.unlandedAttempts = await findUnlandedAttempts(repo, target, logForFile(repo, target.path, 500), cap);
   }

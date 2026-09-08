@@ -8,7 +8,7 @@ import { closeDatabases, makeTmp, setMemoryEnv } from './fixtures';
 import { MAX_REVIEW_ENTRIES } from '@pacifico/agents/mcp';
 
 // The two agent-source seams, driven directly (the protocol-level conformance runs
-// in src/mcp.test.ts). Fixtures are the same shape as sources.test.ts — the point
+// in src/mcp.test.ts). Fixtures are the same shape as sources.test.ts - the point
 // here is the projection, filtering, and reporting layered ON TOP of discovery.
 
 let tmp: string;
@@ -90,7 +90,7 @@ interface ReviewedMemoryJson {
 }
 
 function parse<T>(res: { content: { text: string }[] }): T {
-  // SAFETY: res.content[0].text is the tool's JSON payload — the in-process MCP
+  // SAFETY: res.content[0].text is the tool's JSON payload - the in-process MCP
   // harness carries the same envelope the wire would, and the payload contract is
   // what each call site asserts.
   return JSON.parse(res.content[0]!.text) as T;
@@ -119,7 +119,7 @@ describe('runGetMemorySources', () => {
     expect(payload.sources.map((s) => s.id)).toEqual(['claude:global', 'codex:rules:default.rules', 'pi-hermes:db']);
     const hermes = payload.sources.find((s) => s.id === 'pi-hermes:db')!;
     expect(hermes).toMatchObject({ agent: 'pi', entries: 1, durable: 1, lastUpdated: '2026-08-05' });
-    // The payload is the structuredContent too — no shape drift between the two.
+    // The payload is the structuredContent too - no shape drift between the two.
     expect(res.structuredContent).toEqual(payload);
   });
 });
@@ -209,7 +209,7 @@ describe('runReviewAgentMemories', () => {
     expect(unrelated!.similarTo).toBeUndefined();
   });
 
-  test('rejected stored memory is not redundancy — it never flags', async () => {
+  test('rejected stored memory is not redundancy - it never flags', async () => {
     const id = seedStoredMemory('Never rewrite the lockfile by hand, run the installer', false);
     const { setState } = await import('./store');
     setState(id, 'rejected');

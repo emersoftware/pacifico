@@ -71,7 +71,7 @@ describe('snoozeUntil', () => {
     expect(snoozeUntil('2028-02-01')).toBe('2028-03-02'); // 29-day February
   });
 
-  test('is timezone-independent — the same string on any machine', () => {
+  test('is timezone-independent - the same string on any machine', () => {
     // Date.parse of a date-only form is UTC midnight and toISOString renders in UTC,
     // so no local offset can shift the result by a day.
     expect(snoozeUntil('2026-06-30')).toBe('2026-07-30');
@@ -125,7 +125,7 @@ describe('write-back', () => {
     expect(stored.snoozedUntil).toBe('2026-01-31');
   });
 
-  test('approve on a rejected id succeeds — a user may change their mind', () => {
+  test('approve on a rejected id succeeds - a user may change their mind', () => {
     reject(REJECTED.id);
     expect(listMemories({ state: 'rejected' }).map((r) => r.id)).toEqual([REJECTED.id]);
     approve(REJECTED.id);
@@ -151,7 +151,7 @@ describe('dropSuppressed', () => {
     expect(dropSuppressed([FRESH], suppressedMemories(), '2030-01-01')).toEqual([FRESH]);
   });
 
-  test('an approved memory stays in the batch — the pipe mirrors the table', () => {
+  test('an approved memory stays in the batch - the pipe mirrors the table', () => {
     approve(FRESH.id);
     expect(dropSuppressed([FRESH], suppressedMemories(), '2030-01-01').map((r) => r.id)).toEqual([FRESH.id]);
   });

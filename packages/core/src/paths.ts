@@ -5,7 +5,7 @@
 // dir, and having the installer import a path from a feature module inverts the
 // dependency and drags bun:sqlite into the setup/uninstall path. Path resolution
 // living beside its consumers is the same shape as getCacheDir/getDbPath in
-// src/cache.ts — this file is that, for the durable directory.
+// src/cache.ts - this file is that, for the durable directory.
 
 import { join } from 'node:path';
 import { homedir } from 'node:os';
@@ -20,8 +20,8 @@ export function getHome(): string {
 }
 
 /**
- * The durable data directory. Honors SESSIONS_DATA_DIR and is resolved lazily —
- * never frozen at import — for the same reason as src/cache.ts:41-45: the module
+ * The durable data directory. Honors SESSIONS_DATA_DIR and is resolved lazily -
+ * never frozen at import - for the same reason as src/cache.ts:41-45: the module
  * instance is shared across a `bun test` run, so a test that mutates the env on an
  * already-imported module must still be honored.
  */
@@ -29,7 +29,7 @@ export function getDataDir(): string {
   return process.env.SESSIONS_DATA_DIR || join(getHome(), '.local', 'share', 'pacifico');
 }
 
-/** The memory store. Deliberately outside the cache dir — see src/memory/store.ts. */
+/** The memory store. Deliberately outside the cache dir - see src/memory/store.ts. */
 export function getMemoryDbPath(): string {
   return join(getDataDir(), 'memory.db');
 }
@@ -38,8 +38,8 @@ export function getMemoryDbPath(): string {
  * The transcript vault: an append-only, user-owned archive of session transcripts.
  * Built on getDataDir() (the ~/.local/share/pacifico durable-data convention that
  * `pacifico uninstall` leaves alone) so it inherits SESSIONS_DATA_DIR, with
- * SESSIONS_ARCHIVE_DIR as the direct override. Resolved lazily — never frozen at
- * import — for the same test-hermeticity reason as getDataDir above.
+ * SESSIONS_ARCHIVE_DIR as the direct override. Resolved lazily - never frozen at
+ * import - for the same test-hermeticity reason as getDataDir above.
  */
 export function getArchiveDir(): string {
   return process.env.SESSIONS_ARCHIVE_DIR || join(getDataDir(), 'archive');
@@ -51,10 +51,10 @@ export function getArchiveDir(): string {
  * (src/report/extract.ts) so all three always look at the same tree.
  *
  * Order:
- *   1. SESSIONS_PI_DIR — this project's own override (tests, unusual setups);
- *   2. PI_CODING_AGENT_SESSION_DIR — Pi's documented session-storage override;
- *   3. PI_CODING_AGENT_DIR — Pi's config-dir override (sessions live under it);
- *   4. ~/.pi/agent/sessions — Pi's default.
+ *   1. SESSIONS_PI_DIR - this project's own override (tests, unusual setups);
+ *   2. PI_CODING_AGENT_SESSION_DIR - Pi's documented session-storage override;
+ *   3. PI_CODING_AGENT_DIR - Pi's config-dir override (sessions live under it);
+ *   4. ~/.pi/agent/sessions - Pi's default.
  * Resolved lazily (never frozen at import) for the same test-hermeticity reason
  * as getDataDir above.
  */

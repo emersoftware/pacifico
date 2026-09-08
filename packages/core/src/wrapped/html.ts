@@ -1,9 +1,9 @@
-// The wrapped page — a scroll-snap story, not a dashboard. Design rules from
+// The wrapped page - a scroll-snap story, not a dashboard. Design rules from
 // the Spotify Wrapped research: one stat per full-viewport card, payoffs late
 // (persona is the climax), numerals as artwork, decoration behind flat text
 // panels, a limited high-contrast palette (the report's OKLCH accents, one per
 // card), self-relative comparisons only, hedged copy on disputable stats, and
-// zero external requests. JS is textContent-only — never innerHTML.
+// zero external requests. JS is textContent-only - never innerHTML.
 
 import type { WrappedData, FunCard, WrappedExtra } from './types.ts';
 import { prettyModel } from './model-name.ts';
@@ -21,7 +21,7 @@ const esc = (s: string): string =>
 const jsonForScript = <T>(v: T): string => JSON.stringify(v).replace(/</g, '\\u003c');
 
 const fmtInt = (n: number): string => n.toLocaleString('en-US');
-/** "1 day" / "2 days" — never "1 days". */
+/** "1 day" / "2 days" - never "1 days". */
 const plural = (n: number, one: string, many = `${one}s`): string => (n === 1 ? one : many);
 
 function fmtTokens(n: number): string {
@@ -40,7 +40,7 @@ function fmtDuration(ms: number): string {
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
-/** Seconds-capable variant — a median loop is often under a minute, and "0m"
+/** Seconds-capable variant - a median loop is often under a minute, and "0m"
  *  reads as a bug. */
 function fmtDurationShort(ms: number): string {
   const s = Math.round(ms / 1000);
@@ -67,7 +67,7 @@ function shortDate(ymd: string): string {
   return `${MONTHS[m! - 1]} ${d}`;
 }
 
-// Same accents as the report — wrapped and report read as one product. The
+// Same accents as the report - wrapped and report read as one product. The
 // page commits to dark (it's a mood); each card adopts one accent in rotation.
 const ACCENTS = [
   { name: 'magenta', c: 'oklch(70% 0.24 350)' },
@@ -78,7 +78,7 @@ const ACCENTS = [
   { name: 'red', c: 'oklch(68% 0.21 25)' },
 ] as const;
 
-/** Reframe the raw token count as something human — the "minutes listened"
+/** Reframe the raw token count as something human - the "minutes listened"
  *  move. The pool and the seeding live in `src/equivalence.ts`, shared with the
  *  report so the two products never compare the same number to different
  *  things on the same day. */
@@ -87,7 +87,7 @@ function tokenEquivalence(tokens: number, seed: string): string | null {
   return eq ? `that’s ${eq.phrase}` : null;
 }
 
-/** The receipt's version of tokenEquivalence — the bill, in things. */
+/** The receipt's version of tokenEquivalence - the bill, in things. */
 export function costEquivalence(costUSD: number): string | null {
   const scales: { unit: number; many: string }[] = [
     { unit: 1999, many: 'MacBook Airs' },
@@ -104,7 +104,7 @@ export function costEquivalence(costUSD: number): string | null {
   return null;
 }
 
-/** Pick the type ramp that fits — hero numerals for short strings, then
+/** Pick the type ramp that fits - hero numerals for short strings, then
  *  progressively smaller word ramps, so a long line (a roast punchline, an
  *  abandoned project's name) never becomes a wall of 9rem type that outgrows
  *  its viewport-height card. `min: 'word'` skips the numeral ramp for text
@@ -131,7 +131,7 @@ function foot(text: string): string {
   return `<p class="foot">${esc(text)}</p>`;
 }
 
-/** Oversized echo of the card's hero — the decoration layer, never the data. */
+/** Oversized echo of the card's hero - the decoration layer, never the data. */
 function echo(text: string): string {
   return `<div class="echo" aria-hidden="true">${esc(text)}</div>`;
 }
@@ -141,8 +141,8 @@ function bigNum(n: number, fmt: 'int' | 'tok' | 'usd'): string {
   return `<div class="big"><span class="n" data-n="${n}" data-fmt="${fmt}">${esc(rendered)}</span></div>`;
 }
 
-// The outline marks the busiest-HOUR column and busiest-DAY row — the same two
-// marginals the caption names — so text and picture never disagree. (An earlier
+// The outline marks the busiest-HOUR column and busiest-DAY row - the same two
+// marginals the caption names - so text and picture never disagree. (An earlier
 // version outlined the single hottest cell, which could sit on a different
 // hour/day than the caption's independently-computed marginals.)
 function heatmap(heat: number[][], peakHour: number, peakWeekday: number): string {
@@ -161,7 +161,7 @@ function heatmap(heat: number[][], peakHour: number, peakWeekday: number): strin
       const pct = v === 0 ? 0 : Math.round(12 + 78 * Math.sqrt(v / max));
       const band = (wd === peakWeekday ? ' pk-row' : '') + (h === peakHour ? ' pk-col' : '');
       const peak = wd === peakWeekday && h === peakHour ? ' peak' : '';
-      cells += `<div class="hm-cell${band}${peak}" style="--p:${pct}%" data-tip="${esc(`${WEEKDAYS[wd]} ${hourLabel(h)} — ${fmtInt(v)} ${plural(v, 'reply', 'replies')}`)}"></div>`;
+      cells += `<div class="hm-cell${band}${peak}" style="--p:${pct}%" data-tip="${esc(`${WEEKDAYS[wd]} ${hourLabel(h)} - ${fmtInt(v)} ${plural(v, 'reply', 'replies')}`)}"></div>`;
     }
   }
   let hours = '<div></div>';
@@ -187,7 +187,7 @@ function streakStrip(daily: { date: string; tokens: number }[], streak: { from: 
     const v = byDate.get(ymd) ?? 0;
     const pct = v === 0 ? 0 : Math.round(15 + 75 * Math.sqrt(v / max));
     const inStreak = streak && ymd >= streak.from && ymd <= streak.to ? ' streak' : '';
-    cells += `<div class="cal-cell${inStreak}" style="--p:${pct}%" data-tip="${esc(`${formatDate(ymd)} — ${fmtTokens(v)} tokens`)}"></div>`;
+    cells += `<div class="cal-cell${inStreak}" style="--p:${pct}%" data-tip="${esc(`${formatDate(ymd)} - ${fmtTokens(v)} tokens`)}"></div>`;
     cur.setUTCDate(cur.getUTCDate() + 1);
   }
   return `<div class="scrollx"><div class="cal">${cells}</div></div>`;
@@ -228,7 +228,7 @@ function extraCard(x: WrappedExtra, i: number): Card {
 // ---------------------------------------------------------------------------
 // Share card
 //
-// The deck is a dozen-plus slides and the count changes per user — no cost card
+// The deck is a dozen-plus slides and the count changes per user - no cost card
 // on a local-model year, no loop card on a quiet one. A share surface that
 // varied the same way would be a screenshot lottery, so there is exactly one
 // image, and it carries the payoff the deck has been building toward: the
@@ -274,7 +274,7 @@ interface ShareCard {
   kicker: string;
   hero: string;
   lede: string;
-  /** [value, label] — four at most, drawn as a 2×2. */
+  /** [value, label] - four at most, drawn as a 2×2. */
   stats: [string, string][];
   equivalents: string[];
   eqStart: number;
@@ -282,12 +282,12 @@ interface ShareCard {
   /** Bottom rule: [0] sits left, an optional [1] sits right. */
   footer: string[];
   /** Sentences, plus where the comparison gets spliced in when copied. It has
-   *  to land directly after the sentence carrying the token count — "That's
+   *  to land directly after the sentence carrying the token count - "That's
    *  5.7 years of ..." reads as a non-sequitur anywhere else. */
   summary: string[];
   eqSlot: number;
   filename: string;
-  /** Resolved colours — canvas cannot read CSS custom properties. */
+  /** Resolved colours - canvas cannot read CSS custom properties. */
   bg: string;
   ink: string;
   ink2: string;
@@ -296,7 +296,7 @@ interface ShareCard {
    *  than having the page do string surgery on colours at paint time. */
   palettes: { name: string; c: string; glow: string; glow0: string; edge: string; heat: string[] }[];
   /** Where the deck's accent rotation put this slide. Only the picker's opening
-   *  position — the rotation is arbitrary, so it must not be the final word. */
+   *  position - the rotation is arbitrary, so it must not be the final word. */
   accentStart: number;
 }
 
@@ -307,7 +307,7 @@ function shareCardData(d: WrappedData, accentStart: number): ShareCard {
   // The persona is the deck's climax and the thing worth posting. Without one
   // (a year too thin to split three ways) the biggest honest number leads.
   const hasPersona = d.persona !== null;
-  const kicker = hasPersona ? `${d.year} — this year you were` : `your ${d.year} in review`;
+  const kicker = hasPersona ? `${d.year} - this year you were` : `your ${d.year} in review`;
   const hero = hasPersona ? d.persona!.name : t.tokens > 0 ? fmtTokens(t.tokens) : fmtInt(t.sessions);
   const lede = hasPersona
     ? d.persona!.tagline
@@ -335,7 +335,7 @@ function shareCardData(d: WrappedData, accentStart: number): ShareCard {
   const eqSlot = 1;
   if (hasPersona) summary.push(`Apparently I'm ${d.persona!.name}: ${d.persona!.tagline}`);
   if (d.projects[0]) summary.push(`Most of it went to ${d.projects[0].name}.`);
-  // Last line of the copied text, so it carries the domain — a pasted summary
+  // Last line of the copied text, so it carries the domain - a pasted summary
   // is otherwise unattributable.
   summary.push(`Generated locally with pacifico wrapped · ${SITE_HOST}`);
 
@@ -417,7 +417,7 @@ export function renderWrappedHtml(d: WrappedData): string {
 
   const horizon =
     d.dataBegins && d.dataBegins > d.period.from
-      ? `data begins ${formatDate(d.dataBegins)} — older transcripts have been pruned by your tools`
+      ? `data begins ${formatDate(d.dataBegins)} - older transcripts have been pruned by your tools`
       : null;
 
   cards.push({
@@ -427,7 +427,7 @@ export function renderWrappedHtml(d: WrappedData): string {
 <p class="brand">sessions</p>
 <h1><span>your</span> <span class="yr">${d.year}</span> <span>wrapped</span></h1>
 <p class="lede">${esc(formatDate(d.period.from))} → ${esc(formatDate(d.period.to))}${d.period.to.slice(5) !== '12-31' ? ' · so far' : ''}</p>
-${empty ? `<p class="lede">A quiet year — no sessions found. The mystery of you deepens.</p>` : `<p class="hint">scroll<span class="chev">▾</span></p>`}
+${empty ? `<p class="lede">A quiet year - no sessions found. The mystery of you deepens.</p>` : `<p class="hint">scroll<span class="chev">▾</span></p>`}
 <p class="foot">generated locally from your own transcripts · nothing leaves your machine${horizon ? ` · ${esc(horizon)}` : ''}</p>
 </div>`,
   });
@@ -435,13 +435,13 @@ ${empty ? `<p class="lede">A quiet year — no sessions found. The mystery of yo
   if (!empty) {
     // Local-model years (Ollama, gpt-oss, etc.) report no billed tokens. Showing
     // a hero "0" / "$0" would read as broken, so the token and cost cards only
-    // appear when there's a meter to report — the deck leans on the non-zero
+    // appear when there's a meter to report - the deck leans on the non-zero
     // signals (sessions, replies, rhythm, models, persona) instead.
     if (d.totals.tokens > 0) {
       const equiv = tokenEquivalence(d.totals.tokens, `${d.year}|tokencard`);
       cards.push({
         id: 'tokens',
-        body: `${echo(fmtTokens(d.totals.tokens))}<div class="panel center">${kicker('the year in tokens')}<h2>You and your agents had a lot to say.</h2>${bigNum(d.totals.tokens, 'tok')}<p class="lede">tokens exchanged${equiv ? ` — ${esc(equiv)}` : ''}</p>${foot('input + output + cache writes · same math as pacifico report')}</div>`,
+        body: `${echo(fmtTokens(d.totals.tokens))}<div class="panel center">${kicker('the year in tokens')}<h2>You and your agents had a lot to say.</h2>${bigNum(d.totals.tokens, 'tok')}<p class="lede">tokens exchanged${equiv ? ` - ${esc(equiv)}` : ''}</p>${foot('input + output + cache writes · same math as pacifico report')}</div>`,
       });
     }
 
@@ -450,14 +450,14 @@ ${empty ? `<p class="lede">A quiet year — no sessions found. The mystery of yo
       const costEq = costEquivalence(d.totals.costUSD);
       cards.push({
         id: 'cost',
-        body: `${echo(fmtUSD(d.totals.costUSD))}<div class="panel center">${kicker('the receipt')}<h2>All of that, à la carte?</h2>${bigNum(d.totals.costUSD, 'usd')}<p class="lede">what this year would have cost at API list prices${costEq ? ` — ${esc(costEq)}` : ''}</p>${
+        body: `${echo(fmtUSD(d.totals.costUSD))}<div class="panel center">${kicker('the receipt')}<h2>All of that, à la carte?</h2>${bigNum(d.totals.costUSD, 'usd')}<p class="lede">what this year would have cost at API list prices${costEq ? ` - ${esc(costEq)}` : ''}</p>${
           cachePct !== null
-            ? `<div class="substat" style="--i:1"><span class="sn">${cachePct}%</span><span class="sl">cache hit rate — ${fmtTokens(d.totals.cacheReadTokens)} tokens re-read from cache instead of full price</span></div>`
+            ? `<div class="substat" style="--i:1"><span class="sn">${cachePct}%</span><span class="sl">cache hit rate - ${fmtTokens(d.totals.cacheReadTokens)} tokens re-read from cache instead of full price</span></div>`
             : ''
         }${
           d.warnings.length > 0
             ? foot(
-                `${d.warnings.length} model(s) had no pricing — the real number is higher: ${d.warnings.map((w) => w.model).join(', ')}`,
+                `${d.warnings.length} model(s) had no pricing - the real number is higher: ${d.warnings.map((w) => w.model).join(', ')}`,
               )
             : foot('estimated from LiteLLM list prices · cache reads billed at cache rates')
         }</div>`,
@@ -468,7 +468,7 @@ ${empty ? `<p class="lede">A quiet year — no sessions found. The mystery of yo
       // silently dropping the warning with the (hidden) $0 receipt card.
       cards.push({
         id: 'cost',
-        body: `<div class="panel center">${kicker('the receipt')}<h2>No price tag this year.</h2><p class="lede">cost couldn’t be estimated — ${d.warnings.length} model(s) had no list price</p>${foot(`unpriced: ${d.warnings.map((w) => w.model).join(', ')}`)}</div>`,
+        body: `<div class="panel center">${kicker('the receipt')}<h2>No price tag this year.</h2><p class="lede">cost couldn’t be estimated - ${d.warnings.length} model(s) had no list price</p>${foot(`unpriced: ${d.warnings.map((w) => w.model).join(', ')}`)}</div>`,
       });
     }
 
@@ -516,7 +516,7 @@ ${heatmap(d.rhythm.heat, d.rhythm.peakHour, d.rhythm.peakWeekday)}
     }
 
     if (d.models.length > 0) {
-      // The adoption story features the newest model that actually took over —
+      // The adoption story features the newest model that actually took over -
       // "the week X arrived" beats restating the year-long #1.
       const adopters = d.models.filter((m) => m.firstTopDay && m.share >= 0.1);
       const newest = adopters.sort((a, b) => (a.firstSeen < b.firstSeen ? 1 : -1))[0];
@@ -527,7 +527,7 @@ ${heatmap(d.rhythm.heat, d.rhythm.peakHour, d.rhythm.peakWeekday)}
             ? `your daily #1 by <b>${esc(shortDate(newest.firstTopDay!))}</b>`
             : '';
       const story = newest
-        ? `<p class="lede"><b>${esc(prettyModel(newest.label))}</b> arrived <b>${esc(shortDate(newest.firstSeen))}</b> — ${takeover}. ${newest.id === d.models[0]!.id ? 'It never looked back.' : 'The old guard held on.'}</p>`
+        ? `<p class="lede"><b>${esc(prettyModel(newest.label))}</b> arrived <b>${esc(shortDate(newest.firstSeen))}</b> - ${takeover}. ${newest.id === d.models[0]!.id ? 'It never looked back.' : 'The old guard held on.'}</p>`
         : '';
       // A tool you actually used must never read "0%": floor sub-1% shares to "<1%".
       const sharePct = (share: number): string => {
@@ -569,7 +569,7 @@ ${heatmap(d.rhythm.heat, d.rhythm.peakHour, d.rhythm.peakWeekday)}
       cards.push({
         id: 'bigday',
         body: `${echo(shortDate(bd.date))}<div class="panel center">${kicker('the bender')}<h2>Then there was ${esc(formatDate(bd.date))}.</h2>${bigNum(value, byTokens ? 'tok' : 'int')}<p class="lede">${noun} in a single day${
-          ratio >= 2 ? ` — <b>${ratio >= 10 ? Math.round(ratio) : ratio.toFixed(1)}×</b> your median day` : ''
+          ratio >= 2 ? ` - <b>${ratio >= 10 ? Math.round(ratio) : ratio.toFixed(1)}×</b> your median day` : ''
         }</p></div>`,
       });
     }
@@ -577,11 +577,11 @@ ${heatmap(d.rhythm.heat, d.rhythm.peakHour, d.rhythm.peakWeekday)}
     if (d.longestGap && d.longestGap.days >= 7) {
       cards.push({
         id: 'vanish',
-        body: `${echo(`${d.longestGap.days}d`)}<div class="panel center">${kicker('the disappearance')}<h2>And then one day — nothing.</h2>${bigNum(d.longestGap.days, 'int')}<p class="lede">days of total silence, <b>${esc(shortDate(d.longestGap.from))}</b> → <b>${esc(shortDate(d.longestGap.to))}</b> — the agents waited</p>${foot('your longest gap between active days · touching grass, presumably')}</div>`,
+        body: `${echo(`${d.longestGap.days}d`)}<div class="panel center">${kicker('the disappearance')}<h2>And then one day - nothing.</h2>${bigNum(d.longestGap.days, 'int')}<p class="lede">days of total silence, <b>${esc(shortDate(d.longestGap.from))}</b> → <b>${esc(shortDate(d.longestGap.to))}</b> - the agents waited</p>${foot('your longest gap between active days · touching grass, presumably')}</div>`,
       });
     }
 
-    // A sitting under an hour isn't a superlative — drop the line, keep the card.
+    // A sitting under an hour isn't a superlative - drop the line, keep the card.
     const soy = d.sessionOfYear;
     const ls = d.longestSession && d.longestSession.durationMs >= 3_600_000 ? d.longestSession : null;
     if (soy || ls) {
@@ -593,13 +593,13 @@ ${heatmap(d.rhythm.heat, d.rhythm.peakHour, d.rhythm.peakWeekday)}
             : ''
         }${
           ls
-            ? `<div class="substat" style="--i:1"><span class="sn">${esc(fmtDuration(ls.durationMs))}</span><span class="sl">your longest sitting — ${fmtInt(ls.replies)} ${plural(ls.replies, 'reply', 'replies')}, ${esc(formatDate(ls.date))}, ${esc(ls.project)}</span></div>`
+            ? `<div class="substat" style="--i:1"><span class="sn">${esc(fmtDuration(ls.durationMs))}</span><span class="sl">your longest sitting - ${fmtInt(ls.replies)} ${plural(ls.replies, 'reply', 'replies')}, ${esc(formatDate(ls.date))}, ${esc(ls.project)}</span></div>`
             : ''
         }${soy ? foot('ranked by substance: message volume, files edited, and whether something shipped') : ''}</div>`,
       });
     }
 
-    // The loop — the longest stretch the machine ran with nobody home. The
+    // The loop - the longest stretch the machine ran with nobody home. The
     // sitting above measures endurance WITH you in the chair; this one measures
     // trust. Under ten minutes isn't a story (the JSON still carries it).
     if (d.loops && d.loops.longest.durationMs >= 10 * 60_000) {
@@ -609,13 +609,13 @@ ${heatmap(d.rhythm.heat, d.rhythm.peakHour, d.rhythm.peakWeekday)}
       const ratio = lp.medianMs >= 1000 ? L.durationMs / lp.medianMs : null;
       cards.push({
         id: 'loop',
-        body: `${echo(dur)}<div class="panel center">${kicker('the loop')}<h2>You hit enter. And walked away.</h2><div class="${heroClass(dur, 'word')}"><span class="n">${esc(dur)}</span></div><p class="lede">of unsupervised machine — <b>${fmtInt(L.steps)}</b> model ${plural(L.steps, 'call')} back to back${
+        body: `${echo(dur)}<div class="panel center">${kicker('the loop')}<h2>You hit enter. And walked away.</h2><div class="${heroClass(dur, 'word')}"><span class="n">${esc(dur)}</span></div><p class="lede">of unsupervised machine - <b>${fmtInt(L.steps)}</b> model ${plural(L.steps, 'call')} back to back${
           L.tokens > 0 ? `, <b>${fmtTokens(L.tokens)}</b> tokens` : ''
         }, zero human input · from <b>${esc(L.startClock)}</b>, ${esc(formatDate(L.date))}, on <b>${esc(L.project)}</b></p>${
           L.prompt ? `<p class="lede">last known human words: <em>“${esc(L.prompt)}”</em></p>` : ''
         }${
           ratio !== null && ratio >= 3
-            ? `<div class="substat" style="--i:1"><span class="sn">${esc(fmtDurationShort(lp.medianMs))}</span><span class="sl">your median loop — this one went ${fmtInt(Math.round(ratio))}× longer, and nobody stopped it</span></div>`
+            ? `<div class="substat" style="--i:1"><span class="sn">${esc(fmtDurationShort(lp.medianMs))}</span><span class="sl">your median loop - this one went ${fmtInt(Math.round(ratio))}× longer, and nobody stopped it</span></div>`
             : ''
         }${foot(`a loop = back-to-back model calls ≤ 30 min apart with no human turn in between · you set ${fmtInt(lp.count)} of them loose this year · Claude Code sessions only`)}</div>`,
       });
@@ -640,7 +640,7 @@ ${heatmap(d.rhythm.heat, d.rhythm.peakHour, d.rhythm.peakWeekday)}
       cards.push({
         id: 'persona',
         cls: 'persona',
-        body: `<div class="panel center">${kicker(`the reveal — this year you were`)}
+        body: `<div class="panel center">${kicker(`the reveal - this year you were`)}
 <div class="big bigword"><span class="n">${esc(pa.name)}</span></div>
 <p class="lede tagline">${esc(pa.tagline)}</p>
 <div class="axes">${pa.axes
@@ -655,7 +655,7 @@ ${foot('a description of how you worked this year, not who you are · the next s
     }
   }
 
-  // Extras render even on an empty year — an agent-authored roast of a quiet
+  // Extras render even on an empty year - an agent-authored roast of a quiet
   // year is still a slide, and --stdout already includes them unconditionally.
   if (empty) for (const [i, x] of d.extras.entries()) cards.push(extraCard(x, i));
 
@@ -674,7 +674,7 @@ ${foot('a description of how you worked this year, not who you are · the next s
   }
   if (d.projects[0]) creditRows.push(['on location', d.projects[0].name]);
   if (d.content?.topFiles[0]) creditRows.push(['set dressing', d.content.topFiles[0].name]);
-  // Busiest month, straight from the daily series — the shooting schedule.
+  // Busiest month, straight from the daily series - the shooting schedule.
   const byMonth = new Map<string, number>();
   for (const day of d.daily) {
     const mo = day.date.slice(0, 7);
@@ -687,7 +687,7 @@ ${foot('a description of how you worked this year, not who you are · the next s
   if (peakMonth) {
     creditRows.push([
       'principal photography',
-      `${MONTHS[Number(peakMonth.mo.slice(5)) - 1]} ${peakMonth.mo.slice(0, 4)} — ${fmtTokens(peakMonth.tokens)} tokens`,
+      `${MONTHS[Number(peakMonth.mo.slice(5)) - 1]} ${peakMonth.mo.slice(0, 4)} - ${fmtTokens(peakMonth.tokens)} tokens`,
     ]);
   }
   if (d.content?.errors && d.content.errors.totalErrors > 0) {
@@ -697,7 +697,7 @@ ${foot('a description of how you worked this year, not who you are · the next s
   if (d.content?.abandoned) {
     creditRows.push([
       'in memoriam',
-      `${d.content.abandoned.name} — last seen ${shortDate(d.content.abandoned.lastSeen)}`,
+      `${d.content.abandoned.name} - last seen ${shortDate(d.content.abandoned.lastSeen)}`,
     ]);
   }
   creditRows.push(['directed by', 'you']);
@@ -847,7 +847,7 @@ h2{font-size:clamp(1.5rem,4vw,2.2rem);font-weight:800;letter-spacing:-.01em;line
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}.card .panel>*,.card .echo,.card.live .rank li,.card.live .substat,.card.live .axis,.card.live .creditlist div{opacity:1!important;transform:none!important;}}
 `;
 
-// Count-up + card reveal + tooltip + dots. textContent only — never innerHTML.
+// Count-up + card reveal + tooltip + dots. textContent only - never innerHTML.
 const JS = `(function(){
 var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 function fmt(n,kind){if(kind==='usd')return '$'+Math.round(n).toLocaleString('en-US');if(kind==='tok'){if(n>=1e9)return (n/1e9).toFixed(2)+'B';if(n>=1e6)return (n/1e6).toFixed(1)+'M';if(n>=1e3)return (n/1e3).toFixed(1)+'K';return String(Math.round(n));}return Math.round(n).toLocaleString('en-US');}
@@ -897,7 +897,7 @@ var y0=y,ASC=0.78;
 function ls(v){try{c.letterSpacing=v;}catch(e){}}
 function mid(t){return x+(w-c.measureText(t).width)/2;}
 // Paints the given lines from the cursor and advances past them. The caller
-// sets the font first — measureText centres against it.
+// sets the font first - measureText centres against it.
 function put(lines,size,lh,color){
 if(!dry)c.fillStyle=color;
 for(var i=0;i<lines.length;i++){if(!dry)c.fillText(lines[i],mid(lines[i]),y+size*ASC+i*lh);}
@@ -934,7 +934,7 @@ return y-y0;}
 // bleeding off the corner of a card, so the image borrows it rather than
 // inventing a second visual language. Everything here is stroke-only and low
 // alpha: it must read as texture behind the payoff, never as content. Positions
-// are derived from the canvas, never random — the card has to redraw identically
+// are derived from the canvas, never random - the card has to redraw identically
 // on every repaint, aspect switch, and accent change.
 function decorate(c,W,H,P,K,E){
 c.save();
@@ -953,7 +953,7 @@ if(c.globalAlpha<=0.02)continue;
 c.fillStyle=E;c.beginPath();c.arc(dx,dy,d/2,0,Math.PI*2);c.fill();}}
 c.globalAlpha=1;
 
-// Corner crop marks — the poster-framing gesture.
+// Corner crop marks - the poster-framing gesture.
 var m=P*0.46,len=20*K;
 c.strokeStyle=E;c.lineWidth=2*K;c.beginPath();
 c.moveTo(m,m+len);c.lineTo(m,m);c.lineTo(m+len,m);
@@ -1002,7 +1002,7 @@ c.fillText(WCD.year,W-P-c.measureText(WCD.year).width,P+15*C);ls('0px');
 
 var sb=stripBox(w,C,H,P);
 var top=P+52*C,bottom=sb.top-30*C,band=bottom-top;
-// Type is scaled to the aspect, not to the width — a 1080x1920 poster wants
+// Type is scaled to the aspect, not to the width - a 1080x1920 poster wants
 // bigger type than a 1200x630 banner, and scaling on width alone made the
 // taller card the smaller one. Then shrink-to-fit if the stack still overruns.
 var S=sp.scale*K,total=stack(c,x,w,0,true,S,G,sp.cols,sp.ml);
@@ -1022,7 +1022,7 @@ if(WCD.footer[1])c.fillText(WCD.footer[1],W-P-c.measureText(WCD.footer[1]).width
 
 var fl=document.getElementById('wc-flash'),ft=null;
 function flash(m){if(!fl)return;fl.textContent=m;clearTimeout(ft);ft=setTimeout(function(){fl.textContent='';},2400);}
-var BLOCKED='Clipboard blocked here \\u2014 use Download PNG.';
+var BLOCKED='Clipboard blocked here - use Download PNG.';
 function caption(){var p=WCD.summary.slice();
 if(WCD.equivalents.length)p.splice(WCD.eqSlot,0,WCD.equivalents[eqIdx]);return p.join(' ');}
 function on(id,fn){var el=document.getElementById(id);if(el)el.addEventListener('click',fn);}
@@ -1030,7 +1030,7 @@ on('wc-png',function(){var a=document.createElement('a');a.download=WCD.filename
 a.href=wcEl.toDataURL('image/png');a.click();flash('PNG saved to your downloads.');});
 on('wc-img',function(){if(!navigator.clipboard||!window.ClipboardItem){flash(BLOCKED);return;}
 wcEl.toBlob(function(b){navigator.clipboard.write([new ClipboardItem({'image/png':b})])
-.then(function(){flash('Copied \\u2014 paste it anywhere.');}).catch(function(){flash(BLOCKED);});},'image/png');});
+.then(function(){flash('Copied - paste it anywhere.');}).catch(function(){flash(BLOCKED);});},'image/png');});
 on('wc-txt',function(){if(!navigator.clipboard){flash(BLOCKED);return;}
 navigator.clipboard.writeText(caption()).then(function(){flash('Caption copied.');}).catch(function(){flash(BLOCKED);});});
 on('wc-eq',function(){eqIdx=(eqIdx+1)%WCD.equivalents.length;draw();flash('Swapped the comparison.');});
@@ -1048,5 +1048,5 @@ draw();flash(PAL().name+'.');});});
 draw();
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(draw);})();}
 
-console.log('pacifico wrapped \\u2014 generated locally from your own session logs. No telemetry.');
+console.log('pacifico wrapped - generated locally from your own session logs. No telemetry.');
 })();`;

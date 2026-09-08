@@ -26,7 +26,7 @@ export type WireStatus = 'added' | 'unchanged' | 'refused' | 'failed';
 
 export interface WireResult {
   status: WireStatus;
-  /** Why it was refused or failed. Always shown — a refusal the user can't see is a lie. */
+  /** Why it was refused or failed. Always shown - a refusal the user can't see is a lie. */
   reason?: string;
 }
 
@@ -141,7 +141,7 @@ export function unwireJsonClient(path: string): WireResult {
   if (!('pacifico' in map)) return { status: 'unchanged' };
 
   delete map.pacifico;
-  // asJsonObject detaches the subtree — re-attach before serializing.
+  // asJsonObject detaches the subtree - re-attach before serializing.
   config.mcpServers = map;
   try {
     writeFileSync(path, JSON.stringify(config, null, 2) + '\n');
@@ -176,7 +176,7 @@ function tomlString(value: string): string {
 
 /**
  * Parse a table header into its dotted key parts. Returns null when the line is
- * not a header, or is one we can't read — callers treat null on a `[`-leading
+ * not a header, or is one we can't read - callers treat null on a `[`-leading
  * line as a reason to refuse rather than to guess.
  */
 function parseHeader(line: string): TomlHeader | null {
@@ -255,7 +255,7 @@ function isOurTable(h: TomlHeader): boolean {
   return h.parts.length === 2 && h.parts[0] === 'mcp_servers' && h.parts[1] === 'pacifico';
 }
 
-/** True for `[mcp_servers.pacifico.env]` and friends — part of our table's block. */
+/** True for `[mcp_servers.pacifico.env]` and friends - part of our table's block. */
 function isOurChild(h: TomlHeader): boolean {
   return h.parts.length > 2 && h.parts[0] === 'mcp_servers' && h.parts[1] === 'pacifico';
 }
@@ -416,8 +416,8 @@ export function codexManualBlock(command: string): string {
 
 /**
  * `<config-dir>/.mcp.json` files older versions of setup wrote and no client
- * reads. Removed only when the content is exactly what we generated — a lone
- * `pacifico` server and nothing else — so a file the user made their own stays.
+ * reads. Removed only when the content is exactly what we generated - a lone
+ * `pacifico` server and nothing else - so a file the user made their own stays.
  */
 function deadConfigPaths(): string[] {
   const home = getHome();

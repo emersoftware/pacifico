@@ -1,5 +1,5 @@
 // Sessions-owned (forked from tokenmaxing's parser). Dedupes usage by (message.id, requestId)
-// so the same API response — copied across resumed/forked session files — is counted once, matching ccusage.
+// so the same API response - copied across resumed/forked session files - is counted once, matching ccusage.
 //
 // Subagent attribution: Claude Code writes dispatched agents to
 // `<project>/<sessionId>/subagents/agent-<agentId>.jsonl`, and those transcripts
@@ -9,7 +9,7 @@
 //   1. the sibling `agent-<agentId>.meta.json` (covers ~77% of dispatches here);
 //   2. the parent transcript's `toolUseResult` on the user record that closes the
 //      Task/Agent tool call, which carries agentId + agentType.
-// A file therefore cannot name its own dispatches on its own — a subagent
+// A file therefore cannot name its own dispatches on its own - a subagent
 // transcript is usually read before the parent record that names it. Parsing is
 // split accordingly: parseFile() extracts what one file knows, and
 // resolveAgentTypes() names the dispatches once every file has been seen. The
@@ -60,7 +60,7 @@ const claudeUserLineSchema = z.object({
 });
 
 const SUBAGENT_PATH = /[/\\]subagents[/\\]/;
-// `agent-<id>.jsonl` — the id in the filename is the dispatch id, and is the only
+// `agent-<id>.jsonl` - the id in the filename is the dispatch id, and is the only
 // source when a transcript's records omit `agentId`.
 const AGENT_FILENAME = /[/\\]agent-([^/\\]+)\.jsonl$/;
 // Auto-compaction runs as a subagent with no parent dispatch record and no meta
@@ -80,7 +80,7 @@ export interface AgentName {
 /** What one transcript file yields on its own. `agentTypes` is what this file
  *  revealed about dispatch naming, which may belong to events in other files. */
 export interface ParsedFile {
-  /** Events whose `agent.type` is still a placeholder — resolveAgentTypes fills it. */
+  /** Events whose `agent.type` is still a placeholder - resolveAgentTypes fills it. */
   events: UsageEvent[];
   agentTypes: Record<string, AgentName>;
 }
@@ -100,7 +100,7 @@ function recordAgentId(line: ClaudeAssistantLine): string | undefined {
 }
 
 // Read the agentType out of the `agent-<id>.meta.json` written next to a subagent
-// transcript. Missing or malformed metadata is not an error — the parent-record
+// transcript. Missing or malformed metadata is not an error - the parent-record
 // map is the fallback.
 const agentMetaSchema = z.object({ agentType: z.string().min(1) });
 
@@ -178,7 +178,7 @@ export async function parseClaudeCodeFile(path: string): Promise<ParsedFile> {
 }
 
 /** Name every dispatch, now that every file's contribution to the map is known.
- *  Mutates in place — the events are freshly built by the caller. */
+ *  Mutates in place - the events are freshly built by the caller. */
 export function resolveAgentTypes(events: UsageEvent[], agentTypes: Record<string, AgentName>): void {
   for (const e of events) {
     if (!e.agent) continue;

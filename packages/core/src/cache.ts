@@ -40,7 +40,7 @@ import { readSessionLines, statSession } from './session-io';
 import { archiveFile, listArchived, loadManifest, saveManifest, type Manifest } from './vault/archive';
 // The same cap the search projection uses. Aliased at the import so the name reads as the
 // primer's projection cap rather than being confused with extract-files.ts's own MAX_FILES
-// (50 — the bound on the indexed files_touched column, a different number for a different job).
+// (50 - the bound on the indexed files_touched column, a different number for a different job).
 import { MAX_FILES as MAX_PRIMER_FILES } from './search-format';
 import { type RepoInfo, globPrefix, branchLabel, cwdUnder } from './repo';
 import { isTrivia, blendedScore, type ScorableSession } from './significance';
@@ -57,7 +57,7 @@ export function getCacheDir(): string {
 }
 
 // The index.db path under the cache dir. Exported because the test harness (and
-// Task 10) reference it directly. Resolved lazily — not frozen at import — so a
+// Task 10) reference it directly. Resolved lazily - not frozen at import - so a
 // test that mutates SESSIONS_* on the shared module instance is honored.
 export function getDbPath(): string {
   return join(getCacheDir(), 'index.db');
@@ -81,17 +81,17 @@ function getCodexDir(): string {
 // Bump 6 -> 7: search becomes message-granular. A new message_fts table holds one
 // row per message (genuine user turns + assistant turns) carrying the parser's
 // message index, and session_fts slims to its genuinely session-level columns
-// (user_content/assistant_content move out — message text is stored exactly once).
+// (user_content/assistant_content move out - message text is stored exactly once).
 // The virtual-table shapes change, so getDb drops + rebuilds on a user_version mismatch.
 // v8: message_fts no longer stores compaction summaries or tag-wrapped agent/
 // harness injections (task-notifications, `!`-mode shell echoes, teammate relays)
-// as genuine user turns — see isGenuineUserTurn/stripInjected in parser.ts.
+// as genuine user turns - see isGenuineUserTurn/stripInjected in parser.ts.
 // v9: adds sessions.started_at (the full first timestamp, for the active-hours
-// histogram), and Codex transcripts index their messages for the first time —
+// histogram), and Codex transcripts index their messages for the first time -
 // every Codex row held metadata only until parser.ts learned the response_item
 // envelope, so a rebuild is what actually populates them.
-// v10: pi lineage columns — sessions.branches / fork_points / forked_from (in-file
-// /tree fork count, the PiFork[] JSON, and the /fork parent path) — and pi
+// v10: pi lineage columns - sessions.branches / fork_points / forked_from (in-file
+// /tree fork count, the PiFork[] JSON, and the /fork parent path) - and pi
 // custom/custom_message content joins session_fts.context_text. Both need a
 // re-parse of every transcript, which the user_version drop+rebuild below provides.
 // v11: adds sessions.ended_at (the full last timestamp), so correlation (pacifico why)
@@ -142,7 +142,7 @@ export function closeDb(): void {
 // lazily so hermetic tests honoring SESSIONS_CACHE_DIR get their own file. busy_timeout
 // makes a statement wait for a contended write lock (e.g. a concurrent refreshIndex)
 // instead of erroring with SQLITE_BUSY immediately. This does NOT assign the `_db`
-// singleton — getDb owns that, so it can retry openDb after discarding a corrupt file.
+// singleton - getDb owns that, so it can retry openDb after discarding a corrupt file.
 function openDb(): Database {
   const db = new Database(getDbPath());
   db.run('PRAGMA busy_timeout=5000');
@@ -195,14 +195,14 @@ function openDb(): Database {
       branch TEXT NOT NULL DEFAULT '',
       -- Pi lineage (v10): in-file /tree fork count, the PiFork[] JSON verbatim
       -- (queryable later without re-parsing), and the /fork parent path stored
-      -- raw — the parent file may not exist on disk, so nothing resolves it here.
+      -- raw - the parent file may not exist on disk, so nothing resolves it here.
       -- Zero/empty defaults for non-pi tools.
       branches INTEGER NOT NULL DEFAULT 0,
       fork_points TEXT NOT NULL DEFAULT '[]',
       forked_from TEXT NOT NULL DEFAULT ''
     )
   `);
-  // Session-level searchable text only — message text lives in message_fts (one row
+  // Session-level searchable text only - message text lives in message_fts (one row
   // per message) so a hit localizes to an exchange instead of a whole session.
   // `porter unicode61` adds stemming on top of the default unicode tokenizer so
   // e.g. "refactoring" matches an indexed "refactor".
@@ -244,7 +244,7 @@ function openDb(): Database {
 }
 
 // Best-effort removal of the index file and its WAL/SHM sidecars (lazily-resolved)
-// so a corrupt index can be rebuilt from scratch. Each unlink is independent — a
+// so a corrupt index can be rebuilt from scratch. Each unlink is independent - a
 // missing sidecar must not stop us deleting the others.
 function removeDbFiles(): void {
   const dbPath = getDbPath();
@@ -270,7 +270,7 @@ function getDb(): Database {
     _db = openDb();
   } catch (e) {
     if (!isCorruption(e)) throw e;
-    // The index is a disposable, rebuildable cache of the session files — so a
+    // The index is a disposable, rebuildable cache of the session files - so a
     // corrupt one is safe to delete and recreate. refreshIndex repopulates on use.
     removeDbFiles();
     _db = openDb();
@@ -328,7 +328,7 @@ async function discoverFiles(): Promise<FileEntry[]> {
     }
   }
 
-  // OpenCode has no per-session files — sessions live in one SQLite DB, so each
+  // OpenCode has no per-session files - sessions live in one SQLite DB, so each
   // discovered "file" is a synthetic dbPath/sessionId handle (see src/opencode.ts).
   // Returns [] when the DB is absent.
   entries.push(...discoverOpencodeSessions());
@@ -336,7 +336,7 @@ async function discoverFiles(): Promise<FileEntry[]> {
   // Vault-only sessions: transcripts whose live source is gone but whose archived
   // copy survives. Appended under their ORIGINAL path so they re-index with the same
   // identity; parsing reads through the session-io vault fallback. Skip any path a
-  // live source already produced — a vendor-restored file wins over its vault entry.
+  // live source already produced - a vendor-restored file wins over its vault entry.
   const live = new Set(entries.map((e) => e.path));
   for (const archived of listArchived(getArchiveDir())) {
     if (!live.has(archived.path)) entries.push({ path: archived.path, tool: archived.tool });
@@ -473,7 +473,7 @@ function writeSessionRow(
   const commandsText = commandsArr.join('\n');
   // context_text carries conversational context that is not a message: error text
   // (all tools) plus pi custom/custom_message injections (recaps, web-search
-  // fetches, intercom) — extension output, never turns, so it stays out of
+  // fetches, intercom) - extension output, never turns, so it stays out of
   // message_fts and ranks at the middle bm25 weight.
   const contextText = [errors.messages.join('\n'), extractCustomContext(lines, tool)].filter(Boolean).join('\n');
   if (hasExisting) {
@@ -515,7 +515,7 @@ function writeSessionRow(
     'INSERT INTO session_fts (file_path, headline, commands, paths, context_text, thinking) VALUES (?, ?, ?, ?, ?, ?)',
     [filePath, headline, commandsText, pathsText, contextText, thinking],
   );
-  // Message rows: assistant turns always; user turns only when genuine — injected
+  // Message rows: assistant turns always; user turns only when genuine - injected
   // skill bodies and tool results match everything and are exactly the noise the
   // trust fixes eliminated elsewhere. Their indices are still consumed by the
   // numbering (extractMessages counts them), they just get no FTS row. db.query()
@@ -537,8 +537,8 @@ function indexFile(db: Database, filePath: string, tool: Tool, ctx: RefreshCtx):
   // Deliberately re-stat rather than trusting refreshIndex's pre-lock snapshot: a
   // candidate may have waited behind another MCP process at BEGIN IMMEDIATE, and
   // this is where we observe that process's completed write (or a transcript
-  // append) and skip the parse. A file that vanished during the wait — with no vault
-  // copy either — stats as null and is left entirely alone; pruning is its owner.
+  // append) and skip the parse. A file that vanished during the wait - with no vault
+  // copy either - stats as null and is left entirely alone; pruning is its owner.
   const stat = statSession(filePath, tool);
   if (!stat) return false;
 
@@ -568,7 +568,7 @@ function indexFile(db: Database, filePath: string, tool: Tool, ctx: RefreshCtx):
   }
 
   // The live file is unusable (empty/truncated/rotated by the vendor). If the vault
-  // holds a parseable copy, index from that instead of ignoring the session — the
+  // holds a parseable copy, index from that instead of ignoring the session - the
   // archived version is the durability promise.
   const entry = ctx.manifest[filePath];
   if (entry && existsSync(entry.vaultPath)) {
@@ -694,7 +694,7 @@ async function runRefreshIndex(): Promise<RefreshResult> {
 /**
  * Force a source scan, coalescing concurrent callers in this process onto one
  * pass. Every query/MCP entry point goes through ensureIndexFresh instead, so
- * today this is reached only by tests — it stays exported as the "scan now" seam
+ * today this is reached only by tests - it stays exported as the "scan now" seam
  * for an explicit rebuild command.
  *
  * Coalescing weakens "scan now" for a caller that arrives mid-flight: it joins a
@@ -737,7 +737,7 @@ async function ensureIndexFresh(): Promise<RefreshResult> {
 
 // Read-only index access for stats consumers (`pacifico wrapped`). Refreshes
 // first so queries see current transcripts, then hands back the shared handle.
-// Callers must treat the connection as read-only — all writes stay in this file.
+// Callers must treat the connection as read-only - all writes stay in this file.
 export async function getIndexDb(): Promise<Database> {
   await ensureIndexFresh();
   return getDb();
@@ -747,8 +747,8 @@ export async function getIndexDb(): Promise<Database> {
  * A row count safe to hand to a `LIMIT ?` placeholder (or a `.slice()` that stands in for
  * one): at least 1, an integer, never NaN.
  *
- * SQLite reads a NEGATIVE limit as no limit at all, so `-1` — the value most likely to be
- * passed meaning "none" — selects every matching row instead. A fractional limit is no
+ * SQLite reads a NEGATIVE limit as no limit at all, so `-1` - the value most likely to be
+ * passed meaning "none" - selects every matching row instead. A fractional limit is no
  * better defined. Callers at the MCP boundary are bounded by their input schemas
  * (src/mcp.ts), and this is the floor under every other caller, including the next one.
  * `grepSessions` keeps its own guard because 0 is meaningful there: it returns the
@@ -759,7 +759,7 @@ function rowLimit(value: number | undefined, fallback: number): number {
   return Math.max(1, Math.floor(value));
 }
 
-// Ranking knobs — the eval fixture's tuning surface (src/eval/, docs/EVAL.md).
+// Ranking knobs - the eval fixture's tuning surface (src/eval/, docs/EVAL.md).
 // These move ONLY against the golden fixture, in coarse steps: change a value,
 // run `bun run eval`, and keep the change only if the gate stays green because a
 // real miss got fixed. The fixture is versioned with the values; grow it (log
@@ -771,7 +771,7 @@ function rowLimit(value: number | undefined, fallback: number): number {
 // verbose thinking adds recall without dominating (message text ranks via
 // message_fts below).
 export const SESSION_FTS_COLUMN_WEIGHTS = [0.0, 10.0, 6.0, 5.0, 2.0, 0.5] as const;
-// message_fts: file_path, msg_index, role, text — only the text column ranks.
+// message_fts: file_path, msg_index, role, text - only the text column ranks.
 export const MESSAGE_FTS_COLUMN_WEIGHTS = [0.0, 0.0, 0.0, 1.0] as const;
 // bm25 can't weight by row, so user-turn ranks are boosted in JS instead (bm25
 // is more-negative-is-better; multiplying a negative rank improves it).
@@ -821,7 +821,7 @@ export async function searchSessions(query: string, opts: SearchOptions = {}): P
 
   // Split the free-text query into individual quoted terms joined with OR. OR recall
   // (any term may match) paired with bm25() ranking surfaces the sessions matching the
-  // most — and rarest — terms first, instead of the old strict-AND that returned
+  // most - and rarest - terms first, instead of the old strict-AND that returned
   // nothing unless every word was present. This matters most for the LLM/MCP caller,
   // which issues long natural-language queries. Quoting each term keeps FTS5 operators
   // in user input literal. An all-whitespace/quotes query yields no terms → recent list.
@@ -854,7 +854,7 @@ export async function searchSessions(query: string, opts: SearchOptions = {}): P
     conditions.push('date <= ?');
     condParams.push(opts.before);
   }
-  // Files filter: substring match over the JSON-array text columns — callers pass a
+  // Files filter: substring match over the JSON-array text columns - callers pass a
   // path suffix or full path. Deliberately imprecise (a short fragment can match an
   // unrelated longer path); precision comes from passing longer suffixes. LIKE
   // metacharacters are escaped so paths with `_` (common) match literally.
@@ -946,7 +946,7 @@ export async function searchSessions(query: string, opts: SearchOptions = {}): P
 
     // finalRank = sessionRank + bestMessageRank: a missing side contributes 0, and
     // matching both sources compounds (both are negative). The display snippet
-    // prefers the best message hit (localized — strictly better than a whole-session
+    // prefers the best message hit (localized - strictly better than a whole-session
     // snippet) and falls back to the session-side snippet for metadata-only matches.
     const merged = [...metaByPath.values()].map((meta) => {
       const s = sessionHitByPath.get(meta.file_path);
@@ -1032,7 +1032,7 @@ export interface GrepHit {
   filePath: string;
   date: string;
   role: 'user' | 'assistant';
-  /** Feeds get_session_messages(offset) directly — same numbering as message_fts. */
+  /** Feeds get_session_messages(offset) directly - same numbering as message_fts. */
   msgIndex: number;
   snippet: string;
 }
@@ -1058,7 +1058,7 @@ function escapeRegExp(s: string): string {
  * filePath + msgIndex so it feeds get_session_messages(offset) with no extra lookup.
  * Streams message rows so memory stays O(limit) however large the corpus. Matches the
  * same text corpus as search (message_fts): assistant tool-call inputs are not indexed,
- * so a command string won't be found here — grep prose, navigate to the turn, then read
+ * so a command string won't be found here - grep prose, navigate to the turn, then read
  * it with include_tools.
  */
 export async function grepSessions(pattern: string, opts: GrepOptions = {}): Promise<GrepResult> {
@@ -1102,7 +1102,7 @@ export async function grepSessions(pattern: string, opts: GrepOptions = {}): Pro
     conditions.push('s.date <= ?');
     params.push(opts.before);
   }
-  // Literal mode: a LIKE filter cuts rows before the JS regex confirms each match — a huge
+  // Literal mode: a LIKE filter cuts rows before the JS regex confirms each match - a huge
   // win for rare terms. But SQLite LIKE folds case for ASCII only, while the JS `/i` regex
   // folds Unicode too, so for a case-insensitive pattern containing a non-ASCII letter the
   // LIKE is NOT a superset (`%café%` would drop a stored "CAFÉ" the regex would match).
@@ -1174,7 +1174,7 @@ export async function grepSessions(pattern: string, opts: GrepOptions = {}): Pro
 /**
  * Resolve a session id to its indexed JSONL file path. Refreshes the index
  * first (same as searchSessions) so recently created sessions resolve too.
- * Collisions — the same id indexed from multiple files — pick the newest by
+ * Collisions - the same id indexed from multiple files - pick the newest by
  * mtime. Returns null when the id is unknown.
  */
 export async function resolveSessionFile(sessionId: string): Promise<string | null> {
@@ -1419,7 +1419,7 @@ export async function getSessionMetrics(
     dailyMap.set(day, dm);
 
     // Local, not UTC. Transcript timestamps are Z-normalized, and slicing the hour out
-    // of the ISO string read it as wall-clock — shifting the whole histogram by the
+    // of the ISO string read it as wall-clock - shifting the whole histogram by the
     // machine's offset, so a US-Central user's 9am showed up as 2pm or 3pm.
     const hour = hourIn(r.started_at, tz);
     if (hour !== null) activeHours[hour] = (activeHours[hour] ?? 0) + 1;
@@ -1472,7 +1472,7 @@ interface ContextRow {
  * pair of parameters per genuinely distinct tree.
  *
  * Sorted first, which is what makes one pass correct: an ancestor is a strict prefix of its
- * descendants, and a prefix always sorts before the longer string — so by the time a root is
+ * descendants, and a prefix always sorts before the longer string - so by the time a root is
  * considered, any root that contains it has already been kept.
  */
 function coveringRoots(roots: string[]): string[] {
@@ -1488,14 +1488,14 @@ function coveringRoots(roots: string[]): string[] {
  *
  * `repo.container` alone is NOT the repo, and this is the bug the container abstraction
  * hides. In the bare layout every worktree lives under the container, so one prefix covers
- * all of them — but `git worktree add ../feature-x` on a normal repo puts the new worktree
+ * all of them - but `git worktree add ../feature-x` on a normal repo puts the new worktree
  * BESIDE the main one, and `container` falls back to `--show-toplevel`, which resolves to
  * whichever worktree the caller happens to be standing in (src/repo.ts). Container-and-
  * descendants therefore returns only the current worktree's sessions from either side,
  * while the surfaces built on it advertise aggregation.
  *
  * The additional roots are the live worktree paths `resolveRepo` already parsed out of
- * `git worktree list --porcelain` — an enumeration, not a path heuristic. That is precisely
+ * `git worktree list --porcelain` - an enumeration, not a path heuristic. That is precisely
  * what keeps a `…-v2` SIBLING out: it shares a prefix with the container but git does not
  * list it as a worktree of this repo, and only a prefix rule could ever have matched it.
  */
@@ -1542,12 +1542,12 @@ function parseFiles(json: string): string[] {
  * reintroduce exactly the silent suppression it was added to prevent.
  *
  * A count rather than a char budget, matching the primer's other tiers. Topic-conditional
- * `get_memory` is still the precise path — this tier's job is to guarantee delivery, so it
+ * `get_memory` is still the precise path - this tier's job is to guarantee delivery, so it
  * says how many it left out rather than pretending the list is complete.
  */
 export const PRIMER_MEMORY_LIMIT = 8;
 
-/** Approved memories for a repo, always-on first, capped — plus the true in-scope total. */
+/** Approved memories for a repo, always-on first, capped - plus the true in-scope total. */
 interface PrimerMemoryTier {
   memory: PrimerMemory[];
   memoryTotal: number;
@@ -1580,7 +1580,7 @@ export async function getContextPrimer(repo: RepoInfo, opts: ContextOptions): Pr
   const toolFilter = opts.tool ?? '';
 
   // Boundary-aware scope: every root of this repo (or just the current worktree) and their
-  // descendants — captures linked worktrees wherever git put them, while excluding a
+  // descendants - captures linked worktrees wherever git put them, while excluding a
   // same-prefix `…-v2` sibling that is not a worktree of this repo at all.
   const scope = repoScopeClause(repoRoots(repo, opts.worktreeOnly));
   const conditions: string[] = [scope.clause];
@@ -1632,7 +1632,7 @@ export async function getContextPrimer(repo: RepoInfo, opts: ContextOptions): Pr
   const byScore = (a: { score: number }, b: { score: number }): number => b.score - a.score;
   const substantive = scored.filter((x) => !x.trivia).sort(byScore);
   // Fallback: an all-trivial repo still shows something rather than an empty
-  // detail tier — trivia only loses its slot when real work competes for it.
+  // detail tier - trivia only loses its slot when real work competes for it.
   const pool = substantive.length > 0 ? substantive : [...scored].sort(byScore);
   const recentRows = pool.slice(0, limit).map((x) => x.row);
 
@@ -1683,7 +1683,7 @@ export interface RepoSessionRow {
   session_id: string;
   tool: string;
   date: string;
-  /** MAX(created_at) of the id's rows — the ordering key, not display data. */
+  /** MAX(created_at) of the id's rows - the ordering key, not display data. */
   created_at: string;
   first_prompt: string;
   custom_title: string;
@@ -1692,13 +1692,13 @@ export interface RepoSessionRow {
 /**
  * The newest `limit` sessions in a repo, plus the untruncated total.
  *
- * Same boundary-aware scope as getContextPrimer — every root of the repo plus their
+ * Same boundary-aware scope as getContextPrimer - every root of the repo plus their
  * descendants, so linked worktrees aggregate while a `…-v2` sibling stays out. Bounded in
  * SQL rather than in JS as the primer does: MCP clients call `resources/list` speculatively, and
  * selecting thousands of rows to hand back 50 is exactly the enumeration cost this surface
  * exists to avoid.
  *
- * Grouped by session_id because file_path — not session_id — is the primary key, and a
+ * Grouped by session_id because file_path - not session_id - is the primary key, and a
  * resource list must never carry the same `sessions://<id>` URI twice. MAX(created_at)
  * makes the surviving row the newest of a collision (SQLite's bare-column rule), the same
  * tie-break resolveSessionFile applies by mtime.
@@ -1749,7 +1749,7 @@ export interface CandidateSessionRow {
 /**
  * Repo-scoped sessions whose `date` falls in `[after, before]` (inclusive, YYYY-MM-DD).
  *
- * The coarse date bound keeps the scan O(window) rather than O(corpus) — `pacifico why`
+ * The coarse date bound keeps the scan O(window) rather than O(corpus) - `pacifico why`
  * derives the bound from a commit's authored day plus a buffer, then applies the precise
  * `started_at <= authoredAt <= (ended_at | end-of-day) + slack` rule in JS. Same
  * boundary-aware repo scope as the primer, so linked worktrees aggregate while a
@@ -1777,7 +1777,7 @@ export async function candidateSessionsForRepoWindow(
 
 /**
  * Repo-scoped sessions whose files_touched mentions `relPath`, newest first, no date
- * bound — the recall side of `why`'s unlanded-attempt bucket, which cannot know when the
+ * bound - the recall side of `why`'s unlanded-attempt bucket, which cannot know when the
  * abandoned work happened. files_touched only, never files_read: an attempt means the
  * session *changed* the file. Same substring-LIKE imprecision contract as the
  * searchSessions files filter; the caller re-checks after repo-relative normalization.
@@ -1808,7 +1808,7 @@ export interface SessionExcerptRow {
 
 /**
  * The best `limit` message excerpts for one session matching `terms` (already an FTS
- * query string). Scoped to the session's `file_path` — the same message_fts MATCH shape
+ * query string). Scoped to the session's `file_path` - the same message_fts MATCH shape
  * searchSessions uses. Returns [] on an empty/blank term set or an FTS syntax error;
  * evidence without quotes is never an error.
  */

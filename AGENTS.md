@@ -19,3 +19,5 @@ Read README.md and docs/pacifico/ARCHITECTURE.md before changing package boundar
 - Write all code comments in English. Preserve upstream attribution when editing.
 - apps/site is the bilingual Astro/React/Tailwind landing page, with its own lockfile.
   Keep its English and Spanish content equivalent and verify copy controls.
+
+- Avoid em dashes in copy, documentation, and code comments.

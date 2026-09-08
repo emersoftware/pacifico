@@ -58,13 +58,13 @@ describe('renderHtml', () => {
 
   // The report is one file with no build step behind it. The two font hosts are
   // the only exception, and they are a progressive enhancement: with them
-  // unreachable the stack falls back to the system faces. Anything else — an
-  // image, a script, a stylesheet, an analytics beacon — would make the document
+  // unreachable the stack falls back to the system faces. Anything else - an
+  // image, a script, a stylesheet, an analytics beacon - would make the document
   // depend on a network it promises not to touch.
   //
   // Scanned by the positions that actually cause a GET rather than by every
   // `https://` in the file. The page links to the project site now, and a link
-  // is something the reader may choose to follow — not something the document
+  // is something the reader may choose to follow - not something the document
   // goes and gets. The two are different promises and only one of them is this
   // test's; the other is the test below.
   test('fetches no external resource except the font stylesheet', () => {
@@ -192,7 +192,7 @@ describe('renderHtml', () => {
     // subagents in prose when there are any.
     expect(html).not.toContain('>Subagent share</span>');
     expect(html).not.toContain('>Agent types</span>');
-    // the cache card is unconditional — it describes volume, not an event class
+    // the cache card is unconditional - it describes volume, not an event class
     expect(html).toContain('cache hit rate');
   });
 });

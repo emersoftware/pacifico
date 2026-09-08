@@ -10,7 +10,7 @@
 #     unexpected token '(' at L:C, valid tokens [)]
 #
 # The failure is silent. release-please logs the error, DROPS the commit, and still
-# exits 0 — the run is green, `Considering: 0 commits`, and no release PR is created.
+# exits 0 - the run is green, `Considering: 0 commits`, and no release PR is created.
 # The commit's work is then absent from the changelog permanently, because that
 # message will never parse on any later run.
 #
@@ -19,7 +19,7 @@
 #   89f15bd (#61)  L65   summarizeMessages(extractMessages(...)).
 #
 # Note both are ordinary prose. Backticks do not shield the pattern, and a single
-# paren group at line start is fine — only nesting breaks. Neither author chose to
+# paren group at line start is fine - only nesting breaks. Neither author chose to
 # start a line that way; the paragraph simply wrapped there. That is why this is a
 # check and not a guideline.
 #
@@ -32,7 +32,7 @@
 set -euo pipefail
 
 # Prints offending lines as "L<line>:<col>  <text>". Exit 1 if any were found.
-# RSTART+RLENGTH-1 is the position of the inner `(` — the column release-please reports.
+# RSTART+RLENGTH-1 is the position of the inner `(` - the column release-please reports.
 scan() {
   awk 'match($0, /^[^ \t]*\([^)]*\(/) { printf "  L%d:%d  %s\n", NR, RSTART + RLENGTH - 1, $0; f = 1 }
        END { exit f ? 1 : 0 }'
@@ -64,7 +64,7 @@ selftest() {
   # A single paren group at line start parses fine.
   expect_ok 'summarizeMessages(messages) builds the columns'
   expect_ok 'getDataDir() resolves lazily'
-  # Nesting is fine once anything precedes it — this is the documented fix.
+  # Nesting is fine once anything precedes it - this is the documented fix.
   expect_ok 'It is built from summarizeMessages(extractMessages(lines)).'
   expect_ok 'Uses fingerprint(normalizeText(text)) to dedupe.'
   # Ordinary prose and conventional-commit syntax.

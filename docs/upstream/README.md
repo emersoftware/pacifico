@@ -2,7 +2,7 @@
 
 <p align="center">
   Search and memory across your AI coding sessions.<br/>
-  One index over <strong>Claude Code</strong>, <strong>Codex</strong>, <strong>Pi</strong>, and <strong>OpenCode</strong> — fuzzy-find and resume past sessions from the CLI, give agents recall over prior work via MCP, and see where your tokens go.
+  One index over <strong>Claude Code</strong>, <strong>Codex</strong>, <strong>Pi</strong>, and <strong>OpenCode</strong> - fuzzy-find and resume past sessions from the CLI, give agents recall over prior work via MCP, and see where your tokens go.
 </p>
 
 <p align="center">
@@ -12,13 +12,13 @@
 
 ## Why
 
-Every AI coding session leaves a transcript behind. Claude Code buries them in `~/.claude/projects/`, Codex and Pi have their own layouts, OpenCode keeps everything in a SQLite database — and everything in them (what you tried, what you decided, what broke) is effectively write-only.
+Every AI coding session leaves a transcript behind. Claude Code buries them in `~/.claude/projects/`, Codex and Pi have their own layouts, OpenCode keeps everything in a SQLite database - and everything in them (what you tried, what you decided, what broke) is effectively write-only.
 
 `sessions` builds a full-text search index over all of it and makes that history useful in three ways:
 
-- **Search & resume (CLI)** — fuzzy-find any past session across all four tools, ranked by relevance, and jump back in.
-- **Agent memory (MCP)** — agents search your history, pull a repo-scoped context primer when you return to a codebase, and answer "what did I do last week?" via bundled skills.
-- **Usage reports** — a token/cost dashboard across tools, models, and projects.
+- **Search & resume (CLI)** - fuzzy-find any past session across all four tools, ranked by relevance, and jump back in.
+- **Agent memory (MCP)** - agents search your history, pull a repo-scoped context primer when you return to a codebase, and answer "what did I do last week?" via bundled skills.
+- **Usage reports** - a token/cost dashboard across tools, models, and projects.
 
 ## Install
 
@@ -42,19 +42,19 @@ git clone https://github.com/nicknisi/sessions && cd sessions
 bun install && bun run build
 ```
 
-The compiled binary is at `dist/sessions`. Requires [Bun](https://bun.sh) when building from source. The Homebrew install is a standalone binary — no runtime needed.
+The compiled binary is at `dist/sessions`. Requires [Bun](https://bun.sh) when building from source. The Homebrew install is a standalone binary - no runtime needed.
 
 ### Dependencies
 
-- **fzf** (optional but recommended) — used for fuzzy selection. If fzf is not installed, a built-in numbered list selector is used as a fallback. Install with `brew install fzf`.
-- **Ollama** (optional) — enables semantic recall (see below). If Ollama is not running, search stays purely lexical. Install from [ollama.com](https://ollama.com).
+- **fzf** (optional but recommended) - used for fuzzy selection. If fzf is not installed, a built-in numbered list selector is used as a fallback. Install with `brew install fzf`.
+- **Ollama** (optional) - enables semantic recall (see below). If Ollama is not running, search stays purely lexical. Install from [ollama.com](https://ollama.com).
 
 ### Semantic recall
 
-Search is lexical by default (full-text ranking over titles, paths, commands, and messages). When [Ollama](https://ollama.com) is running locally, `sessions` adds an **optional** semantic lane that fuses with — never replaces — the lexical results, so a paraphrase like "flaky tests" can surface a session about "intermittent CI failures".
+Search is lexical by default (full-text ranking over titles, paths, commands, and messages). When [Ollama](https://ollama.com) is running locally, `sessions` adds an **optional** semantic lane that fuses with - never replaces - the lexical results, so a paraphrase like "flaky tests" can surface a session about "intermittent CI failures".
 
 - **Detection**: `sessions` probes `http://localhost:11434` (override with `SESSIONS_OLLAMA_URL`) and uses the `nomic-embed-text` model (override with `SESSIONS_OLLAMA_MODEL`; `ollama pull nomic-embed-text` to install it). Session embeddings are computed at index time and cached; installing Ollama later upgrades the whole corpus on the next refresh.
-- **Absence is first-class**: no Ollama, an unreachable server, or the model not pulled all degrade to identical lexical behavior. Not running Ollama is the off switch — there is no flag.
+- **Absence is first-class**: no Ollama, an unreachable server, or the model not pulled all degrade to identical lexical behavior. Not running Ollama is the off switch - there is no flag.
 - **Privacy**: only `localhost` is ever contacted; nothing leaves your machine, and no model is bundled in the binary.
 
 ## Quick Setup
@@ -96,7 +96,7 @@ sessions setup
 
 After upgrading sessions (e.g., `brew upgrade sessions`), run `sessions setup` again to update the skills to the latest version.
 
-To remove the plugin, the MCP config, and the SessionStart hook: `sessions uninstall`. It removes only what the installer created — durable data in `~/.local/share/sessions` (the memory store and the transcript archive) is left alone.
+To remove the plugin, the MCP config, and the SessionStart hook: `sessions uninstall`. It removes only what the installer created - durable data in `~/.local/share/sessions` (the memory store and the transcript archive) is left alone.
 
 ## CLI: search & resume
 
@@ -140,20 +140,20 @@ sessions vault inspect <target>  # One archived session by original path or sess
 | `report`                        | Generate a usage report (see [Usage reports](#usage-reports))                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | `memory mine`                   | Mine past sessions for durable facts worth remembering and print the candidate batch as JSON. `--repo <path>` scopes to one repo container (default: the current repo); `--all` mines every repo; `--since-last` mines only transcripts whose mtime or size changed since the previous mine, so a repeat run over an unchanged corpus emits an empty batch                                                                                                                                                                                                                                                                                             |
 | `memory report`                 | Read-only recurrence report over the memory store: VIOLATIONS (approved memories still being re-corrected after their `lastSeen` date), REPEATS (corrections spanning sessions and dates that were never triaged), and FUZZY (middling-similarity paraphrase pairs to confirm in `/memory`). `--repo <path>` / `--all` scope the report like `mine`; `--since YYYY-MM-DD` filters cluster evidence; `--json` emits the machine-readable batch; `--no-snapshot` skips appending to the trend history. Each run appends a dated snapshot to `~/.local/share/sessions/memory-recurrence-snapshots.jsonl`, and the TREND section shows deltas between runs |
-| `memory pending`                | Print the untriaged backlog as JSON: the true candidate count plus the first five texts. Reads the store only — it never mines, which is what makes it cheap enough for `/weekly-summary` to call                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| `memory <action>`               | Record a triage decision by the `id` from the mine's batch: `approve <id>`, `reject <id>` (never emitted again), or `snooze <id>` (hidden until the snooze expires **and** a later `merge` adds a phrasing that was not there before). `approve` also takes `--always-on` (budgeted — see [Topic filtering and standing constraints](#topic-filtering-and-standing-constraints)), `--no-always-on` to explicitly revoke it, `--scope group:<name>` — see [Project groups](#project-groups) — and `--scope repo:<path>`, which binds a memory to one repo (the path is resolved to its repo container, so any worktree or subdirectory of it works)     |
-| `memory export`                 | Write approved memories as a portable JSON bundle on stdout; `--out <path>` writes a file. Approved records only, with session paths and repo paths stripped — no local paths leave the machine                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| `memory import <path>`          | Merge a bundle from another author in as candidates to triage. Never lands as approved and never overwrites your own approve/reject decisions. A `repo`-scoped memory arrives with no repo key — export strips local paths — so bind it to one of your repos when you approve it: `--scope repo:.`. Import says how many need it                                                                                                                                                                                                                                                                                                                       |
+| `memory pending`                | Print the untriaged backlog as JSON: the true candidate count plus the first five texts. Reads the store only - it never mines, which is what makes it cheap enough for `/weekly-summary` to call                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `memory <action>`               | Record a triage decision by the `id` from the mine's batch: `approve <id>`, `reject <id>` (never emitted again), or `snooze <id>` (hidden until the snooze expires **and** a later `merge` adds a phrasing that was not there before). `approve` also takes `--always-on` (budgeted - see [Topic filtering and standing constraints](#topic-filtering-and-standing-constraints)), `--no-always-on` to explicitly revoke it, `--scope group:<name>` - see [Project groups](#project-groups) - and `--scope repo:<path>`, which binds a memory to one repo (the path is resolved to its repo container, so any worktree or subdirectory of it works)     |
+| `memory export`                 | Write approved memories as a portable JSON bundle on stdout; `--out <path>` writes a file. Approved records only, with session paths and repo paths stripped - no local paths leave the machine                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `memory import <path>`          | Merge a bundle from another author in as candidates to triage. Never lands as approved and never overwrites your own approve/reject decisions. A `repo`-scoped memory arrives with no repo key - export strips local paths - so bind it to one of your repos when you approve it: `--scope repo:.`. Import says how many need it                                                                                                                                                                                                                                                                                                                       |
 | `memory import --from <source>` | Import the durable facts another agent on this machine has stored, as candidates to triage: `pi-hermes` (its structured store, or MEMORY.md/USER.md/failures.md), `claude` (global and repo CLAUDE.md/AGENTS.md plus the per-project memory store), or `all`. `--repo <path>` sets the repo context (default: cwd). Long consolidated entries split at their own sentence boundaries to fit the memory band; entries already in the store count as known, not duplicates. `codex` stores hold command permissions, not facts, so it imports nothing. See [Other agents' memory stores](#other-agents-memory-stores)                                    |
 | `vault status`                  | Report on the durable transcript archive: per-tool counts, total bytes, and how many archived sessions are vault-only (their source file is gone). See [Transcript vault](#transcript-vault)                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | `vault inspect <target>`        | Show one archived session by its original file path or session id: the manifest entry plus whether the session is live, archived, or both                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | `setup`                         | Install plugin and configure MCP for detected tools (`--hooks` opts into auto-injection)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | `uninstall`                     | Remove plugin, MCP config, and the SessionStart hook from all tools. Durable data in `~/.local/share/sessions` (the memory store and the transcript archive) is preserved                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| `cleanup`                       | Full reset: uninstall plugin + clear search index. The transcript archive is untouched — a cleared index rebuilds from the vault                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `cleanup`                       | Full reset: uninstall plugin + clear search index. The transcript archive is untouched - a cleared index rebuilds from the vault                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | `--here`                        | Scope to the current git repo (default: all projects)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | `--tool <name>`                 | Filter by tool: `claude`, `codex`, `pi`, or `opencode`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `--errored`                     | Only show sessions that hit an error                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| `--file <path>`                 | Only sessions that touched or read this path (substring match; repeatable — every path must match). Newest first when no query is given                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `--file <path>`                 | Only sessions that touched or read this path (substring match; repeatable - every path must match). Newest first when no query is given                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | `--mcp`                         | Start as an MCP server (stdio transport)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | `--clear-cache`                 | Remove the search index (rebuilds on next use)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | `--no-color`                    | Disable colored output                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
@@ -170,8 +170,8 @@ With no arguments, `sessions` scans all session directories, extracts the first 
 ○ old-project      claude  2025-03   Set up the initial project structure
 ```
 
-- **●** (green) — the project directory still exists
-- **○** (red) — the project directory has been deleted
+- **●** (green) - the project directory still exists
+- **○** (red) - the project directory has been deleted
 
 ### Searching
 
@@ -199,7 +199,7 @@ For Claude Code sessions, the command includes `--resume <session-id>`; for Open
 
 ## Why: explain code
 
-`sessions why <target>` answers "why does this code exist" by correlating a git commit to the AI coding sessions that produced it. It is **read-only** on both sides: git is consulted with `log`/`blame`/`show` only, and nothing is ever written to any repository — no hooks, no trailers, no branches.
+`sessions why <target>` answers "why does this code exist" by correlating a git commit to the AI coding sessions that produced it. It is **read-only** on both sides: git is consulted with `log`/`blame`/`show` only, and nothing is ever written to any repository - no hooks, no trailers, no branches.
 
 ```sh
 sessions why src/cache.ts          # commits that last touched a file, and their sessions
@@ -217,7 +217,7 @@ The same correlation is exposed to agents as the read-only MCP tool `why_did_thi
 
 ## Agent memory
 
-`sessions` includes an [MCP](https://modelcontextprotocol.io/) server that gives AI agents searchable access to your past conversations — across every tool, not just the one they're running in. `sessions setup` configures it automatically; for manual setup, add to your MCP configuration (e.g., `~/.claude/.mcp.json`):
+`sessions` includes an [MCP](https://modelcontextprotocol.io/) server that gives AI agents searchable access to your past conversations - across every tool, not just the one they're running in. `sessions setup` configures it automatically; for manual setup, add to your MCP configuration (e.g., `~/.claude/.mcp.json`):
 
 ```json
 {
@@ -236,20 +236,20 @@ The MCP server exposes twelve tools:
 
 | Tool                    | Description                                                                                                                                                                                                                                                                                                                                                                                         |
 | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `search_sessions`       | Ranked, top-k search across sessions by keyword; each result includes snippets, files/commands, an errored flag, a resume command, and `messageHits` — the specific matching messages (index, role, snippet). `files` and `commands` are capped at 10 and 5, with `fileCount`/`commandCount` reporting the true totals. A `files` filter answers "which sessions touched this file?" (newest first) |
-| `grep_sessions`         | Exhaustive literal-or-regex match over every indexed message — for "every time I said X", counts, or exact patterns where ranked search would miss some. Returns `totalHits`/`totalSessions` and hit snippets; each hit's `msgIndex` feeds `get_session_messages` directly                                                                                                                          |
-| `get_session_messages`  | Retrieve messages from a specific session, paginated by offset and limit — pass a `messageHits[].index` from search (or a `grep_sessions` hit's `msgIndex`, or an `exchanges[].index` from the digest) as the offset. `include_tools` annotates each turn with the assistant's tool calls                                                                                                           |
+| `search_sessions`       | Ranked, top-k search across sessions by keyword; each result includes snippets, files/commands, an errored flag, a resume command, and `messageHits` - the specific matching messages (index, role, snippet). `files` and `commands` are capped at 10 and 5, with `fileCount`/`commandCount` reporting the true totals. A `files` filter answers "which sessions touched this file?" (newest first) |
+| `grep_sessions`         | Exhaustive literal-or-regex match over every indexed message - for "every time I said X", counts, or exact patterns where ranked search would miss some. Returns `totalHits`/`totalSessions` and hit snippets; each hit's `msgIndex` feeds `get_session_messages` directly                                                                                                                          |
+| `get_session_messages`  | Retrieve messages from a specific session, paginated by offset and limit - pass a `messageHits[].index` from search (or a `grep_sessions` hit's `msgIndex`, or an `exchanges[].index` from the digest) as the offset. `include_tools` annotates each turn with the assistant's tool calls                                                                                                           |
 | `get_session_digest`    | The arc of one session in a single bounded call (~2k tokens): every genuine user turn paired with its exchange's final assistant reply. Long sessions elide middle exchanges, never the ends                                                                                                                                                                                                        |
-| `get_activity_digest`   | Compact digest of sessions in a date range, grouped by day and project — for weekly summaries                                                                                                                                                                                                                                                                                                       |
+| `get_activity_digest`   | Compact digest of sessions in a date range, grouped by day and project - for weekly summaries                                                                                                                                                                                                                                                                                                       |
 | `get_session_metrics`   | Usage metrics for a date range: tool/project breakdown, daily activity, active hours                                                                                                                                                                                                                                                                                                                |
 | `get_context_primer`    | Repo-scoped primer (recent sessions in detail + older headlines) for re-injecting prior work                                                                                                                                                                                                                                                                                                        |
-| `why_did_this_change`   | Correlate a file, `path:line`, commit-ish, or free-text topic to the AI sessions behind it. Returns the resolved commit (subject, author time, files, trailers) and the sessions that produced it, each tagged `files+time` or `time-only`, with excerpts and a resume command. Read-only on git and the index — never writes to any repository                                                     |
-| `get_memory`            | Approved standing instructions and durable facts for this repo, its project groups, and cross-repo workflow rules — a bounded set of short sentences to read before starting a task. An optional `topic` narrows the result to what is relevant to the task at hand; memory approved with `--always-on` are returned regardless and come first                                                      |
-| `get_memory_sources`    | Inventory every memory store the agents on this machine keep — pi-hermes-memory, Claude Code's global/per-project memory and CLAUDE.md/AGENTS.md files, Codex's rules and goals — with entry counts, durable-fact counts, and last-updated dates. Pure discovery for "what does each agent know?"                                                                                                   |
+| `why_did_this_change`   | Correlate a file, `path:line`, commit-ish, or free-text topic to the AI sessions behind it. Returns the resolved commit (subject, author time, files, trailers) and the sessions that produced it, each tagged `files+time` or `time-only`, with excerpts and a resume command. Read-only on git and the index - never writes to any repository                                                     |
+| `get_memory`            | Approved standing instructions and durable facts for this repo, its project groups, and cross-repo workflow rules - a bounded set of short sentences to read before starting a task. An optional `topic` narrows the result to what is relevant to the task at hand; memory approved with `--always-on` are returned regardless and come first                                                      |
+| `get_memory_sources`    | Inventory every memory store the agents on this machine keep - pi-hermes-memory, Claude Code's global/per-project memory and CLAUDE.md/AGENTS.md files, Codex's rules and goals - with entry counts, durable-fact counts, and last-updated dates. Pure discovery for "what does each agent know?"                                                                                                   |
 | `review_agent_memories` | Read the CONTENTS of those stores with provenance: source agent and store, scope, a durable flag (importable fact vs audit-only material), and a `similarTo` flag when an entry substantially overlaps a memory sessions already holds. Secret/injection text is withheld with a count. Filter by `agent`, narrow by `topic`; capped at 50 entries with `total`/`truncated` reporting the rest      |
 | `get_memory_recurrence` | Read-only recurrence report over the memory store: VIOLATIONS (approved memories re-corrected after their `lastSeen` date), REPEATS (corrections spanning multiple sessions and dates that were never triaged), and FUZZY (middling-similarity paraphrase pairs for human confirmation). Each finding carries session links. `repo` defaults to the current repo; `all` crosses repos               |
 
-Together these support the recall flow the bundled skills teach: `search_sessions` (ranked) or `grep_sessions` (exhaustive) localizes the hit to a message, the digest gives a session's whole arc in one call, and targeted message reads expand only the exchanges that matter — no paging full transcripts.
+Together these support the recall flow the bundled skills teach: `search_sessions` (ranked) or `grep_sessions` (exhaustive) localizes the hit to a message, the digest gives a session's whole arc in one call, and targeted message reads expand only the exchanges that matter - no paging full transcripts.
 
 The `get_activity_digest` tool supports a `detail` parameter: `"compact"` (default) returns topics and file paths only, `"highlights"` adds first and last user messages for substantive sessions (best for summaries), and `"full"` includes all user messages per session.
 
@@ -270,7 +270,7 @@ Skills work with Claude Code, Cursor, Codex, and any agent that supports the ski
 
 ### Project groups
 
-A memory's scope is normally derived: a fact seen in one repo container is `repo`-scoped, one seen across unrelated containers is `workflow`-scoped. A **project group** is the tier in between — a fact true of several related repos, but not of everything.
+A memory's scope is normally derived: a fact seen in one repo container is `repo`-scoped, one seen across unrelated containers is `workflow`-scoped. A **project group** is the tier in between - a fact true of several related repos, but not of everything.
 
 Group membership cannot be derived from your session history, so it comes from a config file at `~/.local/share/sessions/groups.json` (or `$SESSIONS_DATA_DIR/groups.json`). Nothing writes it for you; create it yourself:
 
@@ -283,7 +283,7 @@ Group membership cannot be derived from your session history, so it comes from a
 }
 ```
 
-Each group maps a name to a list of path globs matched against the resolved repo container. `~` expands to your home directory, and a subdirectory of a match counts as a member — working in `~/Developer/authkit-session/packages/core` puts you in `authkit`.
+Each group maps a name to a list of path globs matched against the resolved repo container. `~` expands to your home directory, and a subdirectory of a match counts as a member - working in `~/Developer/authkit-session/packages/core` puts you in `authkit`.
 
 Then assign a group at triage time:
 
@@ -291,45 +291,45 @@ Then assign a group at triage time:
 sessions memory approve <id> --scope group:authkit
 ```
 
-The file is never read from inside a repo, and it is never required. If it is missing, malformed, or does not mention a memory's group, retrieval quietly degrades to repo-plus-workflow rather than failing — but that also means a group memory with no matching config is silently never returned, so check the file if a group memory is not showing up.
+The file is never read from inside a repo, and it is never required. If it is missing, malformed, or does not mention a memory's group, retrieval quietly degrades to repo-plus-workflow rather than failing - but that also means a group memory with no matching config is silently never returned, so check the file if a group memory is not showing up.
 
 ### Topic filtering and standing constraints
 
 `get_memory` takes an optional `topic`. When present, the returned set is narrowed to memory whose text overlaps the topic, so an agent about to work on authentication does not spend context on your build conventions. Omitting `topic` returns everything, exactly as before.
 
-Some facts must never be filtered out — "canary is the mainline branch" has to reach the agent whether or not the task description mentions branching. Approve those with `--always-on`:
+Some facts must never be filtered out - "canary is the mainline branch" has to reach the agent whether or not the task description mentions branching. Approve those with `--always-on`:
 
 ```bash
 sessions memory approve <id> --always-on
 ```
 
-An always-on memory is returned for every topic and sorts first, so an agent that truncates drops the conditional tail rather than the invariants. It still respects state and scope: rejected, snoozed, and out-of-scope memories are never returned. Approving again without the flag does not clear it — omission is not a decision; clearing takes an explicit `--no-always-on`.
+An always-on memory is returned for every topic and sorts first, so an agent that truncates drops the conditional tail rather than the invariants. It still respects state and scope: rejected, snoozed, and out-of-scope memories are never returned. Approving again without the flag does not clear it - omission is not a decision; clearing takes an explicit `--no-always-on`.
 
-The set is budgeted: at most 20 always-on memories totalling 2,000 characters. The cap is what keeps the flag's promise credible — standing constraints only cut through if there are few enough of them to always be read — so a grant past it is refused with instructions to free a slot (`--no-always-on`). A store already over budget (hand-edited, or written before the cap existed) is still served in full, and `get_memory` says so: truncating a standing constraint would be exactly the silent suppression the flag exists to prevent.
+The set is budgeted: at most 20 always-on memories totalling 2,000 characters. The cap is what keeps the flag's promise credible - standing constraints only cut through if there are few enough of them to always be read - so a grant past it is refused with instructions to free a slot (`--no-always-on`). A store already over budget (hand-edited, or written before the cap existed) is still served in full, and `get_memory` says so: truncating a standing constraint would be exactly the silent suppression the flag exists to prevent.
 
 ### Content scanning
 
-Memory text is scanned at every boundary it can cross. Secret material (API keys, tokens, private-key blocks), prompt-injection phrasing ("ignore previous instructions…"), and invisible Unicode characters never enter the store or reach an agent: the mine drops the turn, `import` withholds the record and says so on stderr, `approve` refuses with the finding named, and `get_memory` withholds any pre-existing approved row while reporting its id — so you can `reject` it or re-approve a clean rephrasing with `--as`. The withheld text itself is never served, not even in the warning.
+Memory text is scanned at every boundary it can cross. Secret material (API keys, tokens, private-key blocks), prompt-injection phrasing ("ignore previous instructions…"), and invisible Unicode characters never enter the store or reach an agent: the mine drops the turn, `import` withholds the record and says so on stderr, `approve` refuses with the finding named, and `get_memory` withholds any pre-existing approved row while reporting its id - so you can `reject` it or re-approve a clean rephrasing with `--as`. The withheld text itself is never served, not even in the warning.
 
-Facts _about_ secret handling are deliberately not flagged — "set `DATABASE_URL` through doppler, never in `.env`" and "never pipe `$GITHUB_TOKEN` through curl" are exactly the memories worth keeping. The scanner matches secret material and hijack phrasing, not secret vocabulary: a prohibition legitimately names the thing it prohibits.
+Facts _about_ secret handling are deliberately not flagged - "set `DATABASE_URL` through doppler, never in `.env`" and "never pipe `$GITHUB_TOKEN` through curl" are exactly the memories worth keeping. The scanner matches secret material and hijack phrasing, not secret vocabulary: a prohibition legitimately names the thing it prohibits.
 
 ### Other agents' memory stores
 
 Sessions are only half of what an agent remembers. Each harness also keeps its own store beside the conversation, and if you hop between agents those stores scatter: pi-hermes-memory writes a categorized SQLite store plus `MEMORY.md`/`USER.md`/`failures.md`; Claude Code injects a global `~/.claude/CLAUDE.md`, per-repo `CLAUDE.md`/`AGENTS.md` files, and a per-project `memory/` directory; Codex records command-permission rules. Three surfaces make them visible and portable, all read-only against the source stores:
 
 - **`get_memory_sources`** (MCP) inventories every store it can see for the current repo: what it is, how many entries it holds, how many of those are durable facts, and when it was last updated. This is the "what does each agent know about me?" answer.
-- **`review_agent_memories`** (MCP) reads their contents with provenance. Every entry carries its source agent and store, a sessions-style scope, and a `durable` flag — `true` for standing facts (importable), `false` for audit-only material like Codex's allow/deny rules or Claude's agent research notes. Entries that substantially overlap a memory sessions already stores are flagged in `similarTo`, so redundancy and near-conflicts between agents are visible. The content scanner gates this surface too: flagged text is withheld with a count, never served. These entries are untriaged source material, not binding instructions — `get_memory` remains the binding surface.
-- **`sessions memory import --from <pi-hermes|claude|all>`** (CLI) lands another store's durable facts in your own store as candidates, through the same gates as a bundle import: the text band, the content scan, and candidate-until-approved. Long consolidated entries (pi-hermes averages ~1,100 characters per row) split at their own enumeration and sentence boundaries to fit the 240-character band; fragments that can't be reshaped are counted, never silently dropped. Entries already in the store are reported as known, and a pi-hermes fact recorded against a bare project name arrives unbound — bind it with `approve <id> --scope repo:.` like any import.
+- **`review_agent_memories`** (MCP) reads their contents with provenance. Every entry carries its source agent and store, a sessions-style scope, and a `durable` flag - `true` for standing facts (importable), `false` for audit-only material like Codex's allow/deny rules or Claude's agent research notes. Entries that substantially overlap a memory sessions already stores are flagged in `similarTo`, so redundancy and near-conflicts between agents are visible. The content scanner gates this surface too: flagged text is withheld with a count, never served. These entries are untriaged source material, not binding instructions - `get_memory` remains the binding surface.
+- **`sessions memory import --from <pi-hermes|claude|all>`** (CLI) lands another store's durable facts in your own store as candidates, through the same gates as a bundle import: the text band, the content scan, and candidate-until-approved. Long consolidated entries (pi-hermes averages ~1,100 characters per row) split at their own enumeration and sentence boundaries to fit the 240-character band; fragments that can't be reshaped are counted, never silently dropped. Entries already in the store are reported as known, and a pi-hermes fact recorded against a bare project name arrives unbound - bind it with `approve <id> --scope repo:.` like any import.
 
-The workflow this enables: switch agents for a project, run `get_memory_sources` to see what the old harness learned, `review_agent_memories` to audit it, and `memory import --from` to carry the facts worth keeping — then triage with `/memory` as usual. Codex keeps permission decisions rather than facts, so `--from codex` reports that and imports nothing.
+The workflow this enables: switch agents for a project, run `get_memory_sources` to see what the old harness learned, `review_agent_memories` to audit it, and `memory import --from` to carry the facts worth keeping - then triage with `/memory` as usual. Codex keeps permission decisions rather than facts, so `--from codex` reports that and imports nothing.
 
 ### Context primer
 
-When you return to a codebase, the primer answers "where did I leave off?" — recent sessions in detail, older ones as headlines, including the branch you were on and the last exchange of each session. It's available three ways:
+When you return to a codebase, the primer answers "where did I leave off?" - recent sessions in detail, older ones as headlines, including the branch you were on and the last exchange of each session. It's available three ways:
 
-- **On demand from an agent** — the `/context` skill or the `get_context_primer` MCP tool
-- **On demand from the shell** — `sessions context` prints it as markdown (`--full` widens detail; `--limit`/`--days`/`--tool` filter; `--worktree` narrows to the current worktree; `--out <path>` writes to a file)
-- **Automatically at session start** — opt-in, below
+- **On demand from an agent** - the `/context` skill or the `get_context_primer` MCP tool
+- **On demand from the shell** - `sessions context` prints it as markdown (`--full` widens detail; `--limit`/`--days`/`--tool` filter; `--worktree` narrows to the current worktree; `--out <path>` writes to a file)
+- **Automatically at session start** - opt-in, below
 
 #### Auto-injecting context at session start (opt-in)
 
@@ -339,11 +339,11 @@ You can have a small primer injected automatically at the start of every Claude 
 sessions setup --hooks    # enable auto-injection (Claude Code)
 ```
 
-Run without `--hooks` and `setup` will ask interactively (when on a TTY); it is **off by default** because it costs a small number of tokens on every session. The hook runs `sessions context --hook` — a tiny primer (the 3 most recent sessions for the current repo). In a fresh repo with no history, or outside a git repo, it injects nothing and never blocks session start.
+Run without `--hooks` and `setup` will ask interactively (when on a TTY); it is **off by default** because it costs a small number of tokens on every session. The hook runs `sessions context --hook` - a tiny primer (the 3 most recent sessions for the current repo). In a fresh repo with no history, or outside a git repo, it injects nothing and never blocks session start.
 
 To turn it off, run `sessions uninstall` (which also removes the plugin and MCP config). The hook lives in `~/.claude/settings.json` under `hooks.SessionStart`; enabling and disabling preserve any other hooks you have configured.
 
-> Codex and Cursor are not yet supported — their session-start hook contracts are still being confirmed. The hook also requires `sessions` to be on your `PATH` at session start.
+> Codex and Cursor are not yet supported - their session-start hook contracts are still being confirmed. The hook also requires `sessions` to be on your `PATH` at session start.
 
 ## Usage reports
 
@@ -386,25 +386,25 @@ The selected period is shown prominently at the top of both outputs (and in the 
 
 Both outputs are built from the same data:
 
-- **Summary** — total cost, tokens, sessions, messages, active days, current/longest streak, peak hour, and most-used model.
-- **Pace** — spend per active day, a straight-line projection to the end of the period, and the equally long window immediately before it. Only for a bounded period; an all-time report has nothing to pace against.
-- **Cache** — hit rate, read and write volume, and what the prompt cache saved against uncached input rates.
-- **Breakdowns** — by tool, provider, model, and project.
-- **Weekly trend and model mix** — cost per week, and cost per week stacked by model, so a shift between models is visible while it happens.
-- **Subagents** — spend by dispatched agent type with the cost of a single dispatch of each, plus the costliest individual dispatches. Roughly half of a heavy Task user's tokens land here; they are counted in every total above, and this says who spent them.
-- **Sessions** — the distribution of session spend (median, p90, max across every session), and the most expensive ones named with their title or opening prompt, pulled read-only from the search index when one exists.
-- **Daily series** — per-day tokens/cost/sessions/messages with an hourly histogram.
-- **Insights** — a weekly trend plus hour-of-day and weekday activity profiles.
+- **Summary** - total cost, tokens, sessions, messages, active days, current/longest streak, peak hour, and most-used model.
+- **Pace** - spend per active day, a straight-line projection to the end of the period, and the equally long window immediately before it. Only for a bounded period; an all-time report has nothing to pace against.
+- **Cache** - hit rate, read and write volume, and what the prompt cache saved against uncached input rates.
+- **Breakdowns** - by tool, provider, model, and project.
+- **Weekly trend and model mix** - cost per week, and cost per week stacked by model, so a shift between models is visible while it happens.
+- **Subagents** - spend by dispatched agent type with the cost of a single dispatch of each, plus the costliest individual dispatches. Roughly half of a heavy Task user's tokens land here; they are counted in every total above, and this says who spent them.
+- **Sessions** - the distribution of session spend (median, p90, max across every session), and the most expensive ones named with their title or opening prompt, pulled read-only from the search index when one exists.
+- **Daily series** - per-day tokens/cost/sessions/messages with an hourly histogram.
+- **Insights** - a weekly trend plus hour-of-day and weekday activity profiles.
 
-In the HTML, every stat, section heading, and table column explains itself on hover — what is counted, what is excluded, and what the cost is an estimate of.
+In the HTML, every stat, section heading, and table column explains itself on hover - what is counted, what is excluded, and what the cost is an estimate of.
 
 The JSON is a sessions-owned `UsageReport` (`{ "generator": "sessions", "version": 1, ... }`). The HTML is fully self-contained (inline SVG charts, no external assets) and adapts to light/dark.
 
-Cost is estimated from [LiteLLM](https://github.com/BerriAI/litellm) pricing data, fetched at most once per day and cached locally, with an embedded snapshot as the offline fallback — a failed fetch never blocks the report. Pi sessions use the cost recorded in their own logs; OpenCode sessions use their recorded cost when present (Anthropic) and fall back to estimated pricing otherwise (OpenAI). A model with no published price is billed at the newest rate in its own family and flagged as an estimate in the report; one in no known family is counted at `$0`, loudly. Token totals exclude cache reads (replayed context, mostly free reuse).
+Cost is estimated from [LiteLLM](https://github.com/BerriAI/litellm) pricing data, fetched at most once per day and cached locally, with an embedded snapshot as the offline fallback - a failed fetch never blocks the report. Pi sessions use the cost recorded in their own logs; OpenCode sessions use their recorded cost when present (Anthropic) and fall back to estimated pricing otherwise (OpenAI). A model with no published price is billed at the newest rate in its own family and flagged as an estimate in the report; one in no known family is counted at `$0`, loudly. Token totals exclude cache reads (replayed context, mostly free reuse).
 
 ## Wrapped
 
-`sessions wrapped` turns your year of AI pairing into a Spotify-Wrapped-style scroll-through story and opens it in your browser: tokens with a human-scale equivalence, the API-rate receipt, streaks, a rhythm heatmap, top projects and models, your most significant session — and a set of fun stats mined from what you and your agents actually said to each other (the interrupt census, the two-sided apology scoreboard, how many times Claude told you "you're absolutely right", your word of the year). It ends with a coding-personality reveal built from three behavioral axes, with the evidence printed on the card, followed by a shareable image you can download or copy straight to the clipboard — at 1200 × 630 for timelines or 1080 × 1920 for stories, in whichever of six accents you like.
+`sessions wrapped` turns your year of AI pairing into a Spotify-Wrapped-style scroll-through story and opens it in your browser: tokens with a human-scale equivalence, the API-rate receipt, streaks, a rhythm heatmap, top projects and models, your most significant session - and a set of fun stats mined from what you and your agents actually said to each other (the interrupt census, the two-sided apology scoreboard, how many times Claude told you "you're absolutely right", your word of the year). It ends with a coding-personality reveal built from three behavioral axes, with the evidence printed on the card, followed by a shareable image you can download or copy straight to the clipboard - at 1200 × 630 for timelines or 1080 × 1920 for stories, in whichever of six accents you like.
 
 ```sh
 sessions wrapped                     # this year, opens in your browser
@@ -414,11 +414,11 @@ sessions wrapped --stdout            # the underlying JSON, for piping
 sessions wrapped --extras roast.json # inject your own extra slides
 ```
 
-The fun slides are **dynamically selected**: every candidate stat is scored for how notable it is in _your_ data, and only the top ones render — a daylight coder never sees a 3 AM slide. Everything is computed locally (event logs + the search index); nothing leaves your machine. Because AI tools prune old transcripts, the page discloses when its data starts if that's later than January 1. Token and cost math match `sessions report` exactly.
+The fun slides are **dynamically selected**: every candidate stat is scored for how notable it is in _your_ data, and only the top ones render - a daylight coder never sees a 3 AM slide. Everything is computed locally (event logs + the search index); nothing leaves your machine. Because AI tools prune old transcripts, the page discloses when its data starts if that's later than January 1. Token and cost math match `sessions report` exactly.
 
 ### Roast mode
 
-`--roast` hands your computed stats to an agent CLI you already have installed (`claude`, then `codex`, then `pi` — override with `--roast-with <tool>`) and asks it to improvise a few edgy, bespoke roast slides, which are appended to the story. It rides your existing subscription — no API key, no setup. Only the **stats** are sent (counts, project names, the numbers already on the page), never raw transcript text, and every roast slide is stamped "improvised by \<tool\>" so a generated line can never pass for a counted one. It's opt-in and fails open: no CLI, a timeout, or unparseable output just drops the roast and the deterministic page renders as normal. Expect it to add 15–90s.
+`--roast` hands your computed stats to an agent CLI you already have installed (`claude`, then `codex`, then `pi` - override with `--roast-with <tool>`) and asks it to improvise a few edgy, bespoke roast slides, which are appended to the story. It rides your existing subscription - no API key, no setup. Only the **stats** are sent (counts, project names, the numbers already on the page), never raw transcript text, and every roast slide is stamped "improvised by \<tool\>" so a generated line can never pass for a counted one. It's opt-in and fails open: no CLI, a timeout, or unparseable output just drops the roast and the deterministic page renders as normal. Expect it to add 15–90s.
 
 `--extras <path>` is the manual version: a JSON array of up to six slides (`[{"headline": "...", "title"?, "subline"?, "footnote"?}]`) injected into the story. `--roast` is the same seam, filled by a model instead of by hand.
 
@@ -437,16 +437,16 @@ The fun slides are **dynamically selected**: every candidate stat is scored for 
 
 Each session file is parsed to extract:
 
-- **Working directory** — read from the session metadata to determine which project the session belongs to
-- **First user prompt** — the initial message you sent, cleaned of system-injected tags
-- **Custom title** — if the session was renamed in Claude Code, that title is used instead
-- **Message count** — total user + assistant messages in the session
-- **Timestamps** — first and last timestamps for session duration and date-range queries
-- **Subagent content** — for Claude Code, user messages from subagent sidecar files are folded into the search index
+- **Working directory** - read from the session metadata to determine which project the session belongs to
+- **First user prompt** - the initial message you sent, cleaned of system-injected tags
+- **Custom title** - if the session was renamed in Claude Code, that title is used instead
+- **Message count** - total user + assistant messages in the session
+- **Timestamps** - first and last timestamps for session duration and date-range queries
+- **Subagent content** - for Claude Code, user messages from subagent sidecar files are folded into the search index
 
 ### Search index
 
-Both the CLI and the MCP server share a SQLite + FTS5 index at `~/.cache/sessions/index.db`. Messages are indexed individually, so a hit localizes to the exact message that matched — not just the session. The index is built automatically on first use (under a minute for a few thousand sessions) and updated incrementally on subsequent runs by checking file modification times — only new or changed sessions are re-indexed.
+Both the CLI and the MCP server share a SQLite + FTS5 index at `~/.cache/sessions/index.db`. Messages are indexed individually, so a hit localizes to the exact message that matched - not just the session. The index is built automatically on first use (under a minute for a few thousand sessions) and updated incrementally on subsequent runs by checking file modification times - only new or changed sessions are re-indexed.
 
 Long-lived MCP servers coalesce concurrent refreshes and reuse a freshness check for five seconds, so a burst of related tool calls does not walk the full session tree repeatedly. Set `SESSIONS_REFRESH_INTERVAL_MS=0` on the MCP process to require a source scan before every call.
 
@@ -460,9 +460,9 @@ sessions --clear-cache
 
 The search index is a disposable cache: it prunes rows when source transcripts vanish, and any schema change drops every table and rebuilds from whatever files still exist. Vendors garbage-collect transcripts on a rolling schedule (Claude Code deletes them after 30 days by default), so left to the index alone, history is lost.
 
-The **vault** is the durable copy. On every index refresh, each parseable transcript is archived to `~/.local/share/sessions/archive/` (raw bytes, one file per session, latest snapshot per file). This directory is the same durable-data convention that `sessions uninstall` already leaves alone, and it is **on by default** — the point is that archiving happens before anyone remembers to enable it. Set `SESSIONS_ARCHIVE_DIR` to relocate it.
+The **vault** is the durable copy. On every index refresh, each parseable transcript is archived to `~/.local/share/sessions/archive/` (raw bytes, one file per session, latest snapshot per file). This directory is the same durable-data convention that `sessions uninstall` already leaves alone, and it is **on by default** - the point is that archiving happens before anyone remembers to enable it. Set `SESSIONS_ARCHIVE_DIR` to relocate it.
 
-The vault is also a **discovery source**: a session whose source file is gone is re-indexed from its vault copy under its original path, so search, resume commands, and message reads keep working. OpenCode is the one exception to raw-bytes archiving — its sessions are SQLite rows with no files, so a normalized JSONL export (the same shape the parser reads) is archived instead.
+The vault is also a **discovery source**: a session whose source file is gone is re-indexed from its vault copy under its original path, so search, resume commands, and message reads keep working. OpenCode is the one exception to raw-bytes archiving - its sessions are SQLite rows with no files, so a normalized JSONL export (the same shape the parser reads) is archived instead.
 
 Inspect the archive:
 
@@ -481,7 +481,7 @@ sessions --clear-cache
 
 ### Scoping with `--here`
 
-When `--here` is passed, `sessions` resolves the current git repo root and only shows sessions whose working directory falls under that root. This works with bare repo worktrees — if a `.git` file points to a `.bare` directory, the parent is used as the repo root.
+When `--here` is passed, `sessions` resolves the current git repo root and only shows sessions whose working directory falls under that root. This works with bare repo worktrees - if a `.git` file points to a `.bare` directory, the parent is used as the repo root.
 
 ## Development
 

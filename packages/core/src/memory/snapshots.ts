@@ -1,6 +1,6 @@
 // Trend snapshots for the recurrence report (phase 4 of
 // docs/ideation/memory-recurrence/). One JSONL line per `pacifico memory report`
-// run, appended — never rewritten — so the trend is an audit trail, not state.
+// run, appended - never rewritten - so the trend is an audit trail, not state.
 // JSONL over a memory.db table on purpose: a file is inspectable and survives
 // store schema migrations without one; the contract's whole thesis is that JSONL
 // you can read beats a table you can't.
@@ -17,7 +17,7 @@ import type { RecurrenceTrend, RecurrenceViolation } from './recurrence';
 
 export const SNAPSHOT_FILENAME = 'memory-recurrence-snapshots.jsonl';
 
-/** One appended line. `counts` keys are memory ids — content-addressed, so the
+/** One appended line. `counts` keys are memory ids - content-addressed, so the
  *  identity survives re-mines where the text was edited at triage (`approve --as`). */
 export interface RecurrenceSnapshot {
   v: 1;
@@ -60,7 +60,7 @@ export function snapshotCounts(violations: RecurrenceViolation[]): RecurrenceSna
 
 /**
  * Read every line of the file; a missing file is an empty history, not an error
- * (first run). A corrupt line — a truncated write, or a hand-edit — is skipped with
+ * (first run). A corrupt line - a truncated write, or a hand-edit - is skipped with
  * a stderr warning, and the rest of the file still reads. Append-only means a bad
  * line happens at the END where the last partial write lives, so skipping it is
  * the difference between "one snapshot lost" and "the history is unreadable".
@@ -83,7 +83,7 @@ export function readSnapshots(dir: string): RecurrenceSnapshot[] {
 /**
  * Delta the current violations against the previous snapshot. New ids get
  * `previous: null` / `delta: null` and render `(new)`. A memory absent from the
- * current violations is NOT decayed to zero silently — absence means "not in this
+ * current violations is NOT decayed to zero silently - absence means "not in this
  * report's scope" and the row simply leaves the TREND section.
  */
 export function diffSnapshots(
@@ -102,7 +102,7 @@ export function diffSnapshots(
 }
 
 /**
- * Append one line. A write failure is a stderr warning, never a throw — a report
+ * Append one line. A write failure is a stderr warning, never a throw - a report
  * is never blocked by its audit trail (spec error table), and runReport renders
  * first and appends after so the render itself cannot be lost to a full disk.
  */
@@ -112,7 +112,7 @@ export function appendSnapshot(snapshot: RecurrenceSnapshot, dir: string): void 
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     process.stderr.write(
-      `  could not append to ${SNAPSHOT_FILENAME} (${reason}) — report rendered without snapshotting\n`,
+      `  could not append to ${SNAPSHOT_FILENAME} (${reason}) - report rendered without snapshotting\n`,
     );
   }
 }

@@ -26,7 +26,7 @@ function lastDayOfMonth(y: number, m: number): number {
 /**
  * The day a preset's period actually runs to, which is not the same as the last
  * day of data it reports. `--this-month` reports up to today (there is no data
- * from the future) but the month runs to its last day — and pacing a month needs
+ * from the future) but the month runs to its last day - and pacing a month needs
  * the month, not the part of it that has happened.
  *
  * Returns null for presets with no forward horizon, where the period and the

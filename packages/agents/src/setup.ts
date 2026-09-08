@@ -18,7 +18,7 @@ import {
   type WireResult,
 } from './mcp-config';
 
-/** The pacifico data dir. Single source of truth is getDataDir() — the memory store
+/** The pacifico data dir. Single source of truth is getDataDir() - the memory store
  *  lives in the same directory, and the two must never disagree about where it is. */
 function sessionsDir(): string {
   return getDataDir();
@@ -28,12 +28,12 @@ function pluginDest(): string {
 }
 /**
  * The only paths the installer creates inside the data dir. Uninstall removes
- * exactly these — NOT the directory itself.
+ * exactly these - NOT the directory itself.
  *
  * The data dir also holds memory.db, whose approve/reject/snooze rows are human
  * judgments no re-mine can reconstruct. `pacifico cleanup` routes through
  * runUninstall() (index.ts:28-34), so an `rm -rf` of the whole directory would
- * silently destroy every triage decision the user ever made — the same disposability
+ * silently destroy every triage decision the user ever made - the same disposability
  * assumption that is correct for index.db and wrong here.
  */
 function ownedInstallPaths(): string[] {
@@ -119,7 +119,7 @@ function sessionsCommand(): string {
  * Write the MCP entry into the file this client actually reads.
  *
  * Claude Code has no config of its own here: its server arrives with the plugin, which
- * is also the reason the old dotfile bug went unnoticed for so long — the one client
+ * is also the reason the old dotfile bug went unnoticed for so long - the one client
  * most likely to be tested worked through a path setup never touched.
  */
 function wire(client: McpClient): WireResult {
@@ -197,13 +197,13 @@ export function runSetup(): void {
     } else if (res.status === 'unchanged' && tool.configPath) {
       w(`  ${C.dim}ℹ${C.reset} MCP server already configured for ${C.dim}${tool.name}${C.reset}\n`);
     } else if (res.status === 'refused') {
-      w(`  ${C.yellow}!${C.reset} Left ${C.dim}${tool.configPath}${C.reset} alone — ${res.reason}\n`);
+      w(`  ${C.yellow}!${C.reset} Left ${C.dim}${tool.configPath}${C.reset} alone - ${res.reason}\n`);
       if (tool.id === 'codex') {
         w(`  ${C.dim}  Add this yourself:${C.reset}\n`);
         for (const line of codexManualBlock(sessionsCommand()).split('\n')) w(`  ${C.dim}    ${line}${C.reset}\n`);
       }
     } else if (res.status === 'failed') {
-      w(`  ${C.red}✗${C.reset} Failed to configure MCP for ${tool.name} — ${res.reason}\n`);
+      w(`  ${C.red}✗${C.reset} Failed to configure MCP for ${tool.name} - ${res.reason}\n`);
     }
 
     if (tool.id === 'claude') {
@@ -237,7 +237,7 @@ export function runUninstall(): void {
     if (res.status === 'added') {
       w(`  ${C.green}✓${C.reset} Removed MCP config from ${C.dim}${tool.name}${C.reset}\n`);
     } else if (res.status === 'refused' || res.status === 'failed') {
-      w(`  ${C.yellow}!${C.reset} Left ${C.dim}${tool.configPath}${C.reset} alone — ${res.reason}\n`);
+      w(`  ${C.yellow}!${C.reset} Left ${C.dim}${tool.configPath}${C.reset} alone - ${res.reason}\n`);
     }
 
     if (tool.id === 'claude') {
@@ -271,7 +271,7 @@ export function runUninstall(): void {
  *
  * Exported as the seam durability tests exercise: the rest of runUninstall talks to
  * the real ~/.claude config and shells out to `claude plugins uninstall`, so no test
- * may call it — but this is the only part that touches the data dir, and it must be
+ * may call it - but this is the only part that touches the data dir, and it must be
  * provably scoped to the two directories the installer created.
  */
 export function removeInstalledFiles(): string[] {

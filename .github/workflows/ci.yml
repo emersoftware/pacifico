@@ -75,7 +75,7 @@ jobs:
         working-directory: apps/site
 
   # release-please drops any commit whose body has a line-initial nested-paren token,
-  # then exits 0 — so a release silently goes missing while every check is green. This
+  # then exits 0 - so a release silently goes missing while every check is green. This
   # has cost two releases here, most recently 89f15bd. See the script for the mechanism.
   commit-messages:
     runs-on: ubuntu-latest

@@ -68,7 +68,7 @@ describe('the entry cap', () => {
     expect({ state: row.state, alwaysOn: row.alwaysOn }).toEqual({ state: 'candidate', alwaysOn: false });
   });
 
-  test('a plain approve is never budgeted — the cap gates the flag, not the memory', () => {
+  test('a plain approve is never budgeted - the cap gates the flag, not the memory', () => {
     for (let i = 0; i < ALWAYS_ON_MAX_ENTRIES; i++) {
       approve(seed(`Always run check number ${i} before pushing to the remote`), { alwaysOn: true });
     }
@@ -140,7 +140,7 @@ describe('the flags', () => {
 
 describe('the serve-side backstop', () => {
   test('an over-budget set (hand-edited past the gate) is served in full and stated loudly', async () => {
-    // setAlwaysOn directly — the write approve() would refuse, standing in for a
+    // setAlwaysOn directly - the write approve() would refuse, standing in for a
     // hand-edited memory.db or a store written before the cap existed.
     for (let i = 0; i < ALWAYS_ON_MAX_ENTRIES + 1; i++) {
       const id = seed(`Always run check number ${i} before pushing to the remote`);

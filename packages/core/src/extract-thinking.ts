@@ -27,7 +27,7 @@ function collect(lines: string[]): string {
 /**
  * Plaintext reasoning text for the (low-weighted) `thinking` FTS column. Claude and
  * Pi store `thinking` blocks in assistant content, and OpenCode's synthesized lines
- * carry them too (its `reasoning` parts — see src/opencode.ts); Codex reasoning is
+ * carry them too (its `reasoning` parts - see src/opencode.ts); Codex reasoning is
  * encrypted in the logs, so Codex returns empty.
  */
 export function extractThinking(lines: string[], tool: Tool): string {

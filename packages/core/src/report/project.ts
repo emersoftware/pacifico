@@ -1,4 +1,4 @@
-// VENDORED VERBATIM from tokenmaxing/src/project.ts — do not edit logic here; keep in sync. Public contract: schemaVersion 2.
+// VENDORED VERBATIM from tokenmaxing/src/project.ts - do not edit logic here; keep in sync. Public contract: schemaVersion 2.
 import { basename } from 'node:path';
 
 // Match /<anything>/Developer/<repo>(/...) -> <repo>.

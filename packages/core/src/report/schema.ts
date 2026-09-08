@@ -1,4 +1,4 @@
-// Sessions-owned usage report schema — the public contract for `pacifico report`.
+// Sessions-owned usage report schema - the public contract for `pacifico report`.
 // Independent of tokenmaxing's gist shape: no weeklyHighlights, no PR fields.
 // The internal aggregation (vendored from tokenmaxing) is mapped down to this
 // via `toUsageReport`. Generic breakdown/daily shapes are reused from the
@@ -64,7 +64,7 @@ export interface UsageInsights {
 }
 
 // A logged model that had tokens but no pricing match. Surfaced loudly
-// (CLI stderr + this JSON field + HTML notice) — never a silent $0.
+// (CLI stderr + this JSON field + HTML notice) - never a silent $0.
 export interface PricingWarning {
   model: string;
   tokens: number;
@@ -87,7 +87,7 @@ export interface UsageReport {
   daily: DailyEntry[];
   insights: UsageInsights;
   warnings: PricingWarning[]; // unpriced models with tokens; [] when all priced
-  // Sessions-owned facets (see ./facets.ts) — dimensions the vendored
+  // Sessions-owned facets (see ./facets.ts) - dimensions the vendored
   // aggregation does not model, computed from the same events.
   cache: CacheStats;
   subagents: SubagentReport;

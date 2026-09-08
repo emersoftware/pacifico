@@ -295,7 +295,7 @@ describe('wrapped share card', () => {
     expect(all).toContain('$4,313');
     expect(all).toContain('54');
     expect(all).toContain('180 active days');
-    // The image is a poster, not a privacy notice — that claim belongs on the
+    // The image is a poster, not a privacy notice - that claim belongs on the
     // page, not on something the reader is about to post.
     expect(all).not.toContain('telemetry');
   });

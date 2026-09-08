@@ -10,14 +10,14 @@ import type { MemoryRecord } from './types';
 
 // Phase 6 in test form: an incremental mine must see a RESUMED session.
 //
-// The whole design rests on one claim — that a transcript's mtime/size pair is the
+// The whole design rests on one claim - that a transcript's mtime/size pair is the
 // only honest change signal, because transcripts are appended to long after they are
 // first indexed. Every end-to-end test here therefore changes a fixture file after a
 // mine and asserts what the next mine picks up.
 //
 // SESSIONS_REFRESH_INTERVAL_MS is pinned to '0' throughout. Without it,
 // ensureIndexFresh (src/cache.ts:533-537) serves a cached scan for five seconds and a
-// same-test append is simply not visible to the index — a test would then fail for a
+// same-test append is simply not visible to the index - a test would then fail for a
 // reason that has nothing to do with the watermark. It is deleted in afterAll because
 // the whole `bun test` run shares one process and one cache.ts module instance
 // (src/memory/mine.perf.test.ts:55 does the same).
@@ -109,7 +109,7 @@ afterAll(() => {
 });
 
 describe('changedSessions', () => {
-  // Pure over its two inputs — no database, no clock, no index. This is the layer that
+  // Pure over its two inputs - no database, no clock, no index. This is the layer that
   // can exhaust the mtime/size matrix cheaply, and it is the fastest feedback in the
   // phase.
   const seen = (filePath: string, mtime: number, size: number): Map<string, WatermarkEntry> =>
@@ -232,7 +232,7 @@ describe('mine --since-last', () => {
     try {
       appendTurn(paths.s2, APPENDED, repo);
       const batch = batchOf(await capture(['mine', '--repo', repo, '--since-last', '--json']));
-      // Session 2's phrasings — both of them — and nothing from the untouched sessions.
+      // Session 2's phrasings - both of them - and nothing from the untouched sessions.
       expect(texts(batch)).toEqual([APPENDED, S2].sort());
     } finally {
       writeFileSync(paths.s2, before);
@@ -372,7 +372,7 @@ describe('distinctPhrasings stays 1, and snooze-resurface therefore cannot fire'
       const reworded = second.find((r) => r.text === REWORDED)!;
       expect(reworded.id).not.toBe(original.id);
       expect(reworded.evidence.distinctPhrasings).toBe(1);
-      // The original is unbumped — this is the assertion the resurface predicate needs
+      // The original is unbumped - this is the assertion the resurface predicate needs
       // to become false, and it is the whole reason that predicate cannot fire.
       expect(second.find((r) => r.id === original.id)!.evidence.distinctPhrasings).toBe(1);
     } finally {
@@ -404,7 +404,7 @@ describe('distinctPhrasings stays 1, and snooze-resurface therefore cannot fire'
 
 describe('changed-set chunking', () => {
   // FILE_CHUNK bounds an unbounded changed set against SQLite's 999-parameter cap. The
-  // boundary cases are what catch a loop that drops its remainder — a phrasing in the
+  // boundary cases are what catch a loop that drops its remainder - a phrasing in the
   // dropped chunk would silently stop being mined.
   const pad = (n: number): string[] =>
     Array.from({ length: n }, (_, i) => `/absent/${String(i).padStart(5, '0')}.jsonl`);

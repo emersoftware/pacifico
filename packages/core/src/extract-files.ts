@@ -101,7 +101,7 @@ function extractPi(lines: string[], push: (p: string) => void): void {
 }
 
 /**
- * OpenCode: edited files surface three ways in a synthesized assistant message —
+ * OpenCode: edited files surface three ways in a synthesized assistant message -
  * `patch` blocks (an authoritative `files[]` list), `edit`/`write` tool blocks
  * (`state.input.filePath`), and `apply_patch` tool blocks whose `state.input.patchText`
  * carries the same `*** … File:` headers as Codex. Shape confirmed against opencode.db.
@@ -169,7 +169,7 @@ function extractClaudeRead(lines: string[], push: (p: string) => void): void {
   }
 }
 
-/** Pi: read/searched targets — the `read` tool's `arguments.path`. */
+/** Pi: read/searched targets - the `read` tool's `arguments.path`. */
 const PI_READ_TOOLS = new Set(['read']);
 
 function extractPiRead(lines: string[], push: (p: string) => void): void {
@@ -181,7 +181,7 @@ function extractPiRead(lines: string[], push: (p: string) => void): void {
 
 /**
  * Read/searched (not edited) file targets, for the searchable `paths` column.
- * Codex read-target shapes still need fixtures to confirm — deliberate no-op.
+ * Codex read-target shapes still need fixtures to confirm - deliberate no-op.
  */
 export function extractFilesRead(lines: string[], tool: Tool): string[] {
   const seen = new Set<string>();
@@ -197,7 +197,7 @@ export function extractFilesRead(lines: string[], tool: Tool): string[] {
   return out;
 }
 
-/** OpenCode: read/searched targets — `read` tool `filePath`, `grep`/`glob` `path`/`pattern`. */
+/** OpenCode: read/searched targets - `read` tool `filePath`, `grep`/`glob` `path`/`pattern`. */
 function extractOpencodeRead(lines: string[], push: (p: string) => void): void {
   for (const block of opencodeAssistantBlocks(lines)) {
     if (block.type !== 'tool') continue;

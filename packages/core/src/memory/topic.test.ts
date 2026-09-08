@@ -10,13 +10,13 @@ import type { MemoryRecord, MemoryScope } from './types';
 // Two halves, deliberately separated.
 //
 // `matchTopic` is a pure function of two strings, so the first half needs no database
-// at all — that is the whole reason src/memory/topic.ts imports nothing. The scoring
+// at all - that is the whole reason src/memory/topic.ts imports nothing. The scoring
 // failure mode is silence (a memory that does not come back raises no error anywhere),
 // so every case here asserts a number rather than "it worked".
 //
 // The second half needs the store, and takes the same hermetic treatment as
-// src/memory/mcp-memory.test.ts:95-120 — env re-asserted per test, handle dropped, table
-// truncated — because store.ts is one shared module instance across a `bun test` run.
+// src/memory/mcp-memory.test.ts:95-120 - env re-asserted per test, handle dropped, table
+// truncated - because store.ts is one shared module instance across a `bun test` run.
 
 const REPO: MemoryScope = { type: 'repo', key: '/repos/app' };
 const WORKFLOW: MemoryScope = { type: 'workflow', key: '' };
@@ -73,7 +73,7 @@ describe('matchTopic', () => {
   });
 
   test('a topic made entirely of stopwords returns 1 rather than NaN', () => {
-    // 0/0 is NaN, and `NaN >= TOPIC_THRESHOLD` is false — which would silently drop
+    // 0/0 is NaN, and `NaN >= TOPIC_THRESHOLD` is false - which would silently drop
     // every conditional memory. A matcher that cannot form an opinion must abstain.
     const score = matchTopic(KEYCHAIN_TEXT, 'the and it');
     expect(Number.isNaN(score)).toBe(false);

@@ -38,7 +38,7 @@ function section(title: string): string {
   return rule() + `  ${title}\n` + rule();
 }
 
-/** Truncate an identifier — a model id, branch, or path — keeping the tail, which
+/** Truncate an identifier - a model id, branch, or path - keeping the tail, which
  *  is the part that distinguishes it. */
 function fit(label: string, max: number): string {
   return label.length <= max ? label : '…' + label.slice(label.length - (max - 1));
@@ -86,7 +86,7 @@ export function renderText(r: UsageReport): string {
     out += section('Subagents');
     out += row(
       'Spend',
-      `${fmtUSD(r.subagents.costUSD)} — ${pct(r.subagents.shareOfCost)} of total, ${r.subagents.dispatches} dispatches`,
+      `${fmtUSD(r.subagents.costUSD)} - ${pct(r.subagents.shareOfCost)} of total, ${r.subagents.dispatches} dispatches`,
     );
     for (const t of r.subagents.byType.slice(0, 8)) {
       out += row(fit(t.agentType, 30), `${fmtUSD(t.costUSD)}  ${t.dispatches}× @ ${fmtUSD(t.costPerDispatchUSD)}`, 4);
@@ -142,7 +142,7 @@ export function renderText(r: UsageReport): string {
   if (r.warnings.length > 0) {
     out += section('Pricing warnings');
     for (const w of r.warnings) {
-      const how = w.pricedAs ? `estimated as ${w.pricedAs}` : 'NOT PRICED — cost understated';
+      const how = w.pricedAs ? `estimated as ${w.pricedAs}` : 'NOT PRICED - cost understated';
       out += row(fit(w.model, 30), `${fmtTokens(w.tokens)}  ${how}`, 2);
     }
   }

@@ -1,7 +1,7 @@
 // Normalization, content-addressed fingerprinting, and deterministic record
 // construction. Everything in this file must be a pure function of its inputs
 // (gitAuthorEmail excepted, which reads the machine's git identity once), because
-// the determinism criterion asserts full-record JSON equality across two runs —
+// the determinism criterion asserts full-record JSON equality across two runs -
 // not just id equality.
 
 import {
@@ -17,7 +17,7 @@ import {
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
- * Collapse every whitespace run to a single space and trim. Casing is preserved —
+ * Collapse every whitespace run to a single space and trim. Casing is preserved -
  * the stored `text` is what a human reads back, so "Never commit to main" must not
  * become "never commit to main". Case folding happens inside `fingerprint`, so two
  * records differing only in case still collapse to one id.
@@ -39,7 +39,7 @@ export function fingerprint(normalized: string): string {
 
 /**
  * The machine's git identity, or 'unknown'. A missing identity must not block
- * mining — `git config user.email` exits non-zero with empty output when no
+ * mining - `git config user.email` exits non-zero with empty output when no
  * global config exists, and `git` may be absent entirely. Same swallow-to-a-value
  * shape as src/repo.ts:14-22.
  */
@@ -60,7 +60,7 @@ export interface BuildRecordInput {
   kind?: MemoryKind;
   scope: MemoryScope;
   author: string;
-  /** Contributing session file paths, in any order — deduped and sorted here. */
+  /** Contributing session file paths, in any order - deduped and sorted here. */
   sessions: string[];
   /** 'YYYY-MM-DD' dates of the contributing sessions, in any order. */
   dates: string[];
@@ -68,14 +68,14 @@ export interface BuildRecordInput {
   distinctPhrasings: number;
   state?: MemoryState;
   snoozedUntil?: string | null;
-  /** Defaults to false. Set at triage, never derived — see MemoryRecord.alwaysOn. */
+  /** Defaults to false. Set at triage, never derived - see MemoryRecord.alwaysOn. */
   alwaysOn?: boolean;
 }
 
 function buildEvidence(input: BuildRecordInput): MemoryEvidence {
   // Sorted + deduped: unsorted arrays are the single most likely source of
   // run-to-run byte differences, and two sessions can contribute the same path
-  // only through a caller bug — dedupe rather than double-count it.
+  // only through a caller bug - dedupe rather than double-count it.
   const sessions = [...new Set(input.sessions)].sort();
   // String comparison is the correct ordering for 'YYYY-MM-DD'; no Date parsing,
   // no locale formatting, nothing that varies by machine timezone.
@@ -97,7 +97,7 @@ function buildEvidence(input: BuildRecordInput): MemoryEvidence {
  * once: `--since-last` mines only the files that changed (src/memory/watermark.ts), and
  * `mergeInto` assembles a `distinctPhrasings` count no mine can reproduce because
  * paraphrase clustering is an LLM judgment (src/memory/triage.ts). A replace-on-conflict
- * write loses both, and neither is rebuildable — a merge decision exists nowhere else.
+ * write loses both, and neither is rebuildable - a merge decision exists nowhere else.
  *
  * `distinctPhrasings` takes the MAX, never the sum, for the reason `toRecord` documents
  * (src/memory/portable.ts): a re-mine over the same transcripts must be idempotent, and
@@ -131,7 +131,7 @@ export function unionEvidence(prior: MemoryEvidence, fresh: MemoryEvidence): Mem
  *
  * `alwaysOn` defaults to false for the same reason `state` defaults to 'candidate':
  * conditional is the norm and bypassing the topic matcher is the deliberate exception.
- * A mine can never set it — nothing in a transcript says "this one is a standing
+ * A mine can never set it - nothing in a transcript says "this one is a standing
  * constraint", only a human does.
  */
 export function buildRecord(input: BuildRecordInput): MemoryRecord {

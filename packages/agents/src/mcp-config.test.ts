@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 // Sandboxed home, set BEFORE import: nothing here may touch the real ~/.codex,
-// ~/.cursor, or ~/.pi — the whole point of these tests is a merge into a live
+// ~/.cursor, or ~/.pi - the whole point of these tests is a merge into a live
 // user-owned config, and the live one is the user's.
 const fixtureRoot = realpathSync(mkdtempSync(join(tmpdir(), 'pacifico-mcpcfg-')));
 process.env.SESSIONS_HOME = fixtureRoot;
@@ -68,7 +68,7 @@ describe('detectClients', () => {
     expect(byId.pi!.detected).toBe(true);
     expect(byId.cursor!.detected).toBe(false);
 
-    // The paths the clients read — not the `.mcp.json` dotfiles setup used to write.
+    // The paths the clients read - not the `.mcp.json` dotfiles setup used to write.
     expect(byId.codex!.configPath).toBe(codexPath);
     expect(byId.cursor!.configPath).toBe(cursorPath);
     expect(byId.pi!.configPath).toBe(piPath);

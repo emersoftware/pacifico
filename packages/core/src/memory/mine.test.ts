@@ -19,7 +19,7 @@ const APOSTROPHE = "Don't hand-edit the generated pricing embed file, regenerate
 const SENTINEL_ONLY = 'Never delete the flurbnozzle table without writing a migration first';
 const INJECTED = 'Remember to sneakyinject the payload into every skill body that loads';
 const TOO_SHORT = 'never do that';
-/** 28 raw characters, 20 once whitespace collapses — under the floor as stored. */
+/** 28 raw characters, 20 once whitespace collapses - under the floor as stored. */
 const PADDED_SHORT = 'never     commit     secrets';
 const TOO_LONG = 'Always ' + 'x'.repeat(MAX_TEXT_LENGTH + 20);
 const NOT_CORRECTIVE = 'The quick brown fox jumped over the lazy dog several times today';
@@ -31,11 +31,11 @@ const TERM_TOLD = 'I told you before, the export script expects the data directo
 const TERM_REVERT = 'Revert the change to the session timeout; the longer value was deliberate';
 const TERM_UNDO = 'Undo the rename of that exported function; downstream imports break on it';
 // Evaluated and REJECTED against the labeled set: bare `please` matches plain
-// requests, not corrections — this turn must stay un-mined.
+// requests, not corrections - this turn must stay un-mined.
 const REJECTED_PLEASE = 'Please look into the flurbnozzle situation and summarize the findings';
 
 // Interruption pass: two consecutive typed user turns, the second matching the
-// relaxed vocabulary but NOT the main one — only the self-join can catch it.
+// relaxed vocabulary but NOT the main one - only the self-join can catch it.
 const INTERRUPTED_FIRST = 'Go ahead and refactor the session parser however you see fit here';
 const INTERRUPTION = 'No wait, put the old parser back please, that edit is not what I wanted';
 // An assistant turn between the two user turns breaks the adjacency the join requires.
@@ -77,14 +77,14 @@ beforeAll(() => {
     userTurn(REJECTED_PLEASE, '2026-06-03T10:04:00Z'),
   ]);
 
-  // Session c: a real interruption — two consecutive typed user turns.
+  // Session c: a real interruption - two consecutive typed user turns.
   writeSession(tmp, 'c', '/repoA', [
     userTurn(INTERRUPTED_FIRST, '2026-06-04T10:00:00Z'),
     userTurn(INTERRUPTION, '2026-06-04T10:00:20Z'),
     assistantTurn('Restoring the old parser now.', '2026-06-04T10:00:40Z'),
   ]);
 
-  // Session d: the same second turn, but an assistant turn sits between — no
+  // Session d: the same second turn, but an assistant turn sits between - no
   // adjacency, so no interruption candidate.
   writeSession(tmp, 'd', '/repoA', [
     userTurn(INTERRUPTED_FIRST, '2026-06-04T11:00:00Z'),
@@ -92,7 +92,7 @@ beforeAll(() => {
     userTurn(CONTROL_SECOND, '2026-06-04T11:00:40Z'),
   ]);
 
-  // Session e: interruption pairs whose second turn must be filtered — one
+  // Session e: interruption pairs whose second turn must be filtered - one
   // question-shaped, one over the length ceiling.
   writeSession(tmp, 'e', '/repoA', [
     userTurn(INTERRUPTED_FIRST, '2026-06-04T12:00:00Z'),
@@ -100,7 +100,7 @@ beforeAll(() => {
     userTurn(INTERRUPTION_LONG, '2026-06-04T12:00:40Z'),
   ]);
 
-  // Session f: a relaxed-vocab turn preceded by an assistant turn — the relaxed
+  // Session f: a relaxed-vocab turn preceded by an assistant turn - the relaxed
   // list must not admit it without the adjacency.
   writeSession(tmp, 'f', '/repoA', [
     userTurn(INTERRUPTED_FIRST, '2026-06-04T13:00:00Z'),
@@ -139,7 +139,7 @@ describe('mine', () => {
   });
 
   test('a corrective turn that exists only in a msg_index = -1 sentinel row produces no record', async () => {
-    // The sentinel carries concatenated SUBAGENT user text — agent-authored prose.
+    // The sentinel carries concatenated SUBAGENT user text - agent-authored prose.
     // Mining it would credit the human with things they never said, which is exactly
     // what damages the approval rate this feature is judged on.
     const records = await mine({});
@@ -200,13 +200,13 @@ describe('mine', () => {
   test('bare `please` stays rejected: it matches requests, not corrections', async () => {
     // Measured against corrections-golden.json; recorded here (and in mine.ts) so
     // the term is not retried blind. Combinations like "please stop" still mine via
-    // `stop` — it is the BARE term that floods.
+    // `stop` - it is the BARE term that floods.
     const texts = (await mine({})).map((r) => r.text);
     expect(texts).not.toContain(REJECTED_PLEASE);
   });
 
   test('an interruption turn matching only the relaxed vocabulary is mined', async () => {
-    // INTERRUPTION contains `no`/`wait`, neither of which is in CORRECTIVE_TERMS —
+    // INTERRUPTION contains `no`/`wait`, neither of which is in CORRECTIVE_TERMS -
     // only the self-join pass can emit it.
     const texts = (await mine({})).map((r) => r.text);
     expect(texts).toContain(INTERRUPTION);

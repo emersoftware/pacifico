@@ -11,7 +11,7 @@
 // no business throwing away a usage parse. Its own file means its own version.
 //
 // Every entry point degrades rather than fails. A missing, locked, or corrupt
-// cache means "parse everything", which is exactly the old behaviour — a cache
+// cache means "parse everything", which is exactly the old behaviour - a cache
 // must never be the reason a report cannot be produced.
 import { Database } from 'bun:sqlite';
 import { mkdirSync, rmSync } from 'node:fs';
@@ -24,7 +24,7 @@ import type { AgentName } from './parsers/claude-code.ts';
 // Bump when the stored shape changes, so an old cache is discarded rather than
 // misread. v1: per-file events blob + agent-name map.
 // v2: the Pi parser changed what it emits per file (dedupKeys, subagent-run
-// attribution, compaction usage, zero-usage skips) — a v1 pi parse served from
+// attribution, compaction usage, zero-usage skips) - a v1 pi parse served from
 // cache would silently miss all of it, so old caches are rebuilt.
 // v3: Claude events retain the Fast mode flag used for historical pricing.
 const SCHEMA_VERSION = 3;
@@ -64,7 +64,7 @@ export function openEventCache(): Database | null {
     const version = (db.query('PRAGMA user_version').get() as { user_version: number } | null)?.user_version ?? 0;
     if (version !== SCHEMA_VERSION) {
       // A shape change makes every stored blob unreadable, so there is nothing to
-      // migrate — drop and let the next run refill.
+      // migrate - drop and let the next run refill.
       db.run('DROP TABLE IF EXISTS files');
       db.run(`PRAGMA user_version = ${SCHEMA_VERSION}`);
     }
@@ -156,7 +156,7 @@ export function putFile(db: Database, file: FileStat, parsed: FileParse): void {
  * Forget files that no longer exist, so a deleted project stops being reported.
  *
  * Scoped to the roots actually enumerated this run. Without that scope,
- * `report --tool claude` — which never walks the Codex tree — would conclude
+ * `report --tool claude` - which never walks the Codex tree - would conclude
  * every Codex file had vanished and evict it, and a test pointed at a temp
  * fixture would evict the user's entire real cache.
  */

@@ -38,7 +38,7 @@ function payloadOf(res: { content: { text: string }[] }): JsonObject {
 
 // cache.ts resolves SESSIONS_* env lazily, but the module instance is shared across
 // test files in one `bun test` run. So we (re)assert our env and reset the cached DB
-// connection before each test — keeping this file hermetic regardless of which other
+// connection before each test - keeping this file hermetic regardless of which other
 // cache-importing file (cache.search.test.ts, context.test.ts) ran first or interleaves.
 let tmp: string;
 let mcp: typeof import('./mcp');
@@ -46,7 +46,7 @@ let cache: typeof import('@pacifico/core/cache');
 
 /**
  * This repo, and therefore a real git repo `resolveRepo` will resolve. Sessions D and E
- * below are indexed under it so `get_context_primer` has something to return — a temp
+ * below are indexed under it so `get_context_primer` has something to return - a temp
  * mkdtemp dir is not a repo, and calling the primer against one only ever exercises the
  * not-a-repo sentinel.
  *
@@ -101,7 +101,7 @@ beforeAll(async () => {
     ].join('\n'),
   );
 
-  // Session B: multi-message session for hit→offset alignment — the unique term
+  // Session B: multi-message session for hit→offset alignment - the unique term
   // sits in the third message (index 2), so a correct offset is load-bearing.
   writeFileSync(
     join(dir, 'b.jsonl'),
@@ -131,7 +131,7 @@ beforeAll(async () => {
     ].join('\n'),
   );
 
-  // Session C: files-filter fixture (phase 3) — edits a file no other session touches.
+  // Session C: files-filter fixture (phase 3) - edits a file no other session touches.
   writeFileSync(
     join(dir, 'c.jsonl'),
     [
@@ -156,12 +156,12 @@ beforeAll(async () => {
 
   // Sessions D and E: cwd is THIS repo, so get_context_primer resolves it and returns a
   // populated primer instead of a sentinel. Two of them, and E is trivia (2 messages, no
-  // edits, no artifact) while D is substantive — so with `limit: 1` D fills the detail
+  // edits, no artifact) while D is substantive - so with `limit: 1` D fills the detail
   // tier and E is demoted into headlines, putting BOTH primer arrays under real data.
   //
   // D also carries 5 messages on purpose: getActivityDigest only builds sessionDetails
   // for rows with message_count > 3 (src/cache.ts:1081-1083), and the fattest of A/B/C
-  // has 3 — so without D the digestSessionDetail schema is never exercised with an element.
+  // has 3 - so without D the digestSessionDetail schema is never exercised with an element.
   //
   // Nothing here may collide with the A/B/C assertions above: no 'kubectl', no 'flaky',
   // no 'mangowurzel', no 'src/billing.ts', and no errored tool results.
@@ -237,7 +237,7 @@ beforeAll(async () => {
 
   // One approved memory scoped to /repoA. Without it get_memory's conformance call hits
   // the empty-store sentinel, and its populated projection (text / kind / scope) is never
-  // validated through tools/call — the empty payload has the same shape either way.
+  // validated through tools/call - the empty payload has the same shape either way.
   // Repo-scoped, not workflow-scoped, so it cannot leak into the empty-index block below
   // (which uses its own SESSIONS_DATA_DIR and a cwd of /nowhere).
   const memory = buildRecord({
@@ -302,7 +302,7 @@ test('search_sessions handler honors the errored filter', async () => {
   expect(res.content[0]!.text).toContain('No sessions found'); // session A did not error
 });
 
-// ——— message-granularity (schema v7) tests — additive ———
+// --- message-granularity (schema v7) tests - additive ---
 
 test('alignment: messageHits[0].index feeds get_session_messages(offset) to the matched text', async () => {
   const res = await mcp.runSearchSessions({ query: 'mangowurzel' });
@@ -324,7 +324,7 @@ test('search_sessions: a metadata-only match carries empty messageHits', async (
   expect(a.messageHits).toEqual([]);
 });
 
-// ——— files filter (phase 3) tests — additive ———
+// --- files filter (phase 3) tests - additive ---
 
 test('search_sessions: files param reaches SearchOptions; result shape unchanged', async () => {
   const res = await mcp.runSearchSessions({ files: ['src/billing.ts'] });
@@ -339,7 +339,7 @@ test('search_sessions: a non-matching files filter returns no sessions', async (
   expect(res.content[0]!.text).toContain('No sessions found');
 });
 
-// ——— get_session_digest (phase 2) tests — additive ———
+// --- get_session_digest (phase 2) tests - additive ---
 
 test('get_session_digest returns exchange shape within budget', async () => {
   const res = await mcp.runGetSessionDigest({ filePath: join(tmp, 'claude', 'proj', 'b.jsonl') });
@@ -362,7 +362,7 @@ test('get_session_digest flags unreadable files with isError', async () => {
 });
 
 test('get_session_digest returns empty exchanges for sessions with no genuine turns', async () => {
-  // Standalone fixture outside the scanned dirs — the digest reads files directly.
+  // Standalone fixture outside the scanned dirs - the digest reads files directly.
   const file = join(tmp, 'hook-only.jsonl');
   writeFileSync(
     file,
@@ -382,7 +382,7 @@ test('get_session_digest returns empty exchanges for sessions with no genuine tu
   expect(digest.messageCount).toBe(1);
 });
 
-// ——— grep_sessions — additive ———
+// --- grep_sessions - additive ---
 
 test('grep_sessions: exhaustive hit carries msgIndex that feeds get_session_messages', async () => {
   const res = await mcp.runGrepSessions({ pattern: 'flaky' });
@@ -417,7 +417,7 @@ test('grep_sessions: an invalid regex surfaces isError', async () => {
   expect(res.content[0]!.text).toContain('Invalid regex');
 });
 
-// ——— get_session_messages include_tools — additive ———
+// --- get_session_messages include_tools - additive ---
 
 test('get_session_messages include_tools renders the turn tool calls', async () => {
   const file = join(tmp, 'claude', 'proj', 'c.jsonl');
@@ -434,7 +434,7 @@ test('get_session_messages omits tools by default (back-compat shape)', async ()
   expect(parsed.messages[0].tools).toBeUndefined();
 });
 
-// ——— pi fork surfaces (pi first-class phase 2) — additive ———
+// --- pi fork surfaces (pi first-class phase 2) - additive ---
 
 function writePiFixture(id: string, records: JsonObject[]): string {
   const dir = join(tmp, 'pi', 'proj');
@@ -502,7 +502,7 @@ test('search_sessions: pi results carry branches and a basename-only forkedFrom'
     }
   }
   expect(byId.get('pibranch')).toMatchObject({ branches: 1, forkedFrom: '' });
-  // Basename only — agents don't need (and shouldn't act on) the absolute parent path.
+  // Basename only - agents don't need (and shouldn't act on) the absolute parent path.
   expect(byId.get('pifork')).toMatchObject({ branches: 0, forkedFrom: 'parent-file.jsonl' });
 });
 
@@ -510,7 +510,7 @@ test("get_session_messages: the fork marker is a field on the branch's first mes
   const file = writePiFixture('pimarkers', branchedPiRecords());
   const res = await mcp.runGetSessionMessages({ filePath: file, offset: 0, limit: 20 });
   const parsed = JSON.parse(res.content[0]!.text);
-  // The core invariant: a marker is a FIELD, never a synthetic message row — `total`
+  // The core invariant: a marker is a FIELD, never a synthetic message row - `total`
   // must equal the unbranched message count, or every search-hit offset drifts.
   expect(parsed.total).toBe(6);
   const msgs = payloadOf(res).messages;
@@ -522,7 +522,7 @@ test("get_session_messages: the fork marker is a field on the branch's first mes
   const markerMsg = asJsonObject(msgs[2]);
   const fork = asJsonObject(markerMsg?.fork);
   expect(fork).toMatchObject({ fromIndex: 0, abandonedCount: 2, firstUserText: 'hello world' });
-  expect(fork?.marker).toBe('⑂ forked from msg #0 — abandoned branch, 2 messages: "hello world"');
+  expect(fork?.marker).toBe('⑂ forked from msg #0 - abandoned branch, 2 messages: "hello world"');
   // Active messages carry no branch/fork keys at all (zero token cost).
   const firstMsg = asJsonObject(msgs[0]);
   if (!firstMsg) throw new Error('message 0 missing');
@@ -573,7 +573,7 @@ test('schema conformance: fork fields survive tools/call output validation (not 
   await client.close();
 });
 
-// ——— stdio lifecycle ———
+// --- stdio lifecycle ---
 
 test('server exits when the client closes stdin instead of lingering as an orphan', async () => {
   const proc = Bun.spawn(
@@ -603,7 +603,7 @@ test('server exits when the client closes stdin instead of lingering as an orpha
   expect(result).toBe(0);
 }, 15000);
 
-// ——— protocol surface (phase 1) tests — additive ———
+// --- protocol surface (phase 1) tests - additive ---
 //
 // Everything below goes through tools/list and tools/call over the SDK's in-memory
 // transport, because that is the ONLY path that runs the SDK's output validation. The

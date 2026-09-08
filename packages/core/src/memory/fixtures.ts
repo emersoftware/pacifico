@@ -1,6 +1,6 @@
 // Hermetic fixture helpers shared by the src/memory/*.test.ts files.
 //
-// This is NOT a test file — `bun test` collects *.test.ts / *_test.ts / *.spec.ts,
+// This is NOT a test file - `bun test` collects *.test.ts / *_test.ts / *.spec.ts,
 // and this matches none of them. It exists because five memory test files need the
 // same synthesized-JSONL + SESSIONS_* env harness that src/cache.search.test.ts
 // established, and five copies of it would drift apart.
@@ -12,7 +12,7 @@ import { closeDb } from '../cache';
 import { closeMemoryDb } from './store';
 
 /** realpathSync because macOS resolves /var -> /private/var, and git's --show-toplevel
- *  reports the real path — an unresolved fixture path would never compare equal. */
+ *  reports the real path - an unresolved fixture path would never compare equal. */
 export function makeTmp(label: string): string {
   return realpathSync(mkdtempSync(join(tmpdir(), `sessions-${label}-`)));
 }

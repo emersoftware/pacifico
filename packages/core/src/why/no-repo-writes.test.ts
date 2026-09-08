@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 
 // The standing guard on the "git writes are out of scope" exclusion: every why form
 // consults git read-only (log/blame/show/cat-file) and must leave the repository
-// byte-identical — no hooks, no trailers, no branches, no stray objects in the index.
+// byte-identical - no hooks, no trailers, no branches, no stray objects in the index.
 
 let tmp: string;
 let repo: string;

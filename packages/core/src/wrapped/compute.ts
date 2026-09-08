@@ -1,4 +1,4 @@
-// Event-pass aggregations for wrapped — everything aggregate() doesn't compute
+// Event-pass aggregations for wrapped - everything aggregate() doesn't compute
 // but raw UsageEvent timestamps make possible: session durations, small-hours
 // census, the weekday×hour heatmap, model adoption dates, and cache efficiency.
 // Pure and deterministic; tz-sensitive bucketing goes through the same
@@ -12,7 +12,7 @@ import { isJunkCwd } from './exclude.ts';
 import type { UserTurn } from './loops.ts';
 import type { WrappedLongestSession, WrappedLoops, WrappedRhythm } from './types.ts';
 
-/** One threshold for "still the same stretch of work" — sittings and loops
+/** One threshold for "still the same stretch of work" - sittings and loops
  *  must agree on it or the two cards contradict each other. */
 export const SITTING_GAP_MS = 30 * 60_000;
 
@@ -28,16 +28,16 @@ export interface WrappedEventStats {
   /** cacheRead / (input + cacheRead), or null when nothing was cacheable. */
   cacheHitRate: number | null;
   longestSession: WrappedLongestSession | null;
-  /** Median assistant replies per session — persona depth fallback when no index. */
+  /** Median assistant replies per session - persona depth fallback when no index. */
   medianReplies: number;
-  /** Distinct sessions per tool / resolved project — aggregate's per-day sums
+  /** Distinct sessions per tool / resolved project - aggregate's per-day sums
    *  double-count cross-midnight sessions, so wrapped never uses them. */
   sessionsByTool: Map<string, number>;
   sessionsByProject: Map<string, number>;
   /** Keyed by canonical display name (snapshots/aliases merged; sentinels excluded),
    *  so `.size` is the distinct-models-tried count and adoption dates pool variants. */
   modelFirsts: Map<string, ModelFirsts>;
-  /** Share of assistant replies in local hours 22:00–05:59 (22, 23, and 0–5) —
+  /** Share of assistant replies in local hours 22:00–05:59 (22, 23, and 0–5) -
    *  the persona "clock" axis. Broader than nightsPastMidnight's deep-night 0–4. */
   nightShare: number;
 }
@@ -115,7 +115,7 @@ export function computeEventStats(events: UsageEvent[], tz: string): WrappedEven
       if (!s.project) s.project = e.projectPath;
     }
 
-    // '<synthetic>' and other sentinel ids are turns with no real model — they
+    // '<synthetic>' and other sentinel ids are turns with no real model - they
     // must never win a day's adoption race or be counted as a model "tried".
     // Track by canonical name so dated snapshots / provider aliases of one model
     // pool their votes (otherwise a split model loses the daily race to an
@@ -178,8 +178,8 @@ export function computeEventStats(events: UsageEvent[], tz: string): WrappedEven
     }
   }
 
-  // Each peak is its own marginal — busiest hour summed over days, busiest day
-  // summed over hours — so "10 AM on Thursdays" makes two independently true
+  // Each peak is its own marginal - busiest hour summed over days, busiest day
+  // summed over hours - so "10 AM on Thursdays" makes two independently true
   // claims. The heatmap outlines its own argmax cell, which may differ.
   const hourTotals = Array.from({ length: 24 }, () => 0);
   const weekdayTotals = Array.from({ length: 7 }, () => 0);
@@ -239,17 +239,17 @@ function cleanPrompt(raw: string): string | null {
 }
 
 /**
- * Autonomous runs — "loops". A loop is a stretch of back-to-back assistant
+ * Autonomous runs - "loops". A loop is a stretch of back-to-back assistant
  * events (gap ≤ SITTING_GAP_MS) with no genuine human turn between them,
  * timed from the prompt that launched it. Only sessions with at least one
  * genuine human boundary play: a session with zero human turns is automation
  * end-to-end (headless runs, probes), and junk cwds are out for the same
- * reason — a superlative is exactly where one automated session would steal
+ * reason - a superlative is exactly where one automated session would steal
  * the crown. In practice this is Claude Code only: the boundary collector
  * (loops.ts) covers the one log format that proves a human typed.
  *
  * A turn boundary splits a run even when the events around it are close
- * together — the human intervened, the loop ended. A trigger further back
+ * together - the human intervened, the loop ended. A trigger further back
  * than the gap (scheduled wakeups, hook-injected continuations) still names
  * the run's prompt but doesn't extend its clock: the run is timed on its own
  * events then, not from words spoken hours earlier.
@@ -293,7 +293,7 @@ export function computeLoops(
     let runStart = 0;
     let runToks = 0;
 
-    // Returns the run's trigger so the assignment stays in this scope — TS
+    // Returns the run's trigger so the assignment stays in this scope - TS
     // ignores writes made inside the closure when narrowing `trigger` below.
     const openRun = (idx: number): UserTurn | null => {
       runStart = idx;
@@ -344,7 +344,7 @@ interface DayRange {
   to: string;
 }
 
-/** Longest run of silent days strictly between two active dates — the
+/** Longest run of silent days strictly between two active dates - the
  *  disappearance. Edges of the period don't count: silence before the first
  *  session or after the last one is "hadn't started" / "hasn't happened yet". */
 export function longestGapRange(activeDates: string[]): DayRange | null {

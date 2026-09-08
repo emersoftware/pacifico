@@ -1,4 +1,4 @@
-// What counts as "your coding year" for wrapped — and what doesn't. Two classes
+// What counts as "your coding year" for wrapped - and what doesn't. Two classes
 // of session pollute a personal year-in-review even though they're legitimately
 // on disk: automated *probes* (menu-bar apps that spawn a throwaway Claude session
 // every few minutes to read a token count) and automated *harness/throwaway* runs
@@ -8,13 +8,13 @@
 //
 // This applies to wrapped's CONTENT pass only (the fun story: abandoned projects,
 // drive-bys, word of the year, errors). The spend/volume headline (tokens, cost,
-// sessions, rhythm) is deliberately NOT filtered — it must reconcile with
+// sessions, rhythm) is deliberately NOT filtered - it must reconcile with
 // `pacifico report`, and automated eval runs still cost real money. `report` and
 // search also see everything, because you might genuinely want to *find* that run.
 
 /** Substring the cwd must NOT contain. */
 const JUNK_SUBSTRINGS = [
-  '/var/folders/', // macOS temp root — eval harnesses run under $TMPDIR/eval-*
+  '/var/folders/', // macOS temp root - eval harnesses run under $TMPDIR/eval-*
 ];
 
 /** Prefix the cwd must NOT start with. */
@@ -30,7 +30,7 @@ const JUNK_SUFFIXES = [
 
 /** True when a cwd is an automated probe / harness / throwaway, not real user work. */
 export function isJunkCwd(cwd: string | undefined): boolean {
-  if (!cwd) return false; // unknown cwd is kept — it's real work we just can't place
+  if (!cwd) return false; // unknown cwd is kept - it's real work we just can't place
   if (JUNK_SUBSTRINGS.some((s) => cwd.includes(s))) return true;
   if (JUNK_PREFIXES.some((p) => cwd.startsWith(p))) return true;
   if (JUNK_SUFFIXES.some((s) => cwd.endsWith(s))) return true;

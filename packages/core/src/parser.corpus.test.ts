@@ -32,7 +32,7 @@ import { asJsonObject, asJsonString, type JsonObject } from './extract-util';
 const ENABLED = process.env.SESSIONS_LIVE_CORPUS === '1';
 const describeCorpus = ENABLED ? describe : describe.skip;
 
-/** Real roots, not the SESSIONS_* test redirections — the point is the actual corpus. */
+/** Real roots, not the SESSIONS_* test redirections - the point is the actual corpus. */
 const CODEX_ROOT = join(homedir(), '.codex', 'sessions');
 const CLAUDE_ROOT = join(homedir(), '.claude', 'projects');
 const PI_ROOT = join(homedir(), '.pi', 'agent', 'sessions');
@@ -128,10 +128,10 @@ describeCorpus('live corpus', () => {
   });
 });
 
-// ——— Pi topology ———
+// --- Pi topology ---
 // The pi block follows the same differential-oracle convention as the Codex block
 // above: fork/active-path expectations are recomputed from raw lines by an
-// independent inline walk, never by calling buildPiTree — a tree bug must not be its
+// independent inline walk, never by calling buildPiTree - a tree bug must not be its
 // own oracle.
 
 /** Mirrors the parser's message-ness for the pi shape: a user/assistant message line
@@ -215,7 +215,7 @@ function piTopology(lines: string[]): PiTopologyResult {
   });
   // Fork heads: abandoned entries whose parent is ON the active path. A fork head's
   // whole subtree is abandoned, and /tree re-entry means one fork's subtree can span
-  // several disjoint runs in file order — hence full subtree collection, not runs.
+  // several disjoint runs in file order - hence full subtree collection, not runs.
   const forks: number[][] = [];
   entries.forEach((_, i) => {
     if (active.has(i)) return;
@@ -236,7 +236,7 @@ function piTopology(lines: string[]): PiTopologyResult {
   return { entries, active, forks };
 }
 
-describeCorpus('live corpus — pi', () => {
+describeCorpus('live corpus - pi', () => {
   test('every pi file with the id/parentId shape builds a tree without throwing', async () => {
     let files = 0;
     for await (const lines of transcripts(PI_ROOT, '**/*.jsonl', 5000)) {
@@ -300,7 +300,7 @@ describeCorpus('live corpus — pi', () => {
       // Every abandoned message line, and only those, is labeled.
       const expectedAbandoned = entries.filter((e, i) => !active.has(i) && e.producesMessage).length;
       expect(msgs.filter((m) => m.branch === 'abandoned')).toHaveLength(expectedAbandoned);
-      // Exactly the forks with at least one extracted message carry a marker — a fork
+      // Exactly the forks with at least one extracted message carry a marker - a fork
       // whose subtree holds no messages (the real corpus has custom-only subtrees) has
       // nothing to hang one on. The marker's abandonedCount is the branch's MESSAGE
       // count, and interleaved runs (one fork, several disjoint runs) still count once.

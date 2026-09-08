@@ -1,7 +1,7 @@
 // The backfill mine: narrow the corpus to corrective-shaped user turns, collapse
 // repeats, cluster by repo container, derive scope, emit records.
 //
-// Everything here is deterministic. No LLM call enters `sessions` — the mine's job
+// Everything here is deterministic. No LLM call enters `sessions` - the mine's job
 // is to hand an agent a small, well-shaped candidate batch and get out of the way.
 // Generalizability ("is this worth remembering?") is a judgment and lives in the
 // Phase 2 triage skill.
@@ -25,7 +25,7 @@ import type { WatermarkEntry } from './watermark';
  * above the ceiling is a pasted spec or stack trace, not a durable fact. Exported so
  * tuning against real output is a one-line change (see the spec's Open Item).
  *
- * The band is authoritative over the NORMALIZED text — the form that gets stored and
+ * The band is authoritative over the NORMALIZED text - the form that gets stored and
  * fingerprinted. The identical band in SQL is only a cheap prefilter over the raw
  * column; normalization can only shorten a string, so the raw floor lets through
  * whitespace-padded turns that fall under the floor once collapsed, and the loop
@@ -39,7 +39,7 @@ export const MAX_TEXT_LENGTH = 240;
  * for tuning.
  *
  * Two tokenizer facts drive the shape of this list. The index tokenizes with
- * `porter unicode61`, so `stop` already matches "stopped" — but the porter stemmer
+ * `porter unicode61`, so `stop` already matches "stopped" - but the porter stemmer
  * does NOT relate `wrong` and "wrongly", and unicode61 splits "don't" into the two
  * tokens `don` + `t`, so the bare term `dont` matches only the apostrophe-less
  * spelling. `"don t"` is the phrase query that catches the far more common "don't";
@@ -49,19 +49,19 @@ export const MAX_TEXT_LENGTH = 240;
  * src/memory/fixtures/corrections-golden.json by src/memory/recall.test.ts (a term
  * ships only if it raises recall without turning any `not` entry into a candidate):
  *
- * - `again` — recurrence marker ("this came up again in review"). Porter stems
+ * - `again` - recurrence marker ("this came up again in review"). Porter stems
  *   "against" to `against`, so the two do not collide.
- * - `told`, `said` — assertion of prior state ("I told you before…"). Porter does
+ * - `told`, `said` - assertion of prior state ("I told you before…"). Porter does
  *   NOT relate `tell`/`told` or `say`/`said`, so the past-tense spellings are the
  *   ones that carry the phrasing people actually use.
- * - `revert`, `undo` — reversal demands. Porter relates revert/reverted/reverting
+ * - `revert`, `undo` - reversal demands. Porter relates revert/reverted/reverting
  *   and undo/undoes, so one spelling each suffices; "undone" stems to `undon` and
  *   is deliberately absent (measured: no correction in the labeled set needs it).
  *
  * Terms evaluated and REJECTED against the labeled set, recorded here so the next
  * person does not retry them blind: `please` (matches plain requests, not
  * corrections), `not` (an FTS5 boolean operator in MATCH syntax, and far too noisy
- * as a bare term), bare `wait` (interruption-shaped but noisy outside the join — it
+ * as a bare term), bare `wait` (interruption-shaped but noisy outside the join - it
  * lives in INTERRUPTION_TERMS instead).
  */
 export const CORRECTIVE_TERMS = [
@@ -93,7 +93,7 @@ export const CORRECTIVE_MATCH = CORRECTIVE_TERMS.join(' OR ');
  *
  * Same tokenizer rules as CORRECTIVE_TERMS: `no` and `not` are distinct tokens, and
  * `wait` matches "waiting"/"waits" via porter. Candidates still flow through
- * `acceptedText()` unchanged — band, question filter, and scan-clean rules apply
+ * `acceptedText()` unchanged - band, question filter, and scan-clean rules apply
  * identically, so a "no" that starts a question never becomes a record.
  */
 export const INTERRUPTION_TERMS = ['no', 'wait', 'wrong', 'stop'];
@@ -108,12 +108,12 @@ export const INTERRUPTION_MATCH = INTERRUPTION_TERMS.join(' OR ');
  * don't we always run migrations first?" carries `dont` and `always` and asserts
  * nothing. Measured cost of leaving this out: of the first three memories approved on
  * the author's machine, one was "describe what it means to distill, accept, and reject.
- * I don't understand when or why I'd use this" — stored as `kind: 'instruction'` and
+ * I don't understand when or why I'd use this" - stored as `kind: 'instruction'` and
  * served to every later agent under a tool description that says to treat it as binding.
  *
  * Deliberately narrow, in both halves. `?` must be TRAILING: a turn that asks and then
  * asserts ("Cursor MCP config? I don't use Cursor") carries a real fact in its second
- * half, and dropping it would lose the fact rather than tidy it — a false negative costs
+ * half, and dropping it would lose the fact rather than tidy it - a false negative costs
  * more here than a messy candidate, because `approve --as` exists precisely to rephrase
  * one. The opener list is only words that cannot begin an instruction: `how` is absent
  * because "how we deploy is documented in ops/" is a fact, `what` is absent for "what
@@ -139,7 +139,7 @@ export interface MineOptions {
    * the mine is a no-op, which is why this is `files?: string[]` and not a falsy check.
    *
    * The restriction narrows WHICH phrasings are emitted, never the evidence behind
-   * them — see the two-pass comment in `mine`.
+   * them - see the two-pass comment in `mine`.
    */
   files?: string[];
 }
@@ -163,13 +163,13 @@ export const FILE_CHUNK = 400;
  * `resolveRepo().container` is NOT that: for a normal repo it falls through to the
  * *current* worktree's toplevel (src/repo.ts:32-37), so three sibling worktrees of
  * one repo look like three unrelated containers and a repo-local fact gets mislabeled
- * `workflow` — the exact failure mode clustering-by-container was chosen to avoid.
+ * `workflow` - the exact failure mode clustering-by-container was chosen to avoid.
  * The guard keeps us honest for exotic git dirs (`--separate-git-dir`, submodule
  * `.git/modules/<name>`), where the parent directory means nothing.
  *
  * Exported because it is the ONE definition of a repo scope key. Retrieval compares a
  * stored key against this (through `createContainerResolver`, src/memory/retrieve.ts), and
- * `--scope repo:<path>` has to produce a key that comparison can match — a second
+ * `--scope repo:<path>` has to produce a key that comparison can match - a second
  * derivation would drift and the memory would simply never be returned.
  */
 export function containerFor(repo: RepoInfo): string {
@@ -184,7 +184,7 @@ export function containerFor(repo: RepoInfo): string {
  * is ~2,600 subprocess spawns and a multi-minute mine.
  *
  * The resolver is injectable so a test can count calls and prove the memoization
- * holds — a wall-clock assertion alone would not.
+ * holds - a wall-clock assertion alone would not.
  */
 export function createContainerResolver(
   resolve: (cwd: string) => RepoInfo | null = resolveRepo,
@@ -197,7 +197,7 @@ export function createContainerResolver(
     try {
       const repo = resolve(cwd);
       // Not a git repo (or git is absent entirely): the raw cwd is the best key we
-      // have. Never throw — a single unresolvable path must not fail the mine.
+      // have. Never throw - a single unresolvable path must not fail the mine.
       if (repo) container = containerFor(repo);
     } catch {}
     memo.set(cwd, container);
@@ -213,7 +213,7 @@ export function createContainerResolver(
  * SIBLINGS of the main worktree (`/repos/app`, `/repos/app-featureA`), so
  * `cwd GLOB '/repos/app/*'` matches none of them: prefix scoping returns zero of a
  * linked worktree's sessions when run from that worktree, and silently drops the
- * other worktrees when run from the main one — exactly the failure clustering by
+ * other worktrees when run from the main one - exactly the failure clustering by
  * container exists to prevent. `git worktree list` supplies the sibling paths
  * (`RepoInfo.branches`), and the container equality check discards whatever the
  * prefixes over-match: a nested clone or submodule under the container resolves to
@@ -246,13 +246,13 @@ export function repoScope(repo: string, resolve: (cwd: string) => RepoInfo | nul
  * Scope from the containers a phrasing came from.
  *
  * One container is repo-local. Three or more unrelated containers is a fact about
- * how the user works, not about a codebase. Two is genuinely ambiguous — the spec
+ * how the user works, not about a codebase. Two is genuinely ambiguous - the spec
  * resolves it toward `repo`, keyed to the container contributing more sessions, ties
  * broken lexicographically so the output is byte-stable across runs.
  *
  * The spec says "the container with more phrasings"; this counts contributing
  * SESSIONS instead. The two are identical in Phase 1, where a cluster is exactly one
- * phrasing — but they diverge the moment Phase 2 merges paraphrases into a cluster,
+ * phrasing - but they diverge the moment Phase 2 merges paraphrases into a cluster,
  * so Phase 2 must recompute this on phrasings-per-container.
  */
 export function deriveScope(sessionsPerContainer: Map<string, number>): MemoryScope {
@@ -361,14 +361,14 @@ export async function mine(opts: MineOptions = {}): Promise<MemoryRecord[]> {
 
   // The interruption pass (Phase 1, docs/ideation/memory-recurrence/spec-phase-1.md):
   // message_fts excludes tool results and injected turns, so two consecutive
-  // role='user' rows in one session are a real interruption — the user cut the agent
-  // off — and the second turn, matching the relaxed INTERRUPTION_TERMS, is
+  // role='user' rows in one session are a real interruption - the user cut the agent
+  // off - and the second turn, matching the relaxed INTERRUPTION_TERMS, is
   // correction-shaped. A self-join on the existing schema finds them; no index
   // changes. The msg_index >= 0 guard applies on BOTH sides so the subagent sentinel
   // (-1) can neither precede nor BE an interruption turn.
   //
   // Rows from this pass flow through the SAME `acceptedText()` filter and the SAME
-  // `clusters` map as the main scan — no parallel filter rules to drift, and the
+  // `clusters` map as the main scan - no parallel filter rules to drift, and the
   // id-sort at the end keeps the batch byte-identical across runs.
   const interruptionConditions: string[] = [
     "a.role = 'user'",
@@ -409,7 +409,7 @@ export async function mine(opts: MineOptions = {}): Promise<MemoryRecord[]> {
     // After normalization, so the `?` a raw turn ends with is still there to see.
     if (readsAsQuestion(text)) return null;
     // Secret material, hijack phrasing, and invisible characters never become
-    // candidates — not even flagged ones, because the batch is handed verbatim to
+    // candidates - not even flagged ones, because the batch is handed verbatim to
     // the triage agent and the injection case is an attack on exactly that reader.
     // Silent like the question filter above: this is corpus narrowing, and the
     // loud surfaces are the ones where a HUMAN decision gets refused (approve,
@@ -424,7 +424,7 @@ export async function mine(opts: MineOptions = {}): Promise<MemoryRecord[]> {
   // Pass 1 asks the cheap question: which phrasings appear in a session that changed
   // since the last mine? Pass 2 then rebuilds those phrasings' clusters over the FULL
   // corpus. Restricting the single pass instead would build each record from its
-  // changed slice alone — and `upsertCandidates` overwrites `evidence` wholesale
+  // changed slice alone - and `upsertCandidates` overwrites `evidence` wholesale
   // (src/memory/store.ts's ON CONFLICT), so one new session would replace a
   // ten-session evidence list, reset firstSeen to today, and shrink what `quorum`
   // counts and `memory export` carries. Scope is the same failure one level louder:
@@ -434,13 +434,13 @@ export async function mine(opts: MineOptions = {}): Promise<MemoryRecord[]> {
   // The rejected alternative was merging each fresh record against its stored row.
   // That needs containers the store does not keep (evidence holds session PATHS), a
   // defined answer for paths the index has since pruned, and a `Math.max` on
-  // distinctPhrasings that would make snooze-resurface structurally impossible — the
+  // distinctPhrasings that would make snooze-resurface structurally impossible - the
   // fresh count would equal the stored baseline by construction, so
   // `shouldResurface`'s `fresh > stored` could never be true. One extra FTS scan buys
   // exact evidence, exact dates, and exact scope with none of that.
   //
   // Pass 1 is `ceil(files.length / FILE_CHUNK)` scans, so a caller that would restrict
-  // to the ENTIRE inventory should pass `files: undefined` instead — the filter admits
+  // to the ENTIRE inventory should pass `files: undefined` instead - the filter admits
   // everything either way, and the restriction is then pure cost. `runMine` does that
   // in src/memory/cli.ts's `mineRestriction`, which is what keeps a first
   // `--since-last` run as cheap as the full backfill it is equivalent to.
@@ -466,7 +466,7 @@ export async function mine(opts: MineOptions = {}): Promise<MemoryRecord[]> {
   }
 
   // Collapse before counting. Grouping on the normalized text is a strict superset
-  // of the byte-exact collapse the design calls for — it additionally folds pure
+  // of the byte-exact collapse the design calls for - it additionally folds pure
   // whitespace variants, which must not become two clusters because they fingerprint
   // to the same id. One eval fixture prompt appeared 14 times byte-identical in the
   // real corpus; without this it would have been the top candidate.
@@ -501,14 +501,14 @@ export async function mine(opts: MineOptions = {}): Promise<MemoryRecord[]> {
     // mine cannot make this number grow: a record is content-addressed on its own text
     // (src/memory/record.ts:105-110), so a genuinely new wording is a NEW record with a
     // new id, not a bump on an existing one. Counting occurrences or contributing
-    // sessions instead is the "raw volume counting" the contract rejected — one eval
+    // sessions instead is the "raw volume counting" the contract rejected - one eval
     // fixture prompt appeared 14 times byte-identical and would have topped the batch.
     //
     // The consequence is user-visible and documented as such: the resurface predicate's
     // second condition (src/memory/triage.ts) cannot fire through the shipped pipeline,
     // so a snooze currently hides a candidate indefinitely. Closing the gap needs a
-    // clustering write-back — a surface for the /memory skill to record "these three
-    // phrasings are one fact" — which no phase specifies. `src/memory/stream.test.ts`
+    // clustering write-back - a surface for the /memory skill to record "these three
+    // phrasings are one fact" - which no phase specifies. `src/memory/stream.test.ts`
     // locks this behavior so a future write-back has to change the test on purpose.
     const distinctPhrasings = 1;
     if (distinctPhrasings < minPhrasings) continue;

@@ -26,7 +26,7 @@ async function processSession(
   // Reject on cwd BEFORE the full metadata pass: getCwdFromSession returns as soon as
   // it sees the cwd (first line for Claude, session_meta for Codex), while
   // extractSessionMetadata always parses the whole transcript. That gap is load-bearing
-  // for Codex, whose sessions live in one flat tree with no slug to pre-filter on — so
+  // for Codex, whose sessions live in one flat tree with no slug to pre-filter on - so
   // scanDir opens every Codex transcript on the machine and `cwdUnder` rejects nearly
   // all of them. Measured on a 297-session Codex corpus scoped to one repo (4 kept):
   // 371ms when the metadata pass ran first, 92ms with this gate ahead of it.
@@ -108,7 +108,7 @@ async function scanDir(
       return [];
     }
     for (const dirname of dirs) {
-      // Cheap loose pre-filter on the encoded slug — intentionally permissive so it
+      // Cheap loose pre-filter on the encoded slug - intentionally permissive so it
       // never skips a real descendant/worktree dir (the slug separator is ambiguous
       // here). The precise, boundary-aware cwd check in processSession (`cwdUnder`)
       // is what actually excludes siblings like `dotfiles-v2`; this is only an

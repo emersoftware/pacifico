@@ -25,7 +25,7 @@ interface JsonLine {
   /** Claude marks auto-generated context-carryover turns (the "continued from a
    *  previous conversation" summary written on compaction) with this flag. */
   isCompactSummary?: boolean;
-  /** True on every line of a subagent (Task) transcript — which carries the
+  /** True on every line of a subagent (Task) transcript - which carries the
    *  PARENT sessionId, so its injected "user" prompt would otherwise pass for
    *  the human speaking mid-session. */
   isSidechain?: boolean;
@@ -122,7 +122,7 @@ export function extractSessionMetadata(lines: string[], tool: Tool): SessionMeta
       if (asJsonObject(d.message)?.role === 'assistant') count++;
     } else if (d.type === 'response_item') {
       // The same envelope gap extractMessages had, in the counting loop. Left unfixed,
-      // every Codex row indexed with message_count 0 even once its messages parsed —
+      // every Codex row indexed with message_count 0 even once its messages parsed -
       // `developer` is excluded here for the same reason it is there: injected framing.
       const p = d.payload;
       const role = p?.['type'] === 'message' ? p['role'] : undefined;
@@ -152,13 +152,13 @@ export function extractSessionMetadata(lines: string[], tool: Tool): SessionMeta
 
 /**
  * The parentSession path from a pi session header ('' for other tools and for pi
- * sessions that are not /fork or /clone copies). Stored raw — the parent file may
+ * sessions that are not /fork or /clone copies). Stored raw - the parent file may
  * not exist on disk, and nothing resolves the path back to a session row; display
  * surfaces derive a basename at render time.
  */
 export function sessionParentSession(lines: string[], tool: Tool): string {
   // Guard the tool FIRST: Claude transcripts open on a user message and Codex on
-  // session_meta — neither has a type:'session' line 1, but only pi's header can
+  // session_meta - neither has a type:'session' line 1, but only pi's header can
   // carry parentSession at all, so non-pi returns without a parse.
   if (tool !== 'pi' || lines.length === 0) return '';
   const d = tryParseJson(lines[0]!);
@@ -229,7 +229,7 @@ export interface GenuineUserTurn {
 }
 
 /**
- * A genuine human turn with its place in time — the boundary marker wrapped's
+ * A genuine human turn with its place in time - the boundary marker wrapped's
  * loop metric splits autonomous runs on. Takes an already-parsed JSONL line
  * (the report walkers yield parsed objects, not strings). Beyond the
  * `isGenuineUserTurn` rules this also rejects sidechain lines: a subagent
@@ -314,7 +314,7 @@ export function messageCount(lines: string[]): number {
  * The last dated line in a transcript. Scans backwards, so the common case (the
  * final line carries a timestamp) still returns on the first iteration.
  *
- * This is the differential oracle for `extractSessionMetadata().date` — the two
+ * This is the differential oracle for `extractSessionMetadata().date` - the two
  * must agree exactly. An earlier version searched only the last 200 lines and,
  * finding nothing dated there, fell back to the *first* timestamp in the file;
  * that fallback reported a session's date as its start rather than its end, and
@@ -457,7 +457,7 @@ export interface PiForkMarker {
    */
   fromIndex: number;
   /**
-   * Extracted MESSAGES in the abandoned branch — not the branch's entry count
+   * Extracted MESSAGES in the abandoned branch - not the branch's entry count
    * (PiFork.abandonedCount): toolResult/custom entries and pure-toolCall assistant
    * lines produce no message.
    */
@@ -470,20 +470,20 @@ export interface PiForkMarker {
 export interface ExtractedMessage {
   role: 'user' | 'assistant';
   text: string;
-  /** Sequential over ALL non-empty messages — identical to getSessionMessages numbering. */
+  /** Sequential over ALL non-empty messages - identical to getSessionMessages numbering. */
   index: number;
   /** user turns: isGenuineUserTurn; assistant turns: always true. */
   genuine: boolean;
   /**
    * Tool calls belonging to this turn. A pure-tool-use assistant line carries no text
    * and so gets no index of its own; its calls fold into the current turn's head
-   * message here. This keeps numbering dense (array[i].index === i) — the invariant
+   * message here. This keeps numbering dense (array[i].index === i) - the invariant
    * get_session_messages pagination and search-hit offsets both depend on.
    */
   tools: ToolUse[];
   /**
    * Pi branch label. Present only on pi transcripts with topology breaks, and only
-   * ever 'abandoned' — active-path messages are unmarked, and unbranched pi files
+   * ever 'abandoned' - active-path messages are unmarked, and unbranched pi files
    * get no field at all (the annotation pass returns early when there are no forks,
    * keeping unbranched output byte-identical).
    */
@@ -498,15 +498,15 @@ export interface MessageSummary {
   closingAssistant: string;
 }
 
-// ——— Codex ———
+// --- Codex ---
 
 /**
  * Text that arrives on a user-role line but is not the human speaking. Codex writes no
  * `promptSource`, so these prefixes are the shape of every injection observed across the
  * real corpus (305 rollouts, 1,022 user records, 417 of them injections).
  *
- * `Warning: ` is the harness scolding itself — "Warning: apply_patch was requested via
- * exec_command…" — and it is the one prefix that could plausibly open a human turn. It is
+ * `Warning: ` is the harness scolding itself - "Warning: apply_patch was requested via
+ * exec_command…" - and it is the one prefix that could plausibly open a human turn. It is
  * still tested before the event_msg join rather than after, because the sessions carrying
  * it are exactly the ones with no `user_message` events to join against.
  */
@@ -523,7 +523,7 @@ const CODEX_SNIFF_LINES = 20;
  * Sniffed rather than passed in: getSessionMessages runs from mcp.ts and cache.ts with
  * nothing but a file's lines, so a `tool` parameter would have to be threaded through
  * every caller. The check reads the PARSED top-level `type` and never a substring of the
- * raw line — a transcript that merely discusses Codex has `response_item` in its prose.
+ * raw line - a transcript that merely discusses Codex has `response_item` in its prose.
  */
 function isCodexTranscript(lines: string[]): boolean {
   const n = Math.min(lines.length, CODEX_SNIFF_LINES);
@@ -553,7 +553,7 @@ function codexText(payload: JsonObject, kind: 'input_text' | 'output_text'): str
 function codexToolUse(p: JsonObject): ToolUse {
   const name = asJsonString(p['name']) ?? String(p['type'] ?? '?');
   // Codex ships arguments three ways: a JSON string (`function_call.arguments`), the raw
-  // payload itself (`custom_tool_call.input` — a patch or a script), and an object.
+  // payload itself (`custom_tool_call.input` - a patch or a script), and an object.
   const raw = p['arguments'] ?? p['input'] ?? p['action'];
   const rawString = asJsonString(raw);
   if (rawString !== undefined) {
@@ -561,7 +561,7 @@ function codexToolUse(p: JsonObject): ToolUse {
       const parsed = asJsonObject(JSON.parse(rawString));
       if (parsed) return { name, summary: summarizeToolInput(parsed) };
     } catch {
-      // Not JSON — it is the patch or script text itself, so summarize it directly.
+      // Not JSON - it is the patch or script text itself, so summarize it directly.
     }
     const s = rawString.replace(/\s+/g, ' ').trim();
     return { name, summary: s.length > 120 ? s.slice(0, 120) + '…' : s };
@@ -574,14 +574,14 @@ function codexToolUse(p: JsonObject): ToolUse {
  *
  * Codex writes two parallel logs. `response_item` is the model-facing history and
  * `event_msg` is the UI event log, and they overlap: every assistant text is duplicated
- * by an `event_msg` `agent_message`. Messages therefore come from `response_item` only —
+ * by an `event_msg` `agent_message`. Messages therefore come from `response_item` only -
  * reading both would double every Codex turn in message_fts.
  *
  * What `event_msg` alone has is `user_message`: the harness echo of what the human
  * actually typed, and nothing it injected. That makes genuineness a JOIN rather than a
  * heuristic. Measured over the 305-rollout corpus, 604 of 1,022 user records have a
  * text-identical twin in that stream, and every one of the 417 that do not is matched by
- * CODEX_INJECTED — the two signals agree completely, with nothing left unexplained.
+ * CODEX_INJECTED - the two signals agree completely, with nothing left unexplained.
  */
 function extractCodexMessages(lines: string[]): ExtractedMessage[] {
   const parsed = lines.map(tryParseJson);
@@ -602,13 +602,13 @@ function extractCodexMessages(lines: string[]): ExtractedMessage[] {
   }
   // Trust the join only where it demonstrably joins. If Codex ever normalized whitespace
   // differently between the two streams, every turn would silently flip to genuine:false
-  // and first_prompt would go blank again — indistinguishable from the bug this fixes. A
+  // and first_prompt would go blank again - indistinguishable from the bug this fixes. A
   // session whose streams do not meet falls back to the injection prefixes alone.
   const joins = typed.size > 0 && userTexts.some((t) => typed.has(t));
 
   const messages: ExtractedMessage[] = [];
   let idx = 0;
-  // The turn's head message — where a following pure-tool-call line's calls attach.
+  // The turn's head message - where a following pure-tool-call line's calls attach.
   let current: ExtractedMessage | null = null;
   let pending: ToolUse[] = [];
 
@@ -654,8 +654,8 @@ function extractCodexMessages(lines: string[]): ExtractedMessage[] {
 /**
  * The single numbering authority for message extraction. Every non-empty
  * user/assistant message in order, with a sequential index and a `genuine` flag
- * for user turns (injected skill bodies and tool results still consume an index —
- * they are counted, just flagged — so genuineness is metadata, never numbering).
+ * for user turns (injected skill bodies and tool results still consume an index -
+ * they are counted, just flagged - so genuineness is metadata, never numbering).
  * Search-hit indices (message_fts) and get_session_messages pagination must agree
  * exactly, so both derive from this function.
  */
@@ -665,11 +665,11 @@ export function extractMessages(lines: string[]): ExtractedMessage[] {
   if (isCodexTranscript(lines)) return extractCodexMessages(lines);
 
   const messages: ExtractedMessage[] = [];
-  // Source line of each emitted message — the pi annotation pass maps messages back
+  // Source line of each emitted message - the pi annotation pass maps messages back
   // to tree entries through these.
   const messageLines: number[] = [];
   let idx = 0;
-  // The turn's head message — where a following pure-tool-use line's calls attach.
+  // The turn's head message - where a following pure-tool-use line's calls attach.
   let current: ExtractedMessage | null = null;
   // Tool calls seen before any message was emitted (rare: a session opening on a tool
   // call). Buffered here and flushed onto the first emitted message.
@@ -685,7 +685,7 @@ export function extractMessages(lines: string[]): ExtractedMessage[] {
         messages.push(current);
         messageLines.push(li);
       }
-      // A user line with no text is a tool_result/empty turn — it carries no tool_use
+      // A user line with no text is a tool_result/empty turn - it carries no tool_use
       // and must not reset `current` (assistant calls after it still belong to the turn).
     } else {
       const text = extractAssistantText(d);
@@ -710,12 +710,12 @@ export function extractMessages(lines: string[]): ExtractedMessage[] {
  * Pi branch annotation. Pi session files are trees: /tree navigation leaves abandoned
  * branches in the same append-only JSONL, and the linear pass above renders those dead
  * exchanges inline as if they happened in the live conversation. The fix is
- * chronological ANNOTATION, not path filtering or reordering — pi appends entries in
+ * chronological ANNOTATION, not path filtering or reordering - pi appends entries in
  * the order things happened, so raw file order is already truthful, and reordering
  * would falsify the timeline and break the msg_index ↔ get_session_messages(offset)
  * contract. Every message keeps its natural position and gains a label:
  * abandoned-branch messages get branch:'abandoned', and the first message of each
- * abandoned branch carries a fork marker. Numbering is untouched — abandoned messages
+ * abandoned branch carries a fork marker. Numbering is untouched - abandoned messages
  * keep their indices in the single numbering space.
  *
  * No-op purity: buildPiTree returns null on non-pi transcripts, and unbranched pi
@@ -750,7 +750,7 @@ function annotatePiBranches(messages: ExtractedMessage[], messageLines: number[]
       if (lineSet.has(messageLines[i]!)) inFork.push(i);
     }
     // A fork whose branch produces no messages (e.g. a custom-only subtree) gets no
-    // marker — there is no message to hang it on.
+    // marker - there is no message to hang it on.
     if (!inFork.length) continue;
     const fromLine = entryById.get(fork.fromEntryId)?.lineIndex ?? 0;
     let before = -1;
@@ -775,7 +775,7 @@ function annotatePiBranches(messages: ExtractedMessage[], messageLines: number[]
   }
 }
 
-/** Thin projection of extractMessages — same messages, same numbering, no genuine flag. */
+/** Thin projection of extractMessages - same messages, same numbering, no genuine flag. */
 export function getSessionMessages(lines: string[]): SessionMessage[] {
   return extractMessages(lines).map(({ role, text, index, tools, branch, fork }) => {
     const message: SessionMessage = { role, text, index, tools };
@@ -793,7 +793,7 @@ export const CLOSING_MAX = 500;
 /**
  * Remove output-style "★ Insight" marker lines and their `──` fence lines while
  * keeping the body text, then collapse the blank runs they leave behind. This is
- * markup cleanup, not outcome detection — the body (often the useful part) stays.
+ * markup cleanup, not outcome detection - the body (often the useful part) stays.
  */
 export function stripInsightFences(text: string): string {
   // Match only the literal output-style markup: a `★ Insight` marker line and
@@ -840,7 +840,7 @@ export function summarizeMessages(messages: ExtractedMessage[]): MessageSummary 
 /**
  * Last user message and last assistant message from a session, stripped of
  * injected tags and truncated to CLOSING_MAX. Both roles are returned so the
- * synthesis layer (Phase 2) can decide what the open thread is — the last
+ * synthesis layer (Phase 2) can decide what the open thread is - the last
  * assistant turn alone is often a question or tool call, not an outcome.
  */
 export interface ClosingMessages {

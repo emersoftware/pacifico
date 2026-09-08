@@ -57,7 +57,7 @@ beforeAll(() => {
   const repos = join(tmp, 'repos');
   mkdirSync(repos, { recursive: true });
 
-  // (b) One repo, three sibling worktrees — three distinct cwds that must cluster
+  // (b) One repo, three sibling worktrees - three distinct cwds that must cluster
   // as ONE container. This is the standard (non-bare) layout, where
   // resolveRepo().container returns each worktree's own toplevel.
   mainRepo = initRepo(join(repos, 'app'));
@@ -132,7 +132,7 @@ describe('deriveScope', () => {
   });
 
   test('a two-container tie breaks lexicographically, for determinism', () => {
-    // Ties must not depend on Map insertion order — that is SQLite row order, which
+    // Ties must not depend on Map insertion order - that is SQLite row order, which
     // is an implementation detail and would make the batch differ run to run.
     expect(
       deriveScope(
@@ -167,7 +167,7 @@ describe('createContainerResolver', () => {
 
   test('memoizes: one resolution per distinct cwd', () => {
     // resolveRepo spawns git three times per call and the live corpus has ~859
-    // distinct cwds — without memoization a mine is thousands of subprocesses.
+    // distinct cwds - without memoization a mine is thousands of subprocesses.
     let calls = 0;
     const containerOf = createContainerResolver((cwd) => {
       calls++;
@@ -238,12 +238,12 @@ describe('--repo scoping selects by container, not path prefix', () => {
 
 // Binding an imported memory to a local repo.
 //
-// Export blanks a `repo` scope key on purpose — it is an absolute path on the author's
-// machine (src/memory/portable.ts) — and retrieval skips a keyless repo memory rather than
+// Export blanks a `repo` scope key on purpose - it is an absolute path on the author's
+// machine (src/memory/portable.ts) - and retrieval skips a keyless repo memory rather than
 // letting it match every cwd (src/memory/retrieve.ts). Nothing re-derives the key either: a
 // mine builds records from transcripts, and no transcript on THIS machine ever contained the
 // imported sentence. So before `--scope repo:<path>` existed, an imported repo memory could
-// be approved and could never be returned — the worst shape available, because the user
+// be approved and could never be returned - the worst shape available, because the user
 // believes it is active. These tests own that whole path, on real repos.
 describe('binding an imported repo memory', () => {
   const IMPORTED_FACT = 'Always regenerate the vendored client from the schema, never by hand';

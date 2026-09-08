@@ -2,8 +2,8 @@
 //
 // `~/Developer/authkit-*` is four repos that share conventions but are not universal
 // workflow rules. Phase 1's spread heuristic (src/memory/mine.ts:151-156) cannot derive
-// that grouping — it can count containers, but "these four are related" is not a fact
-// about spread — so groups are the one scope that needs configuration.
+// that grouping - it can count containers, but "these four are related" is not a fact
+// about spread - so groups are the one scope that needs configuration.
 //
 // The config lives in the data dir and NOWHERE ELSE. Writing a `.sessions/` file into a
 // project would violate the out-of-band requirement outright, and this module never
@@ -28,7 +28,7 @@ export interface GroupConfig {
 const EMPTY_CONFIG: GroupConfig = { groups: {} };
 
 /**
- * Resolved per call, never frozen at import — same reason as src/paths.ts:14-18. A
+ * Resolved per call, never frozen at import - same reason as src/paths.ts:14-18. A
  * hermetic test rewrites SESSIONS_DATA_DIR after this module is already loaded.
  */
 export function getGroupConfigPath(): string {
@@ -38,8 +38,8 @@ export function getGroupConfigPath(): string {
 /**
  * Expand a leading `~` to the user's home directory.
  *
- * `Bun.Glob` does no shell expansion — verified: `new Bun.Glob('~/Developer/authkit-*')`
- * does not match `/Users/me/Developer/authkit-x` — so this has to happen before the
+ * `Bun.Glob` does no shell expansion - verified: `new Bun.Glob('~/Developer/authkit-*')`
+ * does not match `/Users/me/Developer/authkit-x` - so this has to happen before the
  * pattern is compiled. Only a bare `~` and a `~/` prefix expand; `~someuser` is left
  * alone rather than guessed at, because resolving another account's home requires a
  * passwd lookup and getting it wrong silently produces a group that matches nothing.
@@ -54,14 +54,14 @@ function expandHome(pattern: string): string {
  * Every path from `container` up to the filesystem root, `container` first.
  *
  * This is what makes a glob match a member's SUBDIRECTORY. `Bun.Glob`'s `*` does not
- * cross `/` — verified: `/tmp/x/authkit-*` matches `/tmp/x/authkit-nextjs` but not
- * `/tmp/x/authkit-session/packages/core` — and `activeMemoryFor` passes whatever
+ * cross `/` - verified: `/tmp/x/authkit-*` matches `/tmp/x/authkit-nextjs` but not
+ * `/tmp/x/authkit-session/packages/core` - and `activeMemoryFor` passes whatever
  * `createContainerResolver` produced, which for a cwd outside any git repo is the raw
  * cwd, subdirectory and all. Testing the ancestors is the JS analogue of the boundary
  * semantics `cwdUnder` (src/repo.ts:73-75) already gives repo scope: a group's globs
  * describe the group's ROOTS, and being anywhere beneath one is membership.
  *
- * Bounded by construction — `dirname('/')` is `'/'`, so the walk terminates at the
+ * Bounded by construction - `dirname('/')` is `'/'`, so the walk terminates at the
  * root and a path has as many ancestors as it has segments.
  */
 function selfAndAncestors(container: string): string[] {
@@ -85,7 +85,7 @@ function selfAndAncestors(container: string): string[] {
  * and escaping them would break the feature. A `[` in a *path* being tested is data and
  * is never interpreted.
  *
- * Names are sorted so a container in two groups produces the same order every call —
+ * Names are sorted so a container in two groups produces the same order every call -
  * `activeMemoryFor` promises byte-identical output for identical inputs.
  */
 export function groupsFor(container: string, config: GroupConfig): string[] {
@@ -94,7 +94,7 @@ export function groupsFor(container: string, config: GroupConfig): string[] {
   const matched: string[] = [];
   for (const [name, patterns] of Object.entries(config.groups)) {
     // An unnamed group cannot be referenced by a memory's scope key, and an empty key is
-    // skipped on retrieval anyway — matching it would attach a group to every memory.
+    // skipped on retrieval anyway - matching it would attach a group to every memory.
     if (!name) continue;
     const hit = patterns.some((pattern) => {
       if (!pattern) return false;
@@ -146,7 +146,7 @@ function readGroups(text: string): GroupConfig {
  *
  * Re-read on every call rather than memoized. `activeMemoryFor` runs once per tool
  * invocation and only reaches this when a group-scoped memory exists, so the cost is one
- * `statSync`-shaped syscall plus a small parse — while a process-lifetime memo inside a
+ * `statSync`-shaped syscall plus a small parse - while a process-lifetime memo inside a
  * long-lived MCP server would mean editing groups.json required restarting the client,
  * and would make "deleting groups.json does not break retrieval" pass for the wrong
  * reason.

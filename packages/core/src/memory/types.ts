@@ -1,10 +1,10 @@
 // The v1 memory record: a portable, self-contained document describing one
-// durable fact a user has told an agent. Everything here is deterministic —
+// durable fact a user has told an agent. Everything here is deterministic -
 // no field requires a judgment call, so a record can be rebuilt byte-identically
 // from the same transcripts on any machine.
 //
 // Two fields exist in Phase 1 despite having no consumer until Phase 4:
-// `id` (content-addressed) and `author`. Both are unrepairable retroactively —
+// `id` (content-addressed) and `author`. Both are unrepairable retroactively -
 // an id assigned later would not match one assigned now, and the author of a
 // backfilled record cannot be recovered once the machine changes hands.
 
@@ -22,12 +22,12 @@ export type MemoryState = 'candidate' | 'approved' | 'rejected' | 'snoozed' | 'm
 
 export interface MemoryScope {
   /**
-   * 'repo' — confined to one repo container; 'group' — a named set of containers a
-   * human declared related; 'workflow' — spans unrelated containers.
+   * 'repo' - confined to one repo container; 'group' - a named set of containers a
+   * human declared related; 'workflow' - spans unrelated containers.
    *
    * 'group' is the one tier that cannot be derived. Phase 1's spread heuristic
    * (src/memory/mine.ts:151-156) can tell "seen in one container" from "seen in
-   * several", but not "these four repos share a convention" from "this is universal" —
+   * several", but not "these four repos share a convention" from "this is universal" -
    * that needs a grouping the index does not have, which is why groups are assigned at
    * triage and resolved against configured path globs (src/memory/groups.ts).
    */
@@ -42,7 +42,7 @@ export interface MemoryScope {
 
 export interface MemoryEvidence {
   /**
-   * Count of DISTINCT phrasings after byte-exact collapse — never raw occurrences.
+   * Count of DISTINCT phrasings after byte-exact collapse - never raw occurrences.
    * The name is deliberate: an `occurrences` field would not tell a reader that 14
    * byte-identical copies of one eval fixture prompt count as 1.
    */
@@ -56,7 +56,7 @@ export interface MemoryEvidence {
 
 export interface MemoryRecord {
   v: number;
-  /** `sha256:<hex>` over the normalized text — stable across runs and machines. */
+  /** `sha256:<hex>` over the normalized text - stable across runs and machines. */
   id: string;
   text: string;
   kind: MemoryKind;
@@ -70,14 +70,14 @@ export interface MemoryRecord {
   /**
    * Bypass topic matching: an always-on memory is returned for every topic.
    *
-   * It bypasses ONLY the matcher. State and scope still apply — an always-on memory
+   * It bypasses ONLY the matcher. State and scope still apply - an always-on memory
    * that is rejected, snoozed, or scoped to a repo you are not in is still not
    * returned (src/memory/retrieve.ts). "Always" means "regardless of what you said
    * you were about to work on", not "unconditionally".
    *
    * This is the safety valve for topic-conditional retrieval: a topic string that
    * happens to share no words with a standing constraint would otherwise suppress it,
-   * and the failure is silent — the agent simply never sees the rule.
+   * and the failure is silent - the agent simply never sees the rule.
    */
   alwaysOn: boolean;
   /**
@@ -92,7 +92,7 @@ export interface MemoryRecord {
 }
 
 /**
- * A memory as it crosses the process boundary — no local paths, no raw prompts.
+ * A memory as it crosses the process boundary - no local paths, no raw prompts.
  *
  * Four fields of `MemoryRecord` are deliberately absent, and each omission is a
  * privacy or a correctness decision rather than a size one (see src/memory/portable.ts):
@@ -100,17 +100,17 @@ export interface MemoryRecord {
  *    recipient imports the fact, not your opinion of it, and triages for themselves.
  *  - `alwaysOn`: the same category. Whether a fact is important enough to bypass your
  *    topic matcher is a judgment about YOUR attention budget, and it arrives as a
- *    candidate anyway — nothing imported can reach an agent until you approve it.
+ *    candidate anyway - nothing imported can reach an agent until you approve it.
  *  - `evidence.sessions`: local filesystem paths, which disclose directory structure
  *    and project names and mean nothing on another machine.
  * `scope.key` is declared here because the shape is part of the format. It is blanked
- * on export for `repo` — an absolute container path — but PRESERVED for `group`, where
+ * on export for `repo` - an absolute container path - but PRESERVED for `group`, where
  * the key is a human-chosen name that carries the entire meaning and discloses nothing
  * about this machine's directory layout.
  */
 export interface PortableMemory {
   v: number;
-  /** `sha256:<hex>` — content-addressed, so identity survives transport. */
+  /** `sha256:<hex>` - content-addressed, so identity survives transport. */
   id: string;
   text: string;
   kind: MemoryKind;

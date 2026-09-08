@@ -11,7 +11,7 @@ const j = (o: JsonValue): string => JSON.stringify(o);
 // cache.ts resolves SESSIONS_* env lazily, but the module instance is shared across
 // test files in one `bun test` run (cache.search.test.ts, cache.metrics.test.ts,
 // context.test.ts, mcp.test.ts). So we (re)assert our env and reset the cached DB
-// connection before each test — keeping this file hermetic regardless of which other
+// connection before each test - keeping this file hermetic regardless of which other
 // cache-importing file ran first or interleaves.
 let tmp: string;
 let cache: typeof import('./cache');
@@ -107,7 +107,7 @@ beforeAll(async () => {
   mkdirSync(join(tmp, 'pi'), { recursive: true });
   mkdirSync(join(tmp, 'codex'), { recursive: true });
 
-  // 'branched': the canonical one-fork shape — a /tree hop back to u1 abandons the
+  // 'branched': the canonical one-fork shape - a /tree hop back to u1 abandons the
   // u2/a2 exchange, then a hop back to a1 resumes the live conversation.
   writePi('branched', [
     piSession(),
@@ -120,7 +120,7 @@ beforeAll(async () => {
     piAssistant('a3', 'u3', 'the live answer'),
   ]);
 
-  // 'forked': a /fork copy — the header carries parentSession; the chain is linear.
+  // 'forked': a /fork copy - the header carries parentSession; the chain is linear.
   writePi('forked', [
     piSession({ parentSession: PARENT_PATH }),
     piModelChange('m1', null),
@@ -128,7 +128,7 @@ beforeAll(async () => {
     piAssistant('a1', 'u1', 'carried context'),
   ]);
 
-  // 'plain': unbranched, not a /fork copy — all defaults.
+  // 'plain': unbranched, not a /fork copy - all defaults.
   writePi('plain', [piSession(), piModelChange('m1', null), piUser('u1', 'm1', 'standalone')]);
 
   // A Claude session for the non-pi defaults.
@@ -221,7 +221,7 @@ test('schema bump: stale rows are recomputed by the drop+rebuild, and ignored_fi
   db.close();
 
   // Reopen through the cache: openDb sees the user_version mismatch, drops ALL FOUR
-  // tables (ignored_files included — negative-cache entries do NOT survive a rebuild),
+  // tables (ignored_files included - negative-cache entries do NOT survive a rebuild),
   // and the refresh re-parses from the transcripts on disk.
   await cache.refreshIndex();
 

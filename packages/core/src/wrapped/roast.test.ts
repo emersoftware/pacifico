@@ -78,9 +78,9 @@ describe('buildRoastPrompt', () => {
     expect(p).toContain('656000000'); // tokens
     expect(p).toContain('workos'); // word of the year (aggregate)
     expect(p).toContain('JSON array'); // schema instruction
-    // Headlines render as full-screen type — the prompt must demand brevity.
+    // Headlines render as full-screen type - the prompt must demand brevity.
     expect(p).toContain('<=80 chars');
-    // The session-of-the-year *title* is free text — it must not be sent.
+    // The session-of-the-year *title* is free text - it must not be sent.
     expect(p).not.toContain('secret internal prompt text');
   });
 });
@@ -111,7 +111,7 @@ describe('runRoast', () => {
     });
     expect(slides).toHaveLength(1);
     expect(slides[0]!.headline).toContain('$13,427');
-    // The model's own footnote is overridden — provenance is guaranteed.
+    // The model's own footnote is overridden - provenance is guaranteed.
     expect(slides[0]!.footnote).toBe('improvised by Claude from your stats');
   });
 

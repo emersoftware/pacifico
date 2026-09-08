@@ -20,7 +20,7 @@ export function splitFrontmatter(raw: string): FrontmatterSplit {
 /** The skill's own `description`, lifted out of its frontmatter and folded to one line. */
 export function frontmatterDescription(frontmatter: string): string {
   try {
-    // SAFETY: YAML is a JSON superset at the values we write here — simple
+    // SAFETY: YAML is a JSON superset at the values we write here - simple
     // `key: value` frontmatter lines parse into the JSON domain.
     const parsed = asJsonObject(Bun.YAML.parse(frontmatter) as JsonValue);
     const description = asJsonString(parsed?.description);
@@ -30,7 +30,7 @@ export function frontmatterDescription(frontmatter: string): string {
       return description.replace(/\s+/g, ' ').trim();
     }
   } catch {
-    // A malformed block is not worth refusing to serve the prompt over — the body is what
+    // A malformed block is not worth refusing to serve the prompt over - the body is what
     // matters, and the description falls back to the registration-site sentence.
   }
   return '';

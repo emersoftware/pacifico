@@ -157,7 +157,7 @@ describe('extractSessionMetadata', () => {
 
   // Regression guard for the one input shape where the old date helper disagreed:
   // it searched only the final 200 lines and, finding nothing dated there, fell
-  // back to the FIRST timestamp — reporting a session's start as its end. Both
+  // back to the FIRST timestamp - reporting a session's start as its end. Both
   // implementations must now report the last dated line regardless of tail length.
   test('reports the last dated line even when the final 200+ lines carry no timestamp', () => {
     const lines = [
@@ -391,7 +391,7 @@ describe('getSessionMessages', () => {
 });
 
 describe('extractMessages', () => {
-  // A typed turn, an assistant turn, a skill-injection turn (heuristic path — no
+  // A typed turn, an assistant turn, a skill-injection turn (heuristic path - no
   // promptSource), a promptSource-null turn (tool-result/injected style), and a
   // closing assistant turn. Indices must be sequential over all five.
   const mixed = jsonl(
@@ -674,7 +674,7 @@ describe('tool-call extraction (include_tools support)', () => {
       { type: 'assistant', message: { content: [{ type: 'tool_use', name: 'Bash', input: { command: 'bun test' } }] } },
     );
     const msgs = extractMessages(lines);
-    // Two indexed messages only — the two pure-tool lines added no rows.
+    // Two indexed messages only - the two pure-tool lines added no rows.
     expect(msgs.map((m) => m.index)).toEqual([0, 1]);
     expect(msgs[1]!.tools.map((t) => t.name)).toEqual(['Edit', 'Bash']);
     expect(msgs[1]!.tools[1]!.summary).toBe('bun test');
@@ -759,7 +759,7 @@ describe('tool-call extraction (include_tools support)', () => {
 // exercise did not exist before: Codex nests messages under a `response_item` envelope,
 // so all 305 rollouts on a real machine extracted to zero messages. The pre-existing
 // `{type:'message', message:{…}}` tests elsewhere in this file are the PI shape, which
-// occurs zero times in real Codex logs — hence the duplicate coverage rather than edits
+// occurs zero times in real Codex logs - hence the duplicate coverage rather than edits
 // to those.
 describe('extractMessages: Codex', () => {
   /** A Codex rollout head. Present on line 1 of all 305 real rollouts. */
@@ -772,7 +772,7 @@ describe('extractMessages: Codex', () => {
     type: 'response_item',
     payload: { type: 'message', role: 'assistant', content: [{ type: 'output_text', text }] },
   });
-  /** The UI-log echo of what the human actually typed — Codex's genuineness oracle. */
+  /** The UI-log echo of what the human actually typed - Codex's genuineness oracle. */
   const typedEvent = (message: string) => ({ type: 'event_msg', payload: { type: 'user_message', message } });
 
   test('extracts user and assistant turns from the response_item envelope', () => {
@@ -801,7 +801,7 @@ describe('extractMessages: Codex', () => {
   });
 
   test('falls back to injection prefixes when the two streams never join', () => {
-    // No user_message events at all — 26 of 305 real rollouts look like this. Without the
+    // No user_message events at all - 26 of 305 real rollouts look like this. Without the
     // guard every turn would flip to genuine:false and first_prompt would go blank again.
     const lines = jsonl(meta, userItem('<environment_context> cwd=/repo'), userItem('what changed?'));
     expect(extractMessages(lines).map((m) => [m.text, m.genuine])).toEqual([
@@ -885,7 +885,7 @@ describe('extractMessages: Codex', () => {
   });
 });
 
-// ——— Pi branch topology ———
+// --- Pi branch topology ---
 // Fixture shapes mirror real ~/.pi/agent/sessions files: every line carries
 // id/parentId, the session header is the root, the header-adjacent model_change has
 // parentId: null, and message text lives in content arrays of {type:'text'} blocks.
@@ -953,8 +953,8 @@ describe('buildPiTree', () => {
   });
 
   test('parentId: null chains to the preceding entry instead of forking', () => {
-    // Every real pi file has exactly one parentId:null non-header entry — the first
-    // model_change — so this convention fires on every file and must never fork.
+    // Every real pi file has exactly one parentId:null non-header entry - the first
+    // model_change - so this convention fires on every file and must never fork.
     const tree = buildPiTree(jsonl(piSession, piModelChange('m1', null), piUser('u1', 'm1', 'hi')))!;
     expect(tree.forks).toEqual([]);
     expect(tree.activeIds.has('m1')).toBe(true);
@@ -1014,7 +1014,7 @@ describe('buildPiTree', () => {
         piAssistant('x2', 'x1', 'abandoned 2'),
         piUser('u2', 'a1', 'q2'),
         piAssistant('a2', 'u2', 'a2'),
-        piAssistant('x3', 'x2', 'abandoned 3'), // parent x2 is abandoned — same fork
+        piAssistant('x3', 'x2', 'abandoned 3'), // parent x2 is abandoned - same fork
         piUser('u3', 'a2', 'q3'),
         piAssistant('a3', 'u3', 'a3'),
       ),
@@ -1075,7 +1075,7 @@ describe('extractMessages: pi branches', () => {
       ['user', 'the real follow-up', ''],
       ['assistant', 'the live answer', ''],
     ]);
-    // Dense, single numbering space — abandoned messages keep their indices.
+    // Dense, single numbering space - abandoned messages keep their indices.
     expect(msgs.map((m) => m.index)).toEqual([0, 1, 2, 3, 4, 5]);
     const markers = msgs.filter((m) => m.fork);
     expect(markers).toHaveLength(1);
@@ -1103,7 +1103,7 @@ describe('extractMessages: pi branches', () => {
     const msgs = extractMessages(lines);
     const marker = msgs.find((m) => m.fork)!;
     expect(marker.index).toBe(2);
-    expect(marker.fork!.fromIndex).toBe(1); // a1 — nearest active message at/before m2's line
+    expect(marker.fork!.fromIndex).toBe(1); // a1 - nearest active message at/before m2's line
     expect(msgs.map((m) => m.branch ?? '')).toEqual(['', '', 'abandoned', 'abandoned', '', '']);
   });
 
@@ -1134,7 +1134,7 @@ describe('extractMessages: pi branches', () => {
   test('firstUserText skips injected turns and takes the first genuine one', () => {
     // Regression guard for the sessionId gap: genuineUserTurnFromLine returns null on
     // pi lines (they carry no sessionId), so the fork text must come from the shared
-    // isGenuineUserTurn/extractUserText logic — or every fork would report ''.
+    // isGenuineUserTurn/extractUserText logic - or every fork would report ''.
     const lines = jsonl(
       piSession,
       piModelChange('m1', null),
@@ -1199,7 +1199,7 @@ describe('sessionParentSession', () => {
   });
 
   test('non-pi tools return empty without parsing (tool guard first)', () => {
-    // Claude's line 1 is a user message, Codex's is session_meta — neither has a
+    // Claude's line 1 is a user message, Codex's is session_meta - neither has a
     // type:'session' header, and the guard means even a pi-shaped line 1 under a
     // non-pi tool is never inspected.
     expect(sessionParentSession(jsonl({ ...piSession, parentSession: parent }), 'claude')).toBe('');

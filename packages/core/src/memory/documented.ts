@@ -2,9 +2,9 @@
 // itself loads. Read-only, always: `sessions` never writes to any of them.
 //
 // WHY THIS EXISTS. The mine reads transcripts, so it re-derives facts the user already
-// wrote down somewhere that gets injected every session — `~/.claude/CLAUDE.md`, a
+// wrote down somewhere that gets injected every session - `~/.claude/CLAUDE.md`, a
 // project `CLAUDE.md`, and `~/.claude/projects/<slug>/memory/*.md`. That last one is the
-// sharp overlap: it is the same genre and the same mechanism as this store — durable
+// sharp overlap: it is the same genre and the same mechanism as this store - durable
 // facts captured from sessions, injected at session start. This repo already has eight of
 // them, mined out of the very sessions `memory mine` reads.
 //
@@ -13,7 +13,7 @@
 // an agent gets both and cannot tell which is current.
 //
 // WHY IT IS NOT A MECHANICAL DEDUPE. Token-overlap scoring was tried against this exact
-// corpus and was useless — it scored "I don't know!" as already-documented. Whether two
+// corpus and was useless - it scored "I don't know!" as already-documented. Whether two
 // sentences assert the same fact is the judgment the /memory skill already makes for
 // clustering. This module's job is only to put the prior art in front of that judgment.
 
@@ -21,7 +21,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 
-// Resolved lazily from the env on every call, matching src/cache.ts:51-55 — a test that
+// Resolved lazily from the env on every call, matching src/cache.ts:51-55 - a test that
 // sets SESSIONS_CLAUDE_DIR after import must still be honored.
 //
 // SESSIONS_CLAUDE_DIR is the PROJECTS root (`~/.claude/projects`), not `~/.claude`, so
@@ -38,7 +38,7 @@ export function claudeHome(): string {
 
 /** One already-binding statement, with enough provenance for the skill to cite it. */
 export interface DocumentedFact {
-  /** Display path, tilde-collapsed — this is shown to a human and must not leak $HOME. */
+  /** Display path, tilde-collapsed - this is shown to a human and must not leak $HOME. */
   source: string;
   text: string;
 }
@@ -58,7 +58,7 @@ export function collapseHome(path: string): string {
  *
  * Bullets and paragraphs, not sentences: an instruction file states one rule per bullet,
  * and splitting on `.` would shred "use bun, not npm. always." into two half-facts that
- * match nothing. Headings and fenced code are dropped — a heading is a label and a code
+ * match nothing. Headings and fenced code are dropped - a heading is a label and a code
  * block is an example, neither is a claim.
  */
 export function statementsIn(markdown: string): string[] {
@@ -99,8 +99,8 @@ export function documentedFacts(cwd: string): DocumentedFact[] {
   readFacts(join(cwd, 'CLAUDE.md'), 'CLAUDE.md', facts);
   readFacts(join(cwd, 'AGENTS.md'), 'AGENTS.md', facts);
 
-  // Claude Code's own memory store for this project. MEMORY.md is the index — one
-  // pointer line per file — so reading it alongside the files it points at would count
+  // Claude Code's own memory store for this project. MEMORY.md is the index - one
+  // pointer line per file - so reading it alongside the files it points at would count
   // every fact twice, once as a hook and once in full.
   const memoryDir = join(projectsDir(), projectSlug(cwd), 'memory');
   if (existsSync(memoryDir)) {

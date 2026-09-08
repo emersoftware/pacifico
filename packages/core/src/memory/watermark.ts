@@ -16,7 +16,7 @@
 // default. The two meet in one place worth knowing about: `/weekly-summary` runs
 // `memory mine --all --since-last`, which
 // examines every repo and therefore advances every repo's rows. A `--since-last` run
-// inside a single repo afterwards correctly reports nothing changed — the material was
+// inside a single repo afterwards correctly reports nothing changed - the material was
 // already mined into the same store, so nothing is lost, but a reader who expects the
 // watermark to be per-invocation will read it as a bug. It is not; the scoping rule is
 // only "never advance a file the mine did not look at" (see `advanceWatermark`).
@@ -24,7 +24,7 @@
 // The table lives in memory.db, not index.db: the index is disposable by design
 // (--clear-cache unlinks it), and a watermark that vanished with it would re-emit the
 // entire backfill on the next incremental run. Nothing prunes rows for transcripts
-// that have since been deleted — that is deliberate, not a leak. `changedSessions`
+// that have since been deleted - that is deliberate, not a leak. `changedSessions`
 // only ever reads paths that are in the CURRENT index inventory, so an orphan row is
 // inert; the alternative, a delete pass joined against another database, would buy
 // nothing but a second failure mode.
@@ -33,7 +33,7 @@ import { getMemoryDb } from './store';
 
 export interface WatermarkEntry {
   filePath: string;
-  /** stat.mtimeMs at last mine. A float — see the REAL column note in store.ts's migrate(). */
+  /** stat.mtimeMs at last mine. A float - see the REAL column note in store.ts's migrate(). */
   mtime: number;
   /** stat.size at last mine. */
   size: number;
@@ -50,7 +50,7 @@ export function readWatermark(): Map<string, WatermarkEntry> {
   const db = getMemoryDb();
   const rows = db
     .query<{ file_path: string; mtime: number; size: number }, []>(
-      // Explicit column list, not SELECT * — `mined_at` is provenance for a human
+      // Explicit column list, not SELECT * - `mined_at` is provenance for a human
       // reading the table with sqlite3 and has no reader in code.
       'SELECT file_path, mtime, size FROM mine_watermark',
     )
@@ -61,7 +61,7 @@ export function readWatermark(): Map<string, WatermarkEntry> {
 /**
  * The most recent `mined_at` across the watermark, or null when nothing was ever
  * mined. Report provenance only (the `memory report` header prints it so a stale
- * store is visible) — like `mined_at` itself, it is never an input to a decision.
+ * store is visible) - like `mined_at` itself, it is never an input to a decision.
  */
 export function lastMinedAt(): string | null {
   const db = getMemoryDb();
@@ -72,7 +72,7 @@ export function lastMinedAt(): string | null {
 /**
  * Session file paths that are new or changed since the last mine.
  *
- * A file is unchanged only when BOTH mtime and size match — either half differing
+ * A file is unchanged only when BOTH mtime and size match - either half differing
  * means changed, exactly as src/cache.ts:476-477 decides it. A missing watermark row
  * means never mined, so it is changed by definition; that is what makes the first
  * `--since-last` run equivalent to a full backfill on a fresh install.
@@ -82,7 +82,7 @@ export function lastMinedAt(): string | null {
  * through a fixture corpus.
  *
  * The result is sorted. The caller binds it into a chunked `IN (...)`, and an
- * unstable order would vary the chunk boundaries run to run — which is a new way for
+ * unstable order would vary the chunk boundaries run to run - which is a new way for
  * the "mining twice yields byte-identical output" property to fail.
  */
 export function changedSessions(
@@ -102,13 +102,13 @@ export function changedSessions(
  * Advance the watermark. Call only AFTER candidates are persisted.
  *
  * If the mine crashes between the scan and the upsert, an already-advanced watermark
- * would mark that material as seen and it would never be mined again — silently and
+ * would mark that material as seen and it would never be mined again - silently and
  * unrecoverably. The ordering is mine -> upsert -> advance, enforced in
  * src/memory/cli.ts's `persistMine`.
  *
  * Pass only the entries that were actually IN SCOPE for this mine. `memory mine`
  * defaults to the current repo, so advancing the whole index inventory would mark
- * every changed session in every other repo as seen without ever examining it — the
+ * every changed session in every other repo as seen without ever examining it - the
  * same class of loss as advancing too early, and just as unrecoverable.
  *
  * `mined_at` is a clock read, which every other function under src/memory/ takes as

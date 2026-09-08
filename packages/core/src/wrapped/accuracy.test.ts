@@ -43,7 +43,7 @@ describe('model canonicalization', () => {
     expect(canonicalModel('claude-opus-4-8[1m]')).toBe('Opus 4.8');
   });
 
-  test('GPT variants keep their full suffix — no drop or over-merge', () => {
+  test('GPT variants keep their full suffix - no drop or over-merge', () => {
     expect(canonicalModel('gpt-4o')).toBe('GPT-4o'); // not "GPT-4"
     expect(canonicalModel('gpt-5.1-codex-max')).not.toBe(canonicalModel('gpt-5.1-codex-mini'));
     expect(canonicalModel('gpt-5.1-codex-max')).toBe('GPT-5.1-codex-max');
@@ -58,7 +58,7 @@ describe('mineWords paste-proofing', () => {
     const spread = Array.from({ length: 11 }, (_, i) => ({ text: 'kubernetes deploy', file: `s${i}` }));
     const [top] = mineWords([paste, ...spread], 5);
     expect(top?.word).toBe('kubernetes');
-    // 1 (paste) + 11 (spread) messages = 12, not 61 — the paste can't dominate.
+    // 1 (paste) + 11 (spread) messages = 12, not 61 - the paste can't dominate.
     expect(top?.count).toBe(12);
     expect(top?.sessions).toBe(12);
   });

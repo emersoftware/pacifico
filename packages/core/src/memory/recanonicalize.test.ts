@@ -7,7 +7,7 @@ import { activeMemoryFor } from './retrieve';
 import { closeDatabases, makeTmp, setMemoryEnv } from './fixtures';
 import type { MemoryRecord } from './types';
 
-// `approve --as` — the write-back for the phrasing the triage skill judged canonical.
+// `approve --as` - the write-back for the phrasing the triage skill judged canonical.
 //
 // A mined candidate is a verbatim user turn, and the miner cannot do better: it reads
 // transcripts. Two of the first three memories approved on the author's own machine were
@@ -44,7 +44,7 @@ const ASKED = record("Cursor MCP config? I don't use Cursor", {
     lastSeen: '2026-03-04',
   },
 });
-const FACT = 'Do not generate Cursor MCP config — Cursor is not used on this machine.';
+const FACT = 'Do not generate Cursor MCP config - Cursor is not used on this machine.';
 
 let tmp: string;
 
@@ -77,7 +77,7 @@ describe('approve --as stores the fact, not the utterance that implied it', () =
     expect(served.some((r) => r.text.includes('?'))).toBe(false);
   });
 
-  test('evidence transfers verbatim — the rewrite is not a phrasing the user used', () => {
+  test('evidence transfers verbatim - the rewrite is not a phrasing the user used', () => {
     upsertCandidates([ASKED]);
     const kept = approve(ASKED.id, { as: FACT });
 

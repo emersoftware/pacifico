@@ -11,7 +11,7 @@ export function buildResumeCommand(tool: Tool, cwd: string, sessionId: string): 
 
 /**
  * Payload caps for the search projection. Bounding at the producer is this file's own
- * convention — messageHits is already capped at 3 upstream (src/cache.ts).
+ * convention - messageHits is already capped at 3 upstream (src/cache.ts).
  *
  * These two arrays were the whole payload problem: on a default search_sessions(limit:20)
  * the serialized result was ~243,000 characters, 84% of it `commands`. `filePath` is
@@ -31,7 +31,7 @@ export interface FormattedResult {
   messageCount: number;
   /** At most MAX_FILES entries; fileCount carries the true total. */
   files: string[];
-  /** Total files touched, before truncation — so a capped list never reads as complete. */
+  /** Total files touched, before truncation - so a capped list never reads as complete. */
   fileCount: number;
   /** At most MAX_COMMANDS entries; commandCount carries the true total. */
   commands: string[];
@@ -43,11 +43,11 @@ export interface FormattedResult {
   resumeCommand: string;
   /** Pi /tree in-file fork count; 0 for other tools and unbranched sessions. */
   branches: number;
-  /** BASENAME of the /fork parent session file ('' when none) — agents don't need
+  /** BASENAME of the /fork parent session file ('' when none) - agents don't need
    *  the absolute path, and the stored path is deliberately unresolved. */
   forkedFrom: string;
   /** Message-level matches (≤3, best first); each index feeds get_session_messages(offset).
-   *  Present whenever the source result carries hits (indexed search always does — it may
+   *  Present whenever the source result carries hits (indexed search always does - it may
    *  be empty for metadata-only matches); absent for the no-index scanner fallback. */
   messageHits?: MessageHit[];
 }

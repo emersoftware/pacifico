@@ -8,9 +8,9 @@ import { fingerprint } from './record';
 import { captureStreams, closeDatabases, makeTmp, setMemoryEnv } from './fixtures';
 
 // `pacifico memory import --from` end to end: fixture agent stores on disk, the real
-// CLI, and assertions over what landed in the durable store. The gates under test —
+// CLI, and assertions over what landed in the durable store. The gates under test -
 // durable filtering, band reshaping, the content scan, dedupe-by-fingerprint, and the
-// unbound-scope warning — are the same ones the bundle path has, exercised against a
+// unbound-scope warning - are the same ones the bundle path has, exercised against a
 // live source rather than a file.
 
 let tmp: string;
@@ -22,7 +22,7 @@ beforeAll(() => {
 beforeEach(() => {
   setMemoryEnv(tmp);
   closeDatabases();
-  // Each test asserts over exactly what ITS import landed — no accumulation.
+  // Each test asserts over exactly what ITS import landed - no accumulation.
   getMemoryDb().run('DELETE FROM memory');
   rmSync(join(tmp, 'pi-hermes-memory'), { recursive: true, force: true });
   rmSync(join(tmp, 'rules'), { recursive: true, force: true });
@@ -83,7 +83,7 @@ describe('memory import --from', () => {
     expect(correction).toMatchObject({
       kind: 'instruction',
       scope: { type: 'workflow', key: '' },
-      state: 'candidate', // importing is not consent — triage decides
+      state: 'candidate', // importing is not consent - triage decides
     });
     expect(correction.evidence.firstSeen).toBe('2026-07-15');
     expect(correction.evidence.lastSeen).toBe('2026-08-03');
@@ -157,7 +157,7 @@ describe('memory import --from', () => {
     writeHermesDb([{ content: 'A pi-side fact of sufficient length to matter here' }]);
     writeFileSync(join(tmp, 'CLAUDE.md'), '- A claude-side instruction of sufficient length.\n');
     mkdirSync(join(tmp, 'rules'), { recursive: true });
-    // Codex rules are durable: false — they must NOT land, even under --from all.
+    // Codex rules are durable: false - they must NOT land, even under --from all.
     writeFileSync(join(tmp, 'rules', 'default.rules'), 'prefix_rule(pattern=["gh"], decision="allow")\n');
     const { stderr } = await captureStreams(() => runMemory(['import', '--from', 'all', '--repo', repo]));
     expect(stderr).toContain('2 imported from all');
@@ -170,7 +170,7 @@ describe('memory import --from', () => {
     mkdirSync(join(tmp, 'rules'), { recursive: true });
     writeFileSync(join(tmp, 'rules', 'default.rules'), 'prefix_rule(pattern=["gh"], decision="allow")\n');
     const { stderr } = await captureStreams(() => runMemory(['import', '--from', 'codex']));
-    expect(stderr).toContain('not durable facts — nothing to import');
+    expect(stderr).toContain('not durable facts - nothing to import');
     expect(listMemories()).toHaveLength(0);
   });
 

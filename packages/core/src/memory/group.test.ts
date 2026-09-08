@@ -9,7 +9,7 @@ import { getMemoryDb, setState, upsertCandidates } from './store';
 import { closeDatabases, makeTmp, setMemoryEnv } from './fixtures';
 import type { MemoryRecord, MemoryScope } from './types';
 
-// A group memory that resolves to nothing is invisible and silent — the agent simply
+// A group memory that resolves to nothing is invisible and silent - the agent simply
 // never sees the rule, and nothing anywhere raises. So membership is asserted from both
 // sides: the member paths that MUST resolve, and the near-miss paths that must not.
 //
@@ -42,7 +42,7 @@ describe('groupsFor', () => {
   test('a SUBDIRECTORY of a member returns the group', () => {
     // Bun.Glob's `*` does not cross `/`, so `/tmp/x/authkit-*` does not itself match
     // `/tmp/x/authkit-session/packages/core`. Walking the ancestors is what gives a
-    // group the same boundary semantics cwdUnder gives repo scope — and the container
+    // group the same boundary semantics cwdUnder gives repo scope - and the container
     // resolver hands us the raw cwd whenever the path is not in a git repo.
     expect(groupsFor('/tmp/x/authkit-session/packages/core', CONFIG)).toEqual(['authkit']);
   });
@@ -81,8 +81,8 @@ describe('groupsFor', () => {
   });
 
   test('a metacharacter in the CONTAINER path is data, never interpreted', () => {
-    // The path being tested is never a pattern, so `/repos/re[p]o` — the fixture
-    // src/memory/mcp-memory.test.ts:23 uses to catch the SQL-GLOB hazard — matches a
+    // The path being tested is never a pattern, so `/repos/re[p]o` - the fixture
+    // src/memory/mcp-memory.test.ts:23 uses to catch the SQL-GLOB hazard - matches a
     // plain wildcard and nothing weirder.
     const plain: GroupConfig = { groups: { any: ['/tmp/x/*'] } };
     expect(groupsFor('/tmp/x/re[p]o/src', plain)).toEqual(['any']);
@@ -111,7 +111,7 @@ describe('groupsFor', () => {
     expect(groupsFor('', CONFIG)).toEqual([]);
   });
 
-  test('is pure — the same inputs give the same answer', () => {
+  test('is pure - the same inputs give the same answer', () => {
     expect(groupsFor('/tmp/x/authkit-nextjs', CONFIG)).toEqual(groupsFor('/tmp/x/authkit-nextjs', CONFIG));
   });
 });
@@ -164,7 +164,7 @@ describe('loadGroupConfig', () => {
     expect(loadGroupConfig()).toEqual({ groups: {} });
   });
 
-  test('valid JSON of the wrong SHAPE degrades too — a parse guard alone catches none of these', () => {
+  test('valid JSON of the wrong SHAPE degrades too - a parse guard alone catches none of these', () => {
     for (const body of [
       'null',
       '[]',

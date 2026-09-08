@@ -1,7 +1,7 @@
-// Dynamic slide selection — the mechanism that makes wrapped personal. Every
+// Dynamic slide selection - the mechanism that makes wrapped personal. Every
 // fun stat is a scored candidate; only notable ones render, grouped into themed
 // cards. A user who never codes at 3 AM never sees a 3 AM slide, and an empty
-// index simply yields no fun cards — graceful degradation and personalization
+// index simply yields no fun cards - graceful degradation and personalization
 // are the same mechanism.
 
 import type { FunCard, FunStat, PhraseStat, WrappedContentStats, WrappedPersona, WrappedRhythm } from './types.ts';
@@ -10,7 +10,7 @@ import type { WrappedEventStats } from './compute.ts';
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 const fmtInt = (n: number): string => n.toLocaleString('en-US');
-/** "1 reply" / "2 replies" — never "1 replies". */
+/** "1 reply" / "2 replies" - never "1 replies". */
 const plural = (n: number, one: string, many = `${one}s`): string => (n === 1 ? one : many);
 
 interface Candidate {
@@ -46,7 +46,7 @@ export function buildCandidates(
   const out: Candidate[] = [];
   const p = content?.phrases ?? [];
 
-  // — friction —
+  // - friction -
   const interrupts = phrase(p, 'interrupts');
   if (interrupts > 0) {
     out.push({
@@ -82,7 +82,7 @@ export function buildCandidates(
       score: 0.1 + 0.7 * sat(actually, 200),
       stat: {
         // LIKE '%actually%' matches anywhere in the message, so the copy can't
-        // claim position ("began with") — it's "contained an actually".
+        // claim position ("began with") - it's "contained an actually".
         big: fmtInt(actually),
         label: 'times you said "actually" and moved the goalposts',
         sub: tryAgain > 0 ? `plus ${fmtInt(tryAgain)} rounds of "try again," just to be sure` : undefined,
@@ -96,7 +96,7 @@ export function buildCandidates(
       score: 0.2 + 0.6 * sat(noWait, 30),
       stat: {
         big: fmtInt(noWait),
-        label: 'hard reverses mid-prompt — "no, wait—"',
+        label: 'hard reverses mid-prompt - "no, wait-"',
         sub: 'you heard your own idea out loud and flinched',
       },
     });
@@ -126,9 +126,9 @@ export function buildCandidates(
     });
   }
 
-  // — relationship —
+  // - relationship -
   // Base score is deliberately high: this is the pre-validated crowd-pleaser
-  // of the Claude-wrapped genre, and the joke works at any count — including 3.
+  // of the Claude-wrapped genre, and the joke works at any count - including 3.
   const absolutely = phrase(p, 'absolutelyRight');
   if (content) {
     out.push({
@@ -167,7 +167,7 @@ export function buildCandidates(
       stat: {
         big: fmtInt(please),
         label: 'prompts said "please"',
-        sub: `and ${fmtInt(thanks)} said thanks — hedging your bets for the uprising`,
+        sub: `and ${fmtInt(thanks)} said thanks - hedging your bets for the uprising`,
       },
     });
   }
@@ -181,9 +181,9 @@ export function buildCandidates(
         // Mean chars/message: the user's is dominated by pastes, not chattiness,
         // so the copy attributes length to pasting rather than claiming "chattier".
         big: `${fmtInt(m.userAvg)} vs ${fmtInt(m.assistantAvg)}`,
-        label: 'characters per message — you vs. Claude',
+        label: 'characters per message - you vs. Claude',
         sub: youTalkMore
-          ? 'you didn’t type that, you pasted it — and the average tattled'
+          ? 'you didn’t type that, you pasted it - and the average tattled'
           : 'Claude does love a thorough answer',
       },
     });
@@ -207,7 +207,7 @@ export function buildCandidates(
       score: 0.4 + 0.45 * sat(hallucinate, 12),
       stat: {
         big: fmtInt(hallucinate),
-        label: 'times you used the H-word — “hallucinate”',
+        label: 'times you used the H-word - “hallucinate”',
         sub: 'it prefers the term “creative recall”',
       },
     });
@@ -225,7 +225,7 @@ export function buildCandidates(
     });
   }
 
-  // — lies (famous last words) —
+  // - lies (famous last words) -
   const quickQuestion = phrase(p, 'quickQuestion');
   if (quickQuestion >= 3) {
     out.push({
@@ -263,7 +263,7 @@ export function buildCandidates(
     });
   }
 
-  // — bloopers —
+  // - bloopers -
   if (rhythm.nightsPastMidnight >= 5 && rhythm.latestNight) {
     out.push({
       theme: 'bloopers',
@@ -271,7 +271,7 @@ export function buildCandidates(
       stat: {
         big: fmtInt(rhythm.nightsPastMidnight),
         label: 'nights you coded past midnight',
-        sub: `latest clock-out: ${rhythm.latestNight.clock} on a ${WEEKDAYS[rhythm.latestNight.weekday]} — sleep is a suggestion`,
+        sub: `latest clock-out: ${rhythm.latestNight.clock} on a ${WEEKDAYS[rhythm.latestNight.weekday]} - sleep is a suggestion`,
       },
     });
   }
@@ -316,7 +316,7 @@ export function buildCandidates(
       },
     });
   }
-  // Weekend share straight off the heatmap — column 0 is Sunday, 6 is Saturday.
+  // Weekend share straight off the heatmap - column 0 is Sunday, 6 is Saturday.
   let weekendMsgs = 0;
   let totalMsgs = 0;
   for (let wd = 0; wd < 7; wd++) {
@@ -332,7 +332,7 @@ export function buildCandidates(
       theme: 'bloopers',
       score: 0.15 + weekendShare,
       stat: {
-        // heat counts assistant replies, not user-authored messages — don't claim
+        // heat counts assistant replies, not user-authored messages - don't claim
         // "you sent"; attribute to activity.
         big: `${Math.round(weekendShare * 100)}%`,
         label: 'of the year’s activity happened on a weekend',
@@ -341,9 +341,9 @@ export function buildCandidates(
     });
   }
 
-  // — headline-derived savagery (only when the totals are passed in) —
+  // - headline-derived savagery (only when the totals are passed in) -
   if (extras) {
-    // The daily burn rate — a running meter is scarier than one big total.
+    // The daily burn rate - a running meter is scarier than one big total.
     if (extras.costUSD > 0 && extras.activeDays > 0) {
       const perDay = extras.costUSD / extras.activeDays;
       out.push({
@@ -352,11 +352,11 @@ export function buildCandidates(
         stat: {
           big: fmtUSD(perDay),
           label: 'torched per active day, on average',
-          sub: `${fmtUSD(extras.costUSD)} all year — and you'd do it again tomorrow`,
+          sub: `${fmtUSD(extras.costUSD)} all year - and you'd do it again tomorrow`,
         },
       });
     }
-    // Model rotation — commitment issues, quantified.
+    // Model rotation - commitment issues, quantified.
     if (extras.modelsTried >= 4) {
       out.push({
         theme: 'relationship',
@@ -368,7 +368,7 @@ export function buildCandidates(
         },
       });
     }
-    // Cache reads are replayed context, not new thinking — the honest, brutal framing.
+    // Cache reads are replayed context, not new thinking - the honest, brutal framing.
     if (extras.cacheHitRate !== null && extras.cacheHitRate >= 0.8) {
       out.push({
         theme: 'bloopers',
@@ -394,14 +394,14 @@ const THEME_META = {
 
 const FOOTNOTES = {
   friction:
-    'errors = any failed tool call (a denied command, a missing file, a bad API call) — friction, not disasters · cursed day by session start date (UTC)',
-  relationship: 'counted from your local transcripts — messages containing each phrase',
-  lies: 'counted from your own prompts — messages containing each phrase, in any context',
+    'errors = any failed tool call (a denied command, a missing file, a bad API call) - friction, not disasters · cursed day by session start date (UTC)',
+  relationship: 'counted from your local transcripts - messages containing each phrase',
+  lies: 'counted from your own prompts - messages containing each phrase, in any context',
   bloopers: 'all counted locally from your own transcripts and usage',
 } satisfies Record<Candidate['theme'], string>;
 
 /** Assemble themed cards from the highest-scoring candidates. A card renders
- *  only when its lead stat clears the bar — thresholds, not quotas. */
+ *  only when its lead stat clears the bar - thresholds, not quotas. */
 export function selectFunCards(
   content: WrappedContentStats | null,
   rhythm: WrappedRhythm,
@@ -457,7 +457,7 @@ const ARCHETYPES: ArchetypeMap = {
   'day|multi|deep': { name: 'The Systems Gardener', tagline: 'Tending a dozen codebases until they all bloom.' },
   'day|multi|quick': {
     name: 'The Rapid Prototyper',
-    tagline: 'A new idea every time you sit down — some even survive.',
+    tagline: 'A new idea every time you sit down - some even survive.',
   },
 };
 
@@ -482,9 +482,9 @@ export function selectPersona(
   const interruptRate = content && content.indexedSessions > 0 ? interrupts / content.indexedSessions : 0;
   const flavor =
     interruptRate >= 0.2
-      ? 'trust style: hands on the wheel — you interrupt and steer'
+      ? 'trust style: hands on the wheel - you interrupt and steer'
       : interruptRate > 0
-        ? 'trust style: delegator — you mostly let it cook'
+        ? 'trust style: delegator - you mostly let it cook'
         : null;
 
   return {
@@ -503,7 +503,7 @@ export function selectPersona(
       },
       {
         // message_count includes tool-loop/subagent turns, so this is "messages",
-        // not conversational "turns" — the honest unit for the raw count.
+        // not conversational "turns" - the honest unit for the raw count.
         label: 'depth',
         value:
           depth !== null

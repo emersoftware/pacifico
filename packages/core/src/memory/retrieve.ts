@@ -1,6 +1,6 @@
 // Retrieval: the memory that belong in an agent's context for a given cwd and topic.
 //
-// This is a pure read over the durable store — it never writes a memory and never
+// This is a pure read over the durable store - it never writes a memory and never
 // writes anything into the user's repo. The out-of-band promise of the design is
 // enforced here by omission: the only thing this module knows how to do is SELECT.
 
@@ -19,14 +19,14 @@ import type { MemoryRecord } from './types';
  *  - all workflow-scoped memory
  *
  * Ordering, in precedence order and written out in `rank` below:
- *  1. always-on memory first — they are standing constraints, and an agent that
+ *  1. always-on memory first - they are standing constraints, and an agent that
  *     truncates should truncate the conditional tail, not the invariants.
  *  2. then by scope breadth: workflow, group, repo. Cross-repo standing rules frame
  *     the group ones, which frame the repo-specific ones.
  *  3. then by score descending when a topic was given.
  *  4. then by id, which is the order `listMemories` already returns.
  *
- * With no topic and no group memory this is exactly the Phase 3 order, byte for byte —
+ * With no topic and no group memory this is exactly the Phase 3 order, byte for byte -
  * the scoring pass is skipped entirely rather than run with a score that happens to
  * tie. No existing caller is narrowed by this phase.
  *
@@ -40,7 +40,7 @@ import type { MemoryRecord } from './types';
  *
  * Repo matching happens in TypeScript rather than SQL. The natural SQL form is
  * `? GLOB (scope_key || '/*')`, which puts a stored *column* in the pattern
- * position — and `globPrefix` (src/repo.ts:78-81), the helper that exists to escape
+ * position - and `globPrefix` (src/repo.ts:78-81), the helper that exists to escape
  * GLOB's `*?[` metacharacters, only works on a value. A repo living at a path
  * containing `[` would silently match nothing, which is the exact silent-empty
  * failure this predicate is here to prevent. `cwdUnder` (src/repo.ts:73-75) has
@@ -53,7 +53,7 @@ export function activeMemoryFor(cwd: string, topic?: string): MemoryRecord[] {
   //
   // The scan filter is the LAST line of the content gate (src/memory/scan.ts): the
   // mine, import, and approve already refuse flagged text, but a row written before
-  // those gates existed — or by a hand edit of memory.db — reaches this SELECT
+  // those gates existed - or by a hand edit of memory.db - reaches this SELECT
   // having passed none of them, and this is the final boundary before an agent's
   // context. Filtering here rather than in the callers is what makes every serve
   // path (get_memory AND the context primer) covered by construction; the loudness
@@ -64,7 +64,7 @@ export function activeMemoryFor(cwd: string, topic?: string): MemoryRecord[] {
   const visible = scopedForCwd(approved, cwd);
 
   // An absent or content-free topic disables filtering entirely and returns the full
-  // active set — the Phase 3 behavior, preserved exactly. The short-circuit is before
+  // active set - the Phase 3 behavior, preserved exactly. The short-circuit is before
   // any scoring so there is no path on which a rounding difference could reorder it.
   if (!topic || !topic.trim()) return visible;
 
@@ -88,7 +88,7 @@ export function activeMemoryFor(cwd: string, topic?: string): MemoryRecord[] {
 
 /**
  * The scope partition `activeMemoryFor` documents above, extracted so the withheld
- * set below goes through the SAME matching — a flagged memory scoped to a different
+ * set below goes through the SAME matching - a flagged memory scoped to a different
  * repo is not this cwd's problem to report.
  *
  * One resolver, one git resolution per call. `resolveRepo` shells out three times,
@@ -97,8 +97,8 @@ export function activeMemoryFor(cwd: string, topic?: string): MemoryRecord[] {
 function scopedForCwd(records: MemoryRecord[], cwd: string): MemoryRecord[] {
   const container = createContainerResolver()(cwd);
 
-  // Lazy, and memoized for this call only. A store with no group-scoped memory — which
-  // is every store until a human assigns one — never touches the filesystem for a
+  // Lazy, and memoized for this call only. A store with no group-scoped memory - which
+  // is every store until a human assigns one - never touches the filesystem for a
   // config file it has no use for.
   let memberOf: string[] | null = null;
   const groups = (): string[] => (memberOf ??= groupsFor(container, loadGroupConfig()));
@@ -119,7 +119,7 @@ function scopedForCwd(records: MemoryRecord[], cwd: string): MemoryRecord[] {
     if (!memory.scope.key) continue;
     if (memory.scope.type === 'group') {
       // A group name that appears in no config is inert, silently. That is the
-      // documented cost of a config file nothing writes for you — see the groups.json
+      // documented cost of a config file nothing writes for you - see the groups.json
       // section of the README.
       if (groups().includes(memory.scope.key)) group.push(memory);
       continue;
@@ -142,7 +142,7 @@ function scopedForCwd(records: MemoryRecord[], cwd: string): MemoryRecord[] {
  * decision, and a filter that quietly unmade it would be the exact
  * invisible-suppression failure the alwaysOn flag documents. `get_memory` reports
  * the ids from this (src/mcp.ts) so the human can `reject` each one or re-approve a
- * clean rephrasing with `--as`. Ids only — serving the flagged TEXT anywhere, even
+ * clean rephrasing with `--as`. Ids only - serving the flagged TEXT anywhere, even
  * in a warning, would deliver the payload the withholding exists to stop.
  */
 export function withheldMemoryFor(cwd: string): MemoryRecord[] {

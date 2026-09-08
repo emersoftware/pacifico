@@ -22,7 +22,7 @@ export interface UsageEvent {
   speed?: 'standard' | 'fast';
   /** Set when the event came from a dispatched subagent rather than the main loop.
    *  `id` is the dispatch id (one per Task/Agent invocation); `type` is the agent
-   *  type ('Explore', 'general-purpose', a plugin agent, …) — Pi does not record
+   *  type ('Explore', 'general-purpose', a plugin agent, …) - Pi does not record
    *  the dispatched agent's name, so its runs all carry the 'subagent' type. */
   agent?: { id: string; type: string };
   /** git branch recorded on the message, when the tool logs one. Claude Code only. */

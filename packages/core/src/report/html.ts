@@ -49,7 +49,7 @@ function splitMagnitude(n: number): MagnitudeParts {
   return { num: m?.[1] ?? s, suffix: m?.[2] ?? '' };
 }
 
-/** The same split, rendered — a big numeral with a small accented magnitude. */
+/** The same split, rendered - a big numeral with a small accented magnitude. */
 function magnitude(n: number): string {
   const { num, suffix } = splitMagnitude(n);
   return esc(num) + (suffix ? `<span class="sfx">${esc(suffix)}</span>` : '');
@@ -78,7 +78,7 @@ function formatDate(ymdStr: string): string {
   return `${MONTHS[m! - 1]} ${d}, ${y}`;
 }
 
-/** "Mar 25" — the compact form used in peak labels and on the share card. */
+/** "Mar 25" - the compact form used in peak labels and on the share card. */
 function shortDate(ymdStr: string): string {
   const [, m, d] = ymdStr.split('-').map(Number);
   return `${MONTHS[m! - 1]} ${d}`;
@@ -100,7 +100,7 @@ const spanDays = (from: string, to: string): number =>
   Math.max(1, Math.round((parseYmd(to).getTime() - parseYmd(from).getTime()) / DAY_MS) + 1);
 
 const sum = (ns: number[]): number => ns.reduce((t, n) => t + n, 0);
-/** Every rate on this page is a division by something that can be zero — an
+/** Every rate on this page is a division by something that can be zero - an
  *  empty period, a report with no sessions. None of them may render NaN. */
 const safeDiv = (a: number, b: number): number => (b > 0 ? a / b : 0);
 
@@ -108,7 +108,7 @@ const safeDiv = (a: number, b: number): number => (b > 0 ? a / b : 0);
 // Palette
 //
 // Neutrals are fixed per theme. Everything with hue in it derives from one
-// accent — a hue + chroma pair — rather than being listed per shade, so adding
+// accent - a hue + chroma pair - rather than being listed per shade, so adding
 // an accent is two numbers and every chart, ramp, and the share card follow it.
 //
 // The rule that matters for the two ramps: the model-mix series and the heatmap
@@ -248,7 +248,7 @@ function accentDecls(p: Palette): string {
 }
 
 // ---------------------------------------------------------------------------
-// Glossary — every number on the page can say what it means on hover.
+// Glossary - every number on the page can say what it means on hover.
 //
 // These definitions are the only place the report explains its own accounting
 // (which tokens are counted, what the cost is an estimate OF, how a session is
@@ -261,7 +261,7 @@ const GLOSSARY = {
   tokens: 'Input + output, including prompt-cache reads and writes.',
   sessions:
     'Distinct sessions counted per day and summed, so a session running past midnight counts on each day it touched.',
-  messages: 'Assistant responses — one per API response, after de-duplicating resumed and forked transcripts.',
+  messages: 'Assistant responses - one per API response, after de-duplicating resumed and forked transcripts.',
   streak: 'The longest run of consecutive days with at least one message.',
   activeDays: 'Days in the period with at least one message.',
   lede: 'Every figure in this paragraph is computed from the same events as the charts below. Nothing here is written by hand.',
@@ -298,8 +298,8 @@ const GLOSSARY = {
   distribution:
     'The shape of session spend across every session in the period, not just the ones listed. A max far above the median means a few sessions carry the bill.',
   distinctSessions:
-    'Sessions counted once each. This is lower than the figure at the top of the page, which counts a session again on every day it touched — the two answer different questions.',
-  costPerDispatch: 'What one invocation of this agent type costs on average — total spend divided by dispatches.',
+    'Sessions counted once each. This is lower than the figure at the top of the page, which counts a session again on every day it touched - the two answer different questions.',
+  costPerDispatch: 'What one invocation of this agent type costs on average - total spend divided by dispatches.',
   subagents:
     'Spend by agents dispatched with the Task tool, plus auto-compaction. Their tokens are already inside every total above; this breaks out who spent them.',
   agentTypes: 'Every agent type that was dispatched, with what a single dispatch of each one costs on average.',
@@ -336,7 +336,7 @@ function rate(value: string, label: string, definition: string): string {
 //
 // Space Grotesk for numerals and headings, JetBrains Mono for labels. The report
 // is a single file, so the faces are linked rather than embedded: when the link
-// is unreachable — offline, or an archived copy — the stack degrades to the
+// is unreachable - offline, or an archived copy - the stack degrades to the
 // system UI faces and every measurement in the layout still holds. The canvas
 // share card names the same two stacks, so it degrades identically.
 //
@@ -553,7 +553,7 @@ footer.rep a:hover{color:var(--link-hover);border-bottom:1px solid currentColor;
 // Runs in <head> so the theme, the accent, and every accent-derived custom
 // property land before first paint. The palette table is computed at render
 // time (see PALETTES) rather than re-derived here, so this script only has to
-// look one up and write it — there is no colour maths in the browser.
+// look one up and write it - there is no colour maths in the browser.
 const THEME_BOOT_JS = `(function(){var d=document.documentElement;var PAL=${jsonForScript(PALETTES)};var A=${jsonForScript(ACCENT_ORDER)};
 var t=null;try{t=localStorage.getItem('sessions-report-theme')}catch(e){}
 if(t!=='light'&&t!=='dark'){t=window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';}
@@ -571,7 +571,7 @@ for(var j=0;j<p.mix.length;j++){s.setProperty('--c-mix-'+j,p.mix[j]);}};
 window.setAccentVars(a,t);})();`;
 
 // Delegated tooltip, theme toggle, accent picker, and the share card. Every DOM
-// write is textContent — never innerHTML.
+// write is textContent - never innerHTML.
 const JS = `(function(){
 var d=document.documentElement;
 var t=document.getElementById('tip');
@@ -649,7 +649,7 @@ ls('0px');}
 var flashEl=document.getElementById('flash'),flashTimer=null;
 function flash(msg){if(!flashEl)return;flashEl.textContent=msg;clearTimeout(flashTimer);
 flashTimer=setTimeout(function(){flashEl.textContent='';},2400);}
-var BLOCKED='Clipboard blocked here \\u2014 use Download PNG.';
+var BLOCKED='Clipboard blocked here - use Download PNG.';
 // The copied text carries whichever comparison is on screen, spliced in ahead
 // of the sign-off sentence so the two never disagree.
 function summaryNow(){var parts=CARD.summary.slice();
@@ -663,14 +663,14 @@ a.href=cv.toDataURL('image/png');a.click();flash('PNG saved to your downloads.')
 if(cp)cp.addEventListener('click',function(){
 if(!navigator.clipboard||!window.ClipboardItem){flash(BLOCKED);return;}
 cv.toBlob(function(b){navigator.clipboard.write([new ClipboardItem({'image/png':b})])
-.then(function(){flash('Card copied \\u2014 paste it anywhere.');}).catch(function(){flash(BLOCKED);});},'image/png');});
+.then(function(){flash('Card copied - paste it anywhere.');}).catch(function(){flash(BLOCKED);});},'image/png');});
 if(tx)tx.addEventListener('click',function(){
 if(!navigator.clipboard){flash(BLOCKED);return;}
 navigator.clipboard.writeText(summaryNow()).then(function(){flash('Summary copied as text.');}).catch(function(){flash(BLOCKED);});});
 
 drawCard();
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(drawCard);
-console.log('pacifico report \\u2014 generated locally from your own session logs. No telemetry.');})();`;
+console.log('pacifico report - generated locally from your own session logs. No telemetry.');})();`;
 
 // A loud, URL-free banner naming every model that had no price of its own. The
 // two cases read differently on purpose: a same-family estimate still produces a
@@ -687,7 +687,7 @@ function warningBanner(warnings: PricingWarning[]): string {
           .join('')}</div></div>`;
   return (
     block(
-      `${zeroed.length} model${zeroed.length === 1 ? '' : 's'} had no pricing — cost is understated`,
+      `${zeroed.length} model${zeroed.length === 1 ? '' : 's'} had no pricing - cost is understated`,
       zeroed,
       (w) => w.model,
     ) +
@@ -787,7 +787,7 @@ function legend(keys: string[], totals: Map<string, number>): string {
 // ---------------------------------------------------------------------------
 // Activity heatmap
 //
-// One square per day, seven rows per column, Sunday at the top — the shape of a
+// One square per day, seven rows per column, Sunday at the top - the shape of a
 // year of work, and the only chart on the page that shows the days when nothing
 // happened. `daily` carries only days with activity, so the calendar is walked
 // across the whole period and a missing day reads as level 0 rather than as a
@@ -869,14 +869,14 @@ function heatmap(cols: HeatColumn[]): string {
   // The one chart drawn at a fixed cell size rather than stretched to the card:
   // a square per day only reads as a calendar if the squares stay square and
   // stay the same size whatever the period length. `xMinYMid meet` holds them at
-  // 13px and starts the strip at the left edge — a short period ends early
-  // instead of floating in the middle — and scales the whole grid down together
+  // 13px and starts the strip at the left edge - a short period ends early
+  // instead of floating in the middle - and scales the whole grid down together
   // once the card is narrower than the year.
   return `<svg class="heat" viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="xMinYMid meet">${months}<g transform="translate(0,18)">${cells}</g></svg>`;
 }
 
 // ---------------------------------------------------------------------------
-// Radial clock — 24 spokes, midnight at the top, length by message count. A bar
+// Radial clock - 24 spokes, midnight at the top, length by message count. A bar
 // chart of hours answers "which hour"; the dial answers "which part of the day",
 // which is the question people actually ask of their own logs.
 // ---------------------------------------------------------------------------
@@ -997,11 +997,11 @@ ${cell(fmtInt(s.longestStreakDays), 'day streak', `${GLOSSARY.streak} ${fmtInt(d
 function ledeSection(data: UsageReport, dv: Derived): string {
   const b = (v: string): string => `<b>${esc(v)}</b>`;
   const clauses: string[] = [
-    `${b(fmtInt(dv.recordDays))} days of records, ${b(fmtInt(dv.activeDays))} of them active, ${b(fmtUSD0(dv.total))} of estimated API cost — about ${b(fmtUSD0(dv.perMonth))} a month at list prices.`,
+    `${b(fmtInt(dv.recordDays))} days of records, ${b(fmtInt(dv.activeDays))} of them active, ${b(fmtUSD0(dv.total))} of estimated API cost - about ${b(fmtUSD0(dv.perMonth))} a month at list prices.`,
   ];
   if (dv.trendX !== null) {
     clauses.push(
-      `The last four weeks ran ${b(dv.trendX.toFixed(1) + '×')} the four before them — ${b(fmtPct(dv.shareLast4))} of everything spent in the period.`,
+      `The last four weeks ran ${b(dv.trendX.toFixed(1) + '×')} the four before them - ${b(fmtPct(dv.shareLast4))} of everything spent in the period.`,
     );
   }
   const topProject = data.byProject[0];
@@ -1025,7 +1025,7 @@ function ledeSection(data: UsageReport, dv: Derived): string {
   const topSession = data.topSessions[0];
   if (topSession && dv.total > 0) {
     callouts.push(
-      `one session — ${b(fmtUSD(topSession.costUSD))} — was ${esc(fmtPct(safeDiv(topSession.costUSD, dv.total)))} of the period`,
+      `one session - ${b(fmtUSD(topSession.costUSD))} - was ${esc(fmtPct(safeDiv(topSession.costUSD, dv.total)))} of the period`,
     );
   }
   if (data.cache.savedUSD > 0 && dv.total > 0) {
@@ -1035,7 +1035,7 @@ function ledeSection(data: UsageReport, dv: Derived): string {
   }
   const dist = data.sessionDistribution;
   if (dist.count > 1) {
-    callouts.push(`median session ${b(fmtUSD(dist.medianUSD))}, p90 ${esc(fmtUSD(dist.p90USD))} — a few carry it`);
+    callouts.push(`median session ${b(fmtUSD(dist.medianUSD))}, p90 ${esc(fmtUSD(dist.p90USD))} - a few carry it`);
   }
 
   return `<div class="card deck lede">
@@ -1045,7 +1045,7 @@ ${callouts.length > 0 ? `<div class="callouts">${callouts.map((c) => `<div>${c}<
 </div>`;
 }
 
-/** The volume tile picks its own unit — see `src/equivalence.ts`. Seeded on the
+/** The volume tile picks its own unit - see `src/equivalence.ts`. Seeded on the
  *  period so a given report always shows the same one, and on a slot name so it
  *  never duplicates the share card's pick. A total too small for any unit drops
  *  the tile rather than printing "0 copies" of something. */
@@ -1074,7 +1074,7 @@ ${volumeTile(data, `${data.period.from}|${data.period.to}|ratecard`)}
 function burnSection(burn: BurnStats | null): string {
   if (!burn) return '';
   const change =
-    burn.changePct === null ? '—' : `${burn.changePct >= 0 ? '+' : ''}${(burn.changePct * 100).toFixed(0)}%`;
+    burn.changePct === null ? '-' : `${burn.changePct >= 0 ? '+' : ''}${(burn.changePct * 100).toFixed(0)}%`;
   const projection = burn.inProgress
     ? rate(fmtUSD0(burn.projectedUSD), `projected · day ${burn.elapsedDays}/${burn.periodDays}`, GLOSSARY.burn)
     : rate(fmtInt(burn.periodDays), 'days in period', GLOSSARY.burn);
@@ -1083,7 +1083,7 @@ ${h2('Pace', GLOSSARY.burn, burn.inProgress ? `day ${burn.elapsedDays} of ${burn
 <div class="rates">
 ${rate(fmtUSD(burn.dailyMeanUSD), 'per elapsed day', GLOSSARY.burn)}
 ${projection}
-${rate(burn.priorPeriodUSD === null ? '—' : fmtUSD0(burn.priorPeriodUSD), 'prior period', GLOSSARY.burn)}
+${rate(burn.priorPeriodUSD === null ? '-' : fmtUSD0(burn.priorPeriodUSD), 'prior period', GLOSSARY.burn)}
 ${rate(change, `change vs prior ${burn.periodDays}d`, GLOSSARY.burn)}
 </div>
 </div>`;
@@ -1122,7 +1122,7 @@ ${h2('Clock', GLOSSARY.byHour, 'messages by hour')}
 <div class="clock">
 ${clockDial(hours, peakHour)}
 <div class="facts">
-<div>12A <span>— top of dial</span></div>
+<div>12A <span>- top of dial</span></div>
 <div>${esc(fmtInt(hours[peakHour] ?? 0))} <span>msgs at ${esc(hourLabel(peakHour))}</span></div>
 <div>${esc(fmtInt(hours[0] ?? 0))} <span>after midnight</span></div>
 <div>${esc(Math.round(safeDiv(sum(hours.slice(8)), total) * 100) + '%')} <span>between 8A–11P</span></div>
@@ -1225,7 +1225,7 @@ function cacheSection(c: CacheStats, sub: SubagentReport, total: number): string
   const dividend = `<div class="dividend">
 ${h2('Cache dividend', GLOSSARY.cacheDividend)}
 <div class="n">${esc(fmtUSD0(c.savedUSD))}</div>
-<p>saved against uncached input rates${multiple >= 0.1 ? ` — ${esc(multiple.toFixed(1))}× the bill itself` : ''}, at a <b${tip(GLOSSARY.hitRate)}>${esc(fmtPct(c.hitRate))}</b> cache hit rate.</p>
+<p>saved against uncached input rates${multiple >= 0.1 ? ` - ${esc(multiple.toFixed(1))}× the bill itself` : ''}, at a <b${tip(GLOSSARY.hitRate)}>${esc(fmtPct(c.hitRate))}</b> cache hit rate.</p>
 <div class="vols"><span${tip(GLOSSARY.cacheRead)}>${esc(fmtTokens(c.cacheReadTokens))} read</span><span${tip(GLOSSARY.cacheWrite)}>${esc(fmtTokens(c.cacheWriteTokens))} written</span></div>
 </div>`;
 
@@ -1251,7 +1251,7 @@ function subagentTables(sub: SubagentReport): string {
         `<tr><td class="t">${esc(t.agentType)}</td><td class="num">${fmtInt(t.dispatches)}</td><td class="num">${fmtUSD(t.costPerDispatchUSD)}</td><td class="tot">${fmtUSD(t.costUSD)}</td></tr>`,
     )
     .join('');
-  // Say what the tables leave out — a silent top-N reads as "this is all of them".
+  // Say what the tables leave out - a silent top-N reads as "this is all of them".
   const typeTrunc =
     sub.byType.length > TABLE_ROWS
       ? `<div class="trunc">${TABLE_ROWS} of ${fmtInt(sub.byType.length)} agent types</div>`
@@ -1308,7 +1308,7 @@ ${h2('Biggest sessions', GLOSSARY.topSessions, hint)}
 // A 1200 × 630 image drawn on canvas in the reader's browser, following whatever
 // theme and accent they picked. Everything it needs is serialised into the page
 // as JSON so the drawing code can stay a static string. It is not a second
-// report: it is the seven things worth screenshotting, in order — who, over
+// report: it is the seven things worth screenshotting, in order - who, over
 // what span, what it would have cost, at what rate, the volume as something
 // human-scale, four stats, and the year strip as the visual signature.
 // ---------------------------------------------------------------------------
@@ -1320,7 +1320,7 @@ interface CardData {
   whole: string;
   frac: string;
   rate: string;
-  /** The fixed half of the verdict — always one line. */
+  /** The fixed half of the verdict - always one line. */
   verdict: string;
   /** Every equivalence that fits this volume, already worded. The reroll button
    *  walks the array; `eqStart` is where the seed landed. Empty on a total too
@@ -1333,7 +1333,7 @@ interface CardData {
   heat: number[][];
   footer: string[];
   /** Sentences, plus where the equivalence gets spliced in when copied. It has
-   *  to follow the sentence carrying the token count — "That's 5.7 years of ..."
+   *  to follow the sentence carrying the token count - "That's 5.7 years of ..."
    *  is a non-sequitur anywhere else. */
   summary: string[];
   eqSlot: number;
@@ -1343,7 +1343,7 @@ interface CardData {
 function summaryText(data: UsageReport, dv: Derived): string[] {
   const s = data.summary;
   const parts = [
-    `${fmtInt(dv.recordDays)} days of AI pairing, at API list prices: ${fmtUSD(dv.total)} — about ${fmtUSD0(dv.perMonth)} a month, or ${(safeDiv(dv.total, s.messages) * 100).toFixed(1)} cents per assistant message.`,
+    `${fmtInt(dv.recordDays)} days of AI pairing, at API list prices: ${fmtUSD(dv.total)} - about ${fmtUSD0(dv.perMonth)} a month, or ${(safeDiv(dv.total, s.messages) * 100).toFixed(1)} cents per assistant message.`,
     `${fmtTokens(s.totalTokens)} tokens, ${fmtInt(s.messages)} messages (${fmtInt(Math.round(safeDiv(s.messages, dv.activeDays)))} a day), ${fmtInt(dv.distinctSessions)} sessions, ${fmtInt(dv.activeDays)} active days, a ${fmtInt(s.longestStreakDays)}-day streak.`,
   ];
   const tail: string[] = [];
@@ -1354,7 +1354,7 @@ function summaryText(data: UsageReport, dv: Derived): string[] {
     );
   }
   if (tail.length > 0) parts.push(tail.join(', ') + '.');
-  // Last line of what lands in someone's clipboard, so it carries the domain —
+  // Last line of what lands in someone's clipboard, so it carries the domain -
   // a pasted summary is otherwise unattributable.
   parts.push(`Computed locally with pacifico report · ${SITE_HOST}`);
   return parts;
@@ -1422,7 +1422,7 @@ export function renderHtml(data: UsageReport): string {
 
   return `<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>AI Usage Report — ${esc(data.period.from)} to ${esc(data.period.to)}</title>
+<title>AI Usage Report - ${esc(data.period.from)} to ${esc(data.period.to)}</title>
 ${FONT_LINK}
 <script>${THEME_BOOT_JS}</script>
 <style>${CSS}</style></head>

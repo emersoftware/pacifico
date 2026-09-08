@@ -3,7 +3,7 @@
 // Two constraints shape this helper:
 //   - A bare process.stdout.write followed by the CLI's process.exit(0)
 //     truncates piped output at the 64KB pipe buffer.
-//   - Bun.write(Bun.stdout, …) — the previous fix for that truncation —
+//   - Bun.write(Bun.stdout, …) - the previous fix for that truncation -
 //     busy-loops forever (bun 1.3.x) when stdout is a pipe and the payload
 //     exceeds the pipe buffer, hanging every programmatic consumer
 //     (`pacifico report --stdout | …`, Bun.spawn with stdout: 'pipe').

@@ -26,7 +26,7 @@
 
 ### Features
 
-* durable recall — transcript vault, sessions why, semantic recall ([#91](https://github.com/nicknisi/sessions/issues/91)) ([f91a3a2](https://github.com/nicknisi/sessions/commit/f91a3a27b3bf6f1d2e77b0734b5fedf44524db6b))
+* durable recall - transcript vault, sessions why, semantic recall ([#91](https://github.com/nicknisi/sessions/issues/91)) ([f91a3a2](https://github.com/nicknisi/sessions/commit/f91a3a27b3bf6f1d2e77b0734b5fedf44524db6b))
 
 ## [1.27.0](https://github.com/nicknisi/sessions/compare/v1.26.1...v1.27.0) (2026-08-21)
 
@@ -174,7 +174,7 @@
 
 ### Features
 
-* **wrapped:** add "the loop" — longest unsupervised run ([#40](https://github.com/nicknisi/sessions/issues/40)) ([9852a2a](https://github.com/nicknisi/sessions/commit/9852a2a1d7a7386d66c3bf17929c7038a12264bc))
+* **wrapped:** add "the loop" - longest unsupervised run ([#40](https://github.com/nicknisi/sessions/issues/40)) ([9852a2a](https://github.com/nicknisi/sessions/commit/9852a2a1d7a7386d66c3bf17929c7038a12264bc))
 
 ## [1.14.2](https://github.com/nicknisi/sessions/compare/v1.14.1...v1.14.2) (2026-07-18)
 
@@ -256,7 +256,7 @@
 
 ### Features
 
-* add `sessions report` (usage report — JSON + HTML dashboard) ([#12](https://github.com/nicknisi/sessions/issues/12)) ([f6ecb58](https://github.com/nicknisi/sessions/commit/f6ecb5859948b0cf8aef1570e73a8f6a77662c73))
+* add `sessions report` (usage report - JSON + HTML dashboard) ([#12](https://github.com/nicknisi/sessions/issues/12)) ([f6ecb58](https://github.com/nicknisi/sessions/commit/f6ecb5859948b0cf8aef1570e73a8f6a77662c73))
 
 ## [1.5.1](https://github.com/nicknisi/sessions/compare/v1.5.0...v1.5.1) (2026-05-15)
 

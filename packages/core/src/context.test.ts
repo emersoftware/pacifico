@@ -28,7 +28,7 @@ const cache = await import('./cache');
 beforeEach(() => {
   // The cache module instance is shared across test files in one `bun test` run, so
   // re-assert this fixture's env and drop any connection another file opened. Each
-  // query below then reopens against this fixture's index.db — order-independent.
+  // query below then reopens against this fixture's index.db - order-independent.
   process.env.SESSIONS_CLAUDE_DIR = claudeDir;
   process.env.SESSIONS_PI_DIR = piDir;
   process.env.SESSIONS_CODEX_DIR = codexDir;
@@ -130,7 +130,7 @@ describe('indexed-columns', () => {
 // Note: these fixtures are 1-message sessions, so all are trivia. The detail
 // tier is drawn via the significance fallback (no substantive sessions), and
 // since equal significance makes blended score monotonic in recency, the order
-// collapses back to created_at DESC — which is what these assertions expect.
+// collapses back to created_at DESC - which is what these assertions expect.
 describe('two-tier', () => {
   test('with 12 sessions and limit 10, recent has 10 and headlines has 2', async () => {
     const cwd = join(fixtureRoot, 'proj-tier');
@@ -188,7 +188,7 @@ describe('worktree aggregation', () => {
   // one prefix covers them all. A NORMAL repo is the case that container-and-descendants
   // silently gets wrong: `git worktree add ../feature` puts the worktree BESIDE the main
   // one, and `container` falls back to `--show-toplevel`, which is whichever worktree the
-  // caller is standing in — so aggregation returned only the current worktree from either
+  // caller is standing in - so aggregation returned only the current worktree from either
   // side while advertising that it spanned them.
   describe('normal repo, sibling worktrees', () => {
     const mainWt = join(fixtureRoot, 'normal-repo');
@@ -233,7 +233,7 @@ describe('branch', () => {
   test('the indexed branch (from logs) wins over the worktree-derived label', async () => {
     const cwd = join(fixtureRoot, 'proj-branch');
     writeClaudeSession({ cwd, firstPrompt: 'do work', gitBranch: 'report-redesign' });
-    // fakeRepo maps cwd -> 'feat/current' — what the buggy branchLabel would return.
+    // fakeRepo maps cwd -> 'feat/current' - what the buggy branchLabel would return.
     const primer = await cache.getContextPrimer(fakeRepo(cwd, { [cwd]: 'feat/current' }), {});
     expect(primer.recent[0]!.branch).toBe('report-redesign');
   });
@@ -283,7 +283,7 @@ describe('empty-state', () => {
 });
 
 describe('searchSessions', () => {
-  test('ranks by bm25 relevance, not recency — the stronger match wins even when older', async () => {
+  test('ranks by bm25 relevance, not recency - the stronger match wins even when older', async () => {
     const cwd = join(fixtureRoot, 'search-rank');
     // Older, but matches BOTH query terms (including the rare "plonkish").
     const strong = writeClaudeSession({
@@ -291,7 +291,7 @@ describe('searchSessions', () => {
       firstPrompt: 'quokkavar plonkish',
       createdAt: '2026-06-01T10:00:00.000Z',
     });
-    // Newer, but matches only the common term — under the old `ORDER BY date DESC`
+    // Newer, but matches only the common term - under the old `ORDER BY date DESC`
     // this would have come first purely by recency.
     const weak = writeClaudeSession({ cwd, firstPrompt: 'quokkavar zzfiller', createdAt: '2026-06-20T10:00:00.000Z' });
 
@@ -305,7 +305,7 @@ describe('searchSessions', () => {
   test('OR recall: a multi-word query still matches when only some terms are present', async () => {
     const cwd = join(fixtureRoot, 'search-or');
     const id = writeClaudeSession({ cwd, firstPrompt: 'fix the rate limiter on the api' });
-    // Neither "yesterday" nor "afternoon" appears — the old strict-AND returned nothing.
+    // Neither "yesterday" nor "afternoon" appears - the old strict-AND returned nothing.
     const results = await cache.searchSessions('rate limiter yesterday afternoon', { project: cwd, limit: 20 });
     expect(results.map((r) => r.sessionId)).toContain(id);
   });
@@ -522,10 +522,10 @@ describe('mcp', () => {
     // The MCP handler does exactly this: getContextPrimer → JSON.stringify(_, null, 2).
     const primer = await cache.getContextPrimer(fakeRepo(cwd, {}), { tool: '', worktreeOnly: undefined });
     const json = JSON.stringify(primer, null, 2);
-    // SAFETY: json is JSON.stringify(primer) — a same-process round-trip of the object above.
+    // SAFETY: json is JSON.stringify(primer) - a same-process round-trip of the object above.
     const parsed = JSON.parse(json) as ContextPrimer;
 
-    // Same structure the CLI renderer consumes — render it to prove parity.
+    // Same structure the CLI renderer consumes - render it to prove parity.
     expect(parsed.isEmpty).toBe(false);
     expect(parsed.recent[0]!.intent).toBe('mcp parity intent');
     const md = ctx.renderMarkdown(parsed, false);

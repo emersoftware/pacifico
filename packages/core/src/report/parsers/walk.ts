@@ -34,7 +34,7 @@ export async function* walkJsonl(root: string, opts: WalkOptions = {}): AsyncGen
       try {
         if ((await stat(path)).mtimeMs < threshold) continue;
       } catch {
-        // Unreadable stat is not a reason to drop data — fall through and let the
+        // Unreadable stat is not a reason to drop data - fall through and let the
         // reader decide.
       }
     }

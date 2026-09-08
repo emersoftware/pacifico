@@ -1,6 +1,6 @@
 // Topic matching: how relevant a memory is to what the agent says it is about to do.
 //
-// This module is PURE and imports nothing — no store, no index, no clock. That is a
+// This module is PURE and imports nothing - no store, no index, no clock. That is a
 // constraint, not an accident: src/memory/topic.test.ts drives it with plain strings
 // and needs no tmpdir harness, and anything that reaches into src/memory/store.ts or
 // src/wrapped/content.ts transitively opens a database on import. Same rule
@@ -13,13 +13,13 @@
  * set for a given topic.
  *
  * The score is `|topic ∩ memory| / |topicTokens|`, so the memory's length never enters
- * the denominator — only the topic's does. At 0.15 a topic with one to six content
+ * the denominator - only the topic's does. At 0.15 a topic with one to six content
  * tokens passes on a single hit, and a seven-token topic needs two. That is the
  * intended shape: a terse topic ("keychain") should be permissive, and a long
  * paste-in-the-whole-task topic should demand more than one incidental word overlap.
  *
  * This number is a guess made before there was enough memory volume to tune anything
- * against, which is why it is an exported constant rather than a literal — tuning is a
+ * against, which is why it is an exported constant rather than a literal - tuning is a
  * one-line change, and replacing `matchTopic` outright is the other option the seam is
  * there for.
  */
@@ -30,7 +30,7 @@ export const TOPIC_THRESHOLD = 0.15;
  *
  * Deliberately NOT src/wrapped/content.ts's STOPWORDS, for two reasons. It lives in a
  * module that pulls the index open, which would cost this file its purity; and it is
- * built for a different job — crowning a user's distinctive vocabulary — so it drops
+ * built for a different job - crowning a user's distinctive vocabulary - so it drops
  * `add`, `use`, `check`, `file`, `code`, and `test`, every one of which is load-bearing
  * inside a real topic string ("add keychain support", "check the build config"). A word
  * dropped here shrinks the denominator, so an aggressive list silently inflates every
@@ -116,7 +116,7 @@ function stem(token: string): string {
  *
  * Splitting on non-alphanumerics is what `unicode61` does inside FTS5, so `"don't"`
  * becomes `don` + `t` here exactly as it does in the index (documented at
- * src/memory/mine.ts:41-46). That looks like a bug and is not — matching the index's
+ * src/memory/mine.ts:41-46). That looks like a bug and is not - matching the index's
  * behavior is the point. The single-character fragment it leaves behind is dropped by
  * the length floor below, which is why that floor is 2 rather than 1.
  *
@@ -136,7 +136,7 @@ export function tokenize(text: string): Set<string> {
 /**
  * Relevance of `memoryText` to `topic`, in [0, 1].
  *
- * SWAPPABLE SEAM. This is deliberately the simplest defensible matcher — stemmed token
+ * SWAPPABLE SEAM. This is deliberately the simplest defensible matcher - stemmed token
  * overlap, mirroring the `porter unicode61` tokenization the index already applies
  * (src/cache.ts:162,175) without pulling in a library, because the dependency ceiling
  * is an asserted success criterion. It was written before there was enough memory volume
@@ -144,7 +144,7 @@ export function tokenize(text: string): Set<string> {
  * memory would be fitted to noise. Replace the body, not the signature, once real usage
  * shows what matching should key on.
  *
- * Returns 1 — "no opinion, keep everything" — when the topic contributes no tokens.
+ * Returns 1 - "no opinion, keep everything" - when the topic contributes no tokens.
  * That covers the empty string, whitespace, and the case the spec does not name: a
  * topic made entirely of stopwords ("the and it"), which yields 0/0 = NaN, and
  * `NaN >= TOPIC_THRESHOLD` is false, so every conditional memory would vanish. A silent

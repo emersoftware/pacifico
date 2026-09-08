@@ -219,7 +219,7 @@ describe('display helpers', () => {
     expect(prettyModel('claude-fable-5')).toBe('Fable 5');
     expect(prettyModel('gpt-5.5-codex')).toBe('GPT-5.5-codex');
     expect(prettyModel('mystery-model-9')).toBe('mystery-model-9');
-    // A date suffix is not a minor version — never invent "Opus 4.20250514".
+    // A date suffix is not a minor version - never invent "Opus 4.20250514".
     expect(prettyModel('claude-opus-4-20250514')).toBe('Opus 4');
     expect(prettyModel('claude-sonnet-4-20250514')).toBe('Sonnet 4');
     // Context-window / tier suffixes and provider prefixes are stripped before matching,

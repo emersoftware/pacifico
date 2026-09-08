@@ -148,7 +148,7 @@ export function readOpencodeSession(filePath: string): string[] {
  * OpenCode sessions are SQLite rows with no per-session file, so an export of the
  * already-materialized `readOpencodeSession` lines[] is the rawest form that exists
  * to preserve. The output is byte-identical to what the live materializer emits, so
- * a vault copy re-parses through session-io/parser as tool `opencode` — no second
+ * a vault copy re-parses through session-io/parser as tool `opencode` - no second
  * normalization scheme. Empty string when the session is gone (nothing to archive).
  */
 export function serializeOpencodeSession(filePath: string): string {
@@ -179,7 +179,7 @@ export function collectOpencodeSubagentText(filePath: string): string {
   }
 }
 
-// ——— helpers ———
+// --- helpers ---
 
 /** All parts of a session grouped by message id, preserving stable chronological order. */
 function partsBySession(d: Database, sessionId: string): Map<string, JsonObject[]> {
@@ -217,7 +217,7 @@ function buildContent(parts: JsonObject[]): JsonObject[] {
       case 'tool': {
         // Faithful to the source `state` (input/output/status/error) so the extractors read one shape.
         // Keys stay ABSENT when the source lacks them (undefined would vanish in JSON,
-        // null would not — and the transcript byte-compares matter).
+        // null would not - and the transcript byte-compares matter).
         const block: JsonObject = { type: 'tool' };
         if (p.tool !== undefined) block.tool = p.tool;
         if (p.state !== undefined) block.state = p.state;

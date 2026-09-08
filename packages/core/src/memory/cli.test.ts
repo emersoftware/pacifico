@@ -137,8 +137,8 @@ describe('memory mine', () => {
     // The pipe is the Phase 2 interface, so it has to carry the same truth the table
     // does: an approved memory reports `approved`, and a rejected one is dropped
     // rather than re-presented as a fresh candidate on every run. The row itself
-    // survives — durability.test.ts asserts that a rejected memory keeps receiving
-    // evidence refreshes — so only the batch narrows.
+    // survives - durability.test.ts asserts that a rejected memory keeps receiving
+    // evidence refreshes - so only the batch narrows.
     const first = parseJson<MemoryRecord[]>((await capture(['mine', '--repo', repo, '--json'])).stdout);
     const mined = first.find((r) => r.text === FACT);
     expect(mined).toBeDefined();
@@ -176,11 +176,11 @@ describe('memory pending', () => {
     expect(parsePendingArgs(['--json'])).toEqual({ help: false, json: true });
     expect(parsePendingArgs(['-h']).help).toBe(true);
     expect(() => parsePendingArgs(['--all'])).toThrow('unknown option: --all');
-    // No positional either — `pending` takes no id.
+    // No positional either - `pending` takes no id.
     expect(() => parsePendingArgs(['sha256:abc'])).toThrow('unknown option: sha256:abc');
   });
 
-  test('an empty store reports zero rather than erroring — the skill parses this', async () => {
+  test('an empty store reports zero rather than erroring - the skill parses this', async () => {
     const { stdout } = await capture(['pending', '--json']);
     expect(JSON.parse(stdout)).toEqual({ count: 0, preview: [] });
   });
@@ -194,7 +194,7 @@ describe('memory pending', () => {
     expect(batch.count).not.toBe(batch.preview.length);
   });
 
-  test('only untriaged candidates count — approved and rejected rows are not a backlog', async () => {
+  test('only untriaged candidates count - approved and rejected rows are not a backlog', async () => {
     const [pendingOne, approved, rejected] = [candidate(1), candidate(2), candidate(3)];
     upsertCandidates([pendingOne!, approved!, rejected!]);
     setState(approved!.id, 'approved');
@@ -205,7 +205,7 @@ describe('memory pending', () => {
   });
 
   test('the preview keeps listMemories order and carries nothing but id and text', () => {
-    // listMemories is already ORDER BY id — arbitrary but stable. The projection must not
+    // listMemories is already ORDER BY id - arbitrary but stable. The projection must not
     // re-sort (which would invent a second ordering) and must not leak evidence into a
     // payload a skill pastes into a summary.
     const records = [candidate(1), candidate(2), candidate(3)];
@@ -269,7 +269,7 @@ describe('memory report', () => {
     const prose = (await capture(['report', '--repo', repo])).stdout;
     expect(prose).toContain('VIOLATIONS');
     expect(prose).toContain(RECURRING);
-    expect(prose).toMatch(/^memory report — \d{4}-\d{2}-\d{2}/);
+    expect(prose).toMatch(/^memory report - \d{4}-\d{2}-\d{2}/);
   });
 
   test('an untriaged repeat shows under REPEATS, and a quiet corpus reports none', async () => {
@@ -328,7 +328,7 @@ describe('parseTriageArgs', () => {
   test('--scope still refuses workflow, the one direction that widens', () => {
     // Widening is the asymmetric hazard: a typo that turns one repo's convention into a
     // rule for every repo is invisible, while a wrong repo path just means the memory is
-    // not returned there. Narrowing is also CHECKED — canonicalizeScope resolves the path.
+    // not returned there. Narrowing is also CHECKED - canonicalizeScope resolves the path.
     expect(() => parseTriageArgs(['sha256:abc', '--scope', 'workflow'])).toThrow(
       'only accepts group:<name> or repo:<path>',
     );
@@ -345,13 +345,13 @@ describe('parseTriageArgs', () => {
     });
 
     // The key retrieval compares against is the CONTAINER, derived exactly the way the mine
-    // derives it — `containerFor` reads `<main>/.git` back to `<main>`, so a subdirectory
+    // derives it - `containerFor` reads `<main>/.git` back to `<main>`, so a subdirectory
     // and a linked worktree of one repo both land on the same key.
     expect(canonicalizeScope({ type: 'repo', key: '.' }, fake('/repos/app'))).toEqual({
       type: 'repo',
       key: '/repos/app',
     });
-    // A group scope is untouched — no path, nothing to resolve.
+    // A group scope is untouched - no path, nothing to resolve.
     expect(canonicalizeScope({ type: 'group', key: 'authkit' }, fake('/repos/app'))).toEqual({
       type: 'group',
       key: 'authkit',
@@ -375,7 +375,7 @@ describe('parseTriageArgs', () => {
     expect(parseTriageArgs(['-h', 'sha256:abc']).help).toBe(true);
   });
 
-  test('no id parses cleanly — the runner, not the parser, reports the omission', () => {
+  test('no id parses cleanly - the runner, not the parser, reports the omission', () => {
     expect(parseTriageArgs([])).toEqual({ help: false });
   });
 });
@@ -450,7 +450,7 @@ describe('parseExportArgs', () => {
     expect(() => parseExportArgs(['--out'])).toThrow('--out requires a path');
   });
 
-  test('export takes no positional — a bare word is an unknown option', () => {
+  test('export takes no positional - a bare word is an unknown option', () => {
     expect(() => parseExportArgs(['bundle.json'])).toThrow('unknown option: bundle.json');
   });
 
@@ -471,7 +471,7 @@ describe('parseImportArgs', () => {
     expect(() => parseImportArgs(['a.json', 'b.json'])).toThrow('expected exactly one bundle path');
   });
 
-  test('flags are rejected — import takes none', () => {
+  test('flags are rejected - import takes none', () => {
     expect(() => parseImportArgs(['--out', 'x'])).toThrow('unknown option: --out');
   });
 
@@ -501,7 +501,7 @@ describe('parseImportArgs', () => {
     expect(() => parseImportArgs(['--from', 'pi-hermes', 'bundle.json'])).toThrow('not both');
   });
 
-  test('--repo is rejected on the bundle form — a bundle carries its own scoping', () => {
+  test('--repo is rejected on the bundle form - a bundle carries its own scoping', () => {
     expect(() => parseImportArgs(['bundle.json', '--repo', '/repos/app'])).toThrow('--repo only applies to --from');
   });
 });

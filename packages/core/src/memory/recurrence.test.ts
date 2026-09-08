@@ -1,7 +1,7 @@
 // Unit + golden coverage for recurrence matching (the G2 instrument of
 // docs/ideation/memory-recurrence/spec-phase-2.md), plus the phase-4 trend
 // snapshot coverage (G4 of spec-phase-4.md). The matching unit tests keep the
-// no-tmpdir promise — hand-built records, matcher is pure; the snapshot tests
+// no-tmpdir promise - hand-built records, matcher is pure; the snapshot tests
 // below bring the tmpdir harness because the snapshot file is the G4 instrument.
 
 import { beforeAll, beforeEach, afterAll, describe, expect, test } from 'bun:test';
@@ -40,7 +40,7 @@ describe('jaccard', () => {
   });
 
   test('a near-miss lands strictly inside the fuzzy band', () => {
-    // 2 of 3 tokens shared: 0.667 — above SIMILARITY_FUZZY, below SIMILARITY_ASSERT.
+    // 2 of 3 tokens shared: 0.667 - above SIMILARITY_FUZZY, below SIMILARITY_ASSERT.
     const score = jaccard(new Set(['never', 'push', 'ask']), new Set(['never', 'push']));
     expect(score).toBeGreaterThanOrEqual(SIMILARITY_FUZZY);
     expect(score).toBeLessThan(SIMILARITY_ASSERT);
@@ -145,7 +145,7 @@ describe('classifyRecurrence', () => {
     expect(report.violations).toHaveLength(0);
     expect(report.fuzzy).toHaveLength(1);
     expect(report.fuzzy[0]!.memory.id).toBe(memory.id);
-    // A fuzzy-paired cluster is not also an untriaged repeat — one signal, one section.
+    // A fuzzy-paired cluster is not also an untriaged repeat - one signal, one section.
     expect(report.repeats).toHaveLength(0);
 
     const falsePair = record("don't push", {
@@ -316,7 +316,7 @@ describe('trend snapshots (G4: the two-run delta instrument)', () => {
     trendNote?: string;
   }
 
-  test('G4: two runs over a mutated corpus — the delta shows exactly the new violation', async () => {
+  test('G4: two runs over a mutated corpus - the delta shows exactly the new violation', async () => {
     writeSession(tmp, 's1', repo, [userTurn(FACT, '2026-06-01T10:00:00Z')]);
     writeSession(tmp, 's2', repo, [userTurn(FACT, '2026-06-02T10:00:00Z')]);
     const memory = approve(FACT, '2026-05-03');
@@ -325,7 +325,7 @@ describe('trend snapshots (G4: the two-run delta instrument)', () => {
     // First run: no previous run, every violation is (new), one snapshot line lands.
     // SAFETY: stdout is the `report --json` envelope printed by this test process.
     const first = JSON.parse((await capture(['report', '--repo', repo, '--json'])).stdout) as TrendJson;
-    expect(first.trendNote).toBe('first snapshot — no previous run');
+    expect(first.trendNote).toBe('first snapshot - no previous run');
     expect(first.trend.every((t) => t.delta === null && t.previous === null)).toBe(true);
     const firstCount = first.trend.find((t) => t.id === memory.id)!.violations;
     expect(lines()).toHaveLength(1);
@@ -339,7 +339,7 @@ describe('trend snapshots (G4: the two-run delta instrument)', () => {
     // SAFETY: stdout is the `report --json` envelope printed by this test process.
     const next = JSON.parse((await capture(['report', '--repo', repo, '--json'])).stdout) as TrendJson;
     // The unchanged memory deltas exactly 0; the mutated corpus' addition is the
-    // ONLY (new) row — the whole G4 claim: the diff shows exactly the new violation
+    // ONLY (new) row - the whole G4 claim: the diff shows exactly the new violation
     // and nothing else.
     const unchanged = next.trend.find((t) => t.id === memory.id)!;
     expect({ id: unchanged.id, delta: unchanged.delta }).toEqual({ id: memory.id, delta: 0 });

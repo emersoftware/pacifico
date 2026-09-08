@@ -50,7 +50,7 @@ async function selectWithFzf(lines: string[]): Promise<string | null> {
 /** The argv prefix that re-enters this binary: `bun index.ts` when run from source,
  *  the compiled binary itself otherwise. fzf --preview runs it via `sh -c`.
  *  In a compiled binary argv[0] is literally "bun" and argv[1] is the virtual
- *  /$bunfs/root/... entry path — process.execPath is the real binary. Using argv[0]
+ *  /$bunfs/root/... entry path - process.execPath is the real binary. Using argv[0]
  *  made the preview command `bun --preview <file>`, and bun then tried to run the
  *  session's JSONL as a script, flooding the pane with parse errors. */
 export function previewArgv(script = process.argv[1] ?? '', exe = process.execPath): string[] {
@@ -58,7 +58,7 @@ export function previewArgv(script = process.argv[1] ?? '', exe = process.execPa
   return fromSource ? [exe, script, '--preview'] : [exe, '--preview'];
 }
 
-/** Preview command string for fzf `--preview`. {1} is fzf's field-1 placeholder —
+/** Preview command string for fzf `--preview`. {1} is fzf's field-1 placeholder -
  *  fzf auto single-quotes the expansion, so no manual quoting of the path is needed.
  *  The exe/script paths come from this process's own argv and carry no spaces in
  *  practice (homebrew / install dirs), so they're passed bare. */

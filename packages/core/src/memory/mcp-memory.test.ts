@@ -13,7 +13,7 @@ import type { MemoryRecord, MemoryScope } from './types';
 //
 // The scoping matrix lives here, not in src/mcp.test.ts: that file seeds a single
 // approved memory only so get_memory's populated projection is validated through
-// tools/call, and both files must set SESSIONS_DATA_DIR — without it a get_memory call
+// tools/call, and both files must set SESSIONS_DATA_DIR - without it a get_memory call
 // opens (and creates) the developer's real ~/.local/share/pacifico/memory.db.
 
 const REPO_A: MemoryScope = { type: 'repo', key: '/repos/app' };
@@ -76,7 +76,7 @@ beforeAll(async () => {
 
   // A real repo plus a linked worktree. In the standard git layout the linked
   // worktree is a SIBLING path, so no prefix rule over the raw cwd can connect
-  // `app-featureA` to a memory stored under `app` — only container resolution can.
+  // `app-featureA` to a memory stored under `app` - only container resolution can.
   // Nothing else in the suite covers that branch of activeMemoryFor.
   const repos = join(tmp, 'repos');
   mkdirSync(repos, { recursive: true });
@@ -179,7 +179,7 @@ describe('activeMemoryFor', () => {
 
   test('an approved repo memory with an empty scope key matches nothing', () => {
     // '' is a prefix of every path. Unreachable from mine() today, reachable from
-    // an imported or hand-seeded row — and it would leak into every repo.
+    // an imported or hand-seeded row - and it would leak into every repo.
     for (const cwd of ['/repos/app', '/repos/app-v2', '/repos/unrelated', linkedWorktree]) {
       expect(texts(activeMemoryFor(cwd))).not.toContain(EMPTY_KEY_APPROVED.text);
     }
@@ -226,7 +226,7 @@ describe('runGetMemory', () => {
     const res = await mcp.runGetMemory({ cwd: '/repos/app' });
     expect(res.content[0]!.text).toBe('No memories for this repo.');
     // The sentence is what a model reads; the empty payload is what output validation
-    // needs. Both ship — a sentinel with no structuredContent fails every call.
+    // needs. Both ship - a sentinel with no structuredContent fails every call.
     expect(res.isError).toBeUndefined();
     expect(res.structuredContent).toEqual({ results: [], count: 0 });
   });
@@ -239,7 +239,7 @@ describe('runGetMemory', () => {
       { text: A_APPROVED.text, kind: 'instruction', scope: 'repo' },
     ]);
     expect(parsed.count).toBe(2);
-    // ids, evidence, and session paths are triage concerns — they must not be
+    // ids, evidence, and session paths are triage concerns - they must not be
     // spending the agent's context.
     for (const entry of parsed.results) expect(Object.keys(entry).sort()).toEqual(['kind', 'scope', 'text']);
   });

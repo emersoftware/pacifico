@@ -11,7 +11,7 @@
 function normalizeModelId(id: string): string {
   let s = id.replace(/^[a-z0-9.-]+\//i, ''); // provider/ prefix: openai/, anthropic/, moonshotai/
   // Strip trailing [context-window] and :tier markers, repeatedly and in any
-  // order — "claude-opus-4-8[1m]:thinking" must reduce to "claude-opus-4-8",
+  // order - "claude-opus-4-8[1m]:thinking" must reduce to "claude-opus-4-8",
   // not leave "[1m]" stranded and drop the minor version.
   let prev: string;
   do {
@@ -26,7 +26,7 @@ function normalizeModelId(id: string): string {
  *  anything unrecognized keeps its normalized id (never invent a name). */
 export function prettyModel(id: string): string {
   const norm = normalizeModelId(id);
-  // The minor version is 1-2 digits at a segment boundary — an 8-digit date
+  // The minor version is 1-2 digits at a segment boundary - an 8-digit date
   // suffix (claude-opus-4-20250514) is NOT a minor version.
   const claude = norm.match(/^claude-(opus|sonnet|haiku|fable|mythos)-(\d+)(?:-(\d{1,2})(?=-|$))?/);
   if (claude) {
@@ -41,7 +41,7 @@ export function prettyModel(id: string): string {
   return norm;
 }
 
-/** Canonical key for merging/counting model variants — the pretty name collapses
+/** Canonical key for merging/counting model variants - the pretty name collapses
  *  provider prefixes and dated snapshots that are the same model. */
 export const canonicalModel = prettyModel;
 

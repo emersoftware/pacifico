@@ -7,9 +7,9 @@ import { getMemoryDb, setAlwaysOn, setState, upsertCandidates } from './store';
 import type { MemoryRecord, MemoryScope } from './types';
 import { closeDatabases, makeTmp, setMemoryEnv } from './fixtures';
 
-// THE PROVENANCE GUARD, as a test instead of a hope. Triage state — approve, reject,
+// THE PROVENANCE GUARD, as a test instead of a hope. Triage state - approve, reject,
 // and above all `alwaysOn`, whose rows an agent is told to treat as binding and are
-// served ahead of everything — must only ever change through a human at the CLI.
+// served ahead of everything - must only ever change through a human at the CLI.
 // The MCP surface is where models sit, so the invariant is: no MCP path writes the
 // memory store. Today that is true by construction (every tool is a SELECT); this
 // file exists so it stays true on purpose. A future write tool must consciously
@@ -35,7 +35,7 @@ function record(text: string, scope: MemoryScope): MemoryRecord {
   });
 }
 
-/** Every column of every row, timestamps included — rowToRecord's projection drops
+/** Every column of every row, timestamps included - rowToRecord's projection drops
  *  created_at/updated_at, and a mutation that only touched those would slip past it. */
 function dumpStore(): string {
   const rows = getMemoryDb().query('SELECT * FROM memory ORDER BY id').all();
@@ -77,7 +77,7 @@ afterAll(() => {
   rmSync(tmp, { recursive: true, force: true });
 });
 
-test('every MCP tool declares itself read-only — a write tool cannot land silently', async () => {
+test('every MCP tool declares itself read-only - a write tool cannot land silently', async () => {
   const client = await connect();
   const { tools } = await client.listTools();
   expect(tools.length).toBeGreaterThan(0);
@@ -95,7 +95,7 @@ test('driving get_memory over the protocol leaves the store byte-identical', asy
   const client = await connect();
 
   // Every shape of the call: scoped, topic-narrowed, and defaulted. The topic call is
-  // the one that exercises the alwaysOn partition — the code nearest the flag.
+  // the one that exercises the alwaysOn partition - the code nearest the flag.
   for (const args of [{ cwd: '/repos/app' }, { cwd: '/repos/app', topic: 'force pushing branches' }, {}]) {
     const res = await client.callTool({ name: 'get_memory', arguments: args });
     // Boolean(): the SDK reports success as an absent isError, not a false one.
@@ -110,8 +110,8 @@ test('driving review_memory recurrence over the protocol leaves the store byte-i
   const before = dumpStore();
   const client = await connect();
 
-  // Every arg shape: defaulted, all-repos, and repo-scoped. This tool MINES — the
-  // one read-only tool that does real work — so it is where a write (a candidate
+  // Every arg shape: defaulted, all-repos, and repo-scoped. This tool MINES - the
+  // one read-only tool that does real work - so it is where a write (a candidate
   // upsert, a watermark advance) would most plausibly hide. The byte-compare only
   // covers tools this file drives, which is why this loop exists at all.
   for (const args of [{}, { all: true }, { cwd: '/repos/app' }]) {

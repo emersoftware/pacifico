@@ -2,7 +2,7 @@ import { describe, test, expect } from 'bun:test';
 import { renderMarkdown } from '../context';
 import type { ContextPrimer, PrimerMemory } from '../types';
 
-// The primer's memory tier — the only GUARANTEED delivery of an approved memory.
+// The primer's memory tier - the only GUARANTEED delivery of an approved memory.
 //
 // `get_memory` is topic-conditional and an agent has to choose to call it. That is the
 // same "only fires when the model decides to" dependency that left the previous lesson
@@ -46,7 +46,7 @@ describe('the primer carries approved memory unconditionally', () => {
   });
 
   test('an exact list adds no overflow line', () => {
-    expect(renderMarkdown(primer([fact('Only one.')]), false)).not.toContain('more —');
+    expect(renderMarkdown(primer([fact('Only one.')]), false)).not.toContain('more -');
   });
 
   test('no memory means no section at all, not an empty heading', () => {

@@ -21,7 +21,7 @@ function die(msg: string): never {
 }
 
 function help(): never {
-  process.stderr.write(`pacifico context — load a context primer for the current repo
+  process.stderr.write(`pacifico context - load a context primer for the current repo
 
 Prints a markdown primer of recent sessions (in detail) plus older headlines,
 for pasting into a tool without skill support. Inherently repo-scoped.
@@ -109,12 +109,12 @@ const EMPTY_LINE = 'No past sessions found for this repo.';
  * `## Memory`: what this user has already established here, ahead of what merely happened.
  *
  * First in the primer, and unconditional. `get_memory` is topic-conditional and an agent
- * has to choose to call it — the same "only fires when the model decides to" dependency
+ * has to choose to call it - the same "only fires when the model decides to" dependency
  * that left the previous lesson store at one row for months. This tier is the guaranteed
  * delivery; the tool stays the precise one.
  *
  * Standing constraints are marked, because "do not do X, ever" and "this repo uses Y" are
- * read differently, and the count left out is stated rather than implied — a primer that
+ * read differently, and the count left out is stated rather than implied - a primer that
  * silently shows 8 of 40 reads as the whole set.
  */
 function renderMemory(primer: ContextPrimer): string[] {
@@ -126,7 +126,7 @@ function renderMemory(primer: ContextPrimer): string[] {
   }
   const omitted = primer.memoryTotal - primer.memory.length;
   if (omitted > 0) {
-    out.push(`- _+${omitted} more — call \`get_memory\` with a topic for the ones relevant to your task_`);
+    out.push(`- _+${omitted} more - call \`get_memory\` with a topic for the ones relevant to your task_`);
   }
   return out;
 }
@@ -149,7 +149,7 @@ export function renderMarkdown(primer: ContextPrimer, full: boolean): string {
       const shown = full ? s.files : s.files.slice(0, 5);
       // Count against fileCount, not files.length: the primer caps `files` upstream, so
       // the array no longer knows how many were dropped. `--full` widens the detail it is
-      // given and still says so when the producer truncated — silent is the failure mode.
+      // given and still says so when the producer truncated - silent is the failure mode.
       const hidden = s.fileCount - shown.length;
       out.push(`- **Files:** ${shown.join(', ')}${hidden > 0 ? ` (+${hidden} more)` : ''}`);
     }
@@ -164,7 +164,7 @@ export function renderMarkdown(primer: ContextPrimer, full: boolean): string {
   if (primer.headlines.length > 0) {
     out.push('## Earlier\n');
     for (const h of primer.headlines) {
-      out.push(`- **${h.date}** (${h.tool} · ${h.branch}) — ${h.intent || '(none)'}`);
+      out.push(`- **${h.date}** (${h.tool} · ${h.branch}) - ${h.intent || '(none)'}`);
     }
     out.push('');
   }

@@ -13,7 +13,7 @@
 - **No new runtime dependencies.** Only `@modelcontextprotocol/sdk` and `zod` are allowed (current `dependencies`). No network, no LLM calls, no embedding models.
 - **Single compiled binary.** Everything must work under `bun build --compile`.
 - **Tokenizer stays `porter unicode61`.**
-- **Schema migrations are destructive reindexes** keyed on `PRAGMA user_version` — the established pattern in `getDb()`. Bump the constant; let `getDb()` drop + rebuild.
+- **Schema migrations are destructive reindexes** keyed on `PRAGMA user_version` - the established pattern in `getDb()`. Bump the constant; let `getDb()` drop + rebuild.
 - **Pure extractors live in their own `src/extract-*.ts` files, mirror `src/extract-files.ts`** (per-tool branches, a `push` that dedups + caps), and are unit-tested with inline JSONL.
 - **Caps:** `MAX_COMMANDS = 100`, `MAX_FILES = 50` (existing), thinking length-capped.
 - **Verification gate (every task ends green):** `bun test` exits 0; `bun run typecheck`, `bun run lint`, `bun run format:check`, `bun run build` all exit 0.
@@ -25,22 +25,22 @@
 
 **Create:**
 
-- `src/extract-commands.ts` — `extractCommands(lines, tool) → string[]` (Bash/exec commands).
-- `src/extract-errors.ts` — `extractErrors(lines, tool) → SessionErrors` (error flag/count/messages).
-- `src/extract-thinking.ts` — `extractThinking(lines, tool) → string` (reasoning text).
-- `src/search-format.ts` — `buildResumeCommand()` + `formatResult()` shared by CLI and MCP.
+- `src/extract-commands.ts` - `extractCommands(lines, tool) → string[]` (Bash/exec commands).
+- `src/extract-errors.ts` - `extractErrors(lines, tool) → SessionErrors` (error flag/count/messages).
+- `src/extract-thinking.ts` - `extractThinking(lines, tool) → string` (reasoning text).
+- `src/search-format.ts` - `buildResumeCommand()` + `formatResult()` shared by CLI and MCP.
 - Tests: `src/extract-commands.test.ts`, `src/extract-errors.test.ts`, `src/extract-thinking.test.ts`, `src/search-format.test.ts`, `src/cache.search.test.ts`, `src/cli.test.ts`.
 
 **Modify:**
 
-- `src/extract-files.ts` — add `extractFilesRead(lines, tool) → string[]` (Read/Grep/Glob targets).
-- `src/types.ts` — extend `SessionResult` (`files`, `commands`, `errored`); extend `CliArgs` (`errored`).
-- `src/cache.ts` — `SCHEMA_VERSION` 5→6, new columns on both tables, `indexFile` population, `searchSessions` (options object + weighted bm25 + `errored` filter + metadata), `getDb` hardening, `closeDb`/`getDbPath` test helpers.
-- `src/cli.ts` — parse `--errored`; add `toSearchOptions()`.
-- `index.ts` — route the main path through `searchSessions`; use the shared resume builder.
-- `src/display.ts` — show an errored marker.
-- `src/scanner.ts` — populate the new `SessionResult` fields (kept as a no-index fallback).
-- `src/mcp.ts` — extract the search handler to a testable function; add `errored`; return metadata + `resumeCommand`.
+- `src/extract-files.ts` - add `extractFilesRead(lines, tool) → string[]` (Read/Grep/Glob targets).
+- `src/types.ts` - extend `SessionResult` (`files`, `commands`, `errored`); extend `CliArgs` (`errored`).
+- `src/cache.ts` - `SCHEMA_VERSION` 5→6, new columns on both tables, `indexFile` population, `searchSessions` (options object + weighted bm25 + `errored` filter + metadata), `getDb` hardening, `closeDb`/`getDbPath` test helpers.
+- `src/cli.ts` - parse `--errored`; add `toSearchOptions()`.
+- `index.ts` - route the main path through `searchSessions`; use the shared resume builder.
+- `src/display.ts` - show an errored marker.
+- `src/scanner.ts` - populate the new `SessionResult` fields (kept as a no-index fallback).
+- `src/mcp.ts` - extract the search handler to a testable function; add `errored`; return metadata + `resumeCommand`.
 
 ---
 
@@ -127,7 +127,7 @@ test('dedups identical commands and caps at MAX_COMMANDS', () => {
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `bun test src/extract-commands.test.ts`
-Expected: FAIL — `Cannot find module './extract-commands'`.
+Expected: FAIL - `Cannot find module './extract-commands'`.
 
 - [ ] **Step 3: Write the minimal implementation**
 
@@ -311,7 +311,7 @@ test('pi: toolResult isError is an error', () => {
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `bun test src/extract-errors.test.ts`
-Expected: FAIL — `Cannot find module './extract-errors'`.
+Expected: FAIL - `Cannot find module './extract-errors'`.
 
 - [ ] **Step 3: Write the minimal implementation**
 
@@ -398,7 +398,7 @@ function extractPi(lines: string[], push: (m: string) => void): void {
   }
 }
 
-/** Whether (and how) a session hit errors — drives the `errored` filter + `context_text` FTS column. */
+/** Whether (and how) a session hit errors - drives the `errored` filter + `context_text` FTS column. */
 export function extractErrors(lines: string[], tool: Tool): SessionErrors {
   const messages: string[] = [];
   let count = 0;
@@ -479,7 +479,7 @@ test('codex: reasoning is encrypted, returns empty', () => {
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `bun test src/extract-thinking.test.ts`
-Expected: FAIL — `Cannot find module './extract-thinking'`.
+Expected: FAIL - `Cannot find module './extract-thinking'`.
 
 - [ ] **Step 3: Write the minimal implementation**
 
@@ -555,7 +555,7 @@ git commit -m "feat(extract): thinking-text extractor (claude/pi; codex empty)"
 - [ ] **Step 1: Write the failing test (append to existing file)**
 
 ```ts
-// src/extract-files.test.ts — append
+// src/extract-files.test.ts - append
 import { extractFilesRead } from './extract-files';
 
 test('read: claude Read/Grep targets, separate from edited files', () => {
@@ -586,12 +586,12 @@ test('read: claude Read/Grep targets, separate from edited files', () => {
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `bun test src/extract-files.test.ts -t "read"`
-Expected: FAIL — `extractFilesRead is not a function` / not exported.
+Expected: FAIL - `extractFilesRead is not a function` / not exported.
 
 - [ ] **Step 3: Write the minimal implementation (append to `src/extract-files.ts`)**
 
 ```ts
-// src/extract-files.ts — append (reuses the file-local tryParse + MAX_FILES)
+// src/extract-files.ts - append (reuses the file-local tryParse + MAX_FILES)
 
 /** Claude: read-only tool_use targets (Read/Grep/Glob), kept separate from edits. */
 const CLAUDE_READ_TOOLS = new Set(['Read', 'Grep', 'Glob']);
@@ -617,7 +617,7 @@ function extractClaudeRead(lines: string[], push: (p: string) => void): void {
 
 /**
  * Read/searched (not edited) file targets, for the searchable `paths` column.
- * Codex/Pi read-target shapes need fixtures to confirm — deliberate no-op until
+ * Codex/Pi read-target shapes need fixtures to confirm - deliberate no-op until
  * then, mirroring the edited-files Pi no-op.
  */
 export function extractFilesRead(lines: string[], tool: Tool): string[] {
@@ -750,7 +750,7 @@ test('commands and paths are findable: a file-path query matches a Read target',
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `bun test src/cache.search.test.ts`
-Expected: FAIL — `cache.closeDb is not a function` and/or the FTS table lacks the new columns so the file-path query returns nothing. (Tasks 5 and 10 both touch this file; `closeDb` is added in Task 10. For Step 4 here, comment out the `afterAll` body or expect the two `test(...)` assertions to pass even if `afterAll` errors — the findability assertions are what this task delivers.)
+Expected: FAIL - `cache.closeDb is not a function` and/or the FTS table lacks the new columns so the file-path query returns nothing. (Tasks 5 and 10 both touch this file; `closeDb` is added in Task 10. For Step 4 here, comment out the `afterAll` body or expect the two `test(...)` assertions to pass even if `afterAll` errors - the findability assertions are what this task delivers.)
 
 - [ ] **Step 3: Implement the schema + population changes in `src/cache.ts`**
 
@@ -863,13 +863,13 @@ db.run(
 - [ ] **Step 4: Run the test to verify it passes**
 
 Run: `bun test src/cache.search.test.ts -t "findable"` and `bun test src/cache.search.test.ts -t "indexes new content"`
-Expected: PASS. (Delete the stale `~/.cache/sessions/index.db` if running against a real home — the test uses a temp dir so this is N/A in CI.)
+Expected: PASS. (Delete the stale `~/.cache/sessions/index.db` if running against a real home - the test uses a temp dir so this is N/A in CI.)
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add src/cache.ts src/cache.search.test.ts
-git commit -m "feat(index): schema 5->6 — index commands/paths/errors/thinking"
+git commit -m "feat(index): schema 5->6 - index commands/paths/errors/thinking"
 ```
 
 ---
@@ -934,7 +934,7 @@ test('errored filter and metadata: only errored sessions, with files/commands/er
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `bun test src/cache.search.test.ts -t "ranking"` and `-t "errored filter"`
-Expected: FAIL — `searchSessions` ignores `opts`/`errored`, results lack `files`/`commands`/`errored`.
+Expected: FAIL - `searchSessions` ignores `opts`/`errored`, results lack `files`/`commands`/`errored`.
 
 - [ ] **Step 3: Implement**
 
@@ -958,7 +958,7 @@ export interface SessionResult {
 }
 ```
 
-In `src/scanner.ts`, the fallback can't extract these — set empty defaults in **both** returned objects in `processSession` (add to each object literal):
+In `src/scanner.ts`, the fallback can't extract these - set empty defaults in **both** returned objects in `processSession` (add to each object literal):
 
 ```ts
       files: [],
@@ -1089,7 +1089,7 @@ export async function searchSessions(query: string, opts: SearchOptions = {}): P
 }
 ```
 
-Note: `parseFiles` is defined later in `cache.ts` (function declaration, hoisted — safe to call here). The test in Step 1 expects a Read target in `files`; this implementation returns **edited** files (`files_touched`). Either change the test to assert `a.commands` only, or also include read files: `files: [...parseFiles(r.files_touched), ...parseFiles(r.files_read)]` and add `files_read` to the SELECT + `SessionRow`. Pick one and keep the test consistent. **Recommended:** include both (union) so `files` answers "what files did this session involve."
+Note: `parseFiles` is defined later in `cache.ts` (function declaration, hoisted - safe to call here). The test in Step 1 expects a Read target in `files`; this implementation returns **edited** files (`files_touched`). Either change the test to assert `a.commands` only, or also include read files: `files: [...parseFiles(r.files_touched), ...parseFiles(r.files_read)]` and add `files_read` to the SELECT + `SessionRow`. Pick one and keep the test consistent. **Recommended:** include both (union) so `files` answers "what files did this session involve."
 
 In `src/mcp.ts`, update the single call site to the new signature (keeps the build green; Task 9 enriches it):
 
@@ -1175,7 +1175,7 @@ test('formatResult: shapes a SessionResult for callers, including resumeCommand'
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `bun test src/search-format.test.ts`
-Expected: FAIL — `Cannot find module './search-format'`.
+Expected: FAIL - `Cannot find module './search-format'`.
 
 - [ ] **Step 3: Write the minimal implementation**
 
@@ -1281,7 +1281,7 @@ test('toSearchOptions: maps CLI args + repoRoot to a SearchOptions call', () => 
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `bun test src/cli.test.ts`
-Expected: FAIL — `a.errored` undefined / `toSearchOptions` not exported.
+Expected: FAIL - `a.errored` undefined / `toSearchOptions` not exported.
 
 - [ ] **Step 3: Implement**
 
@@ -1461,7 +1461,7 @@ test('search_sessions handler honors the errored filter', async () => {
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `bun test src/mcp.test.ts`
-Expected: FAIL — `mcp.runSearchSessions is not a function`.
+Expected: FAIL - `mcp.runSearchSessions is not a function`.
 
 - [ ] **Step 3: Implement in `src/mcp.ts`**
 
@@ -1508,7 +1508,7 @@ server.tool(
       .string()
       .optional()
       .describe(
-        'Text to search across session messages, commands, file paths, errors, and reasoning. Natural-language queries work — results are ranked by relevance and any term may match. Omit to list recent sessions.',
+        'Text to search across session messages, commands, file paths, errors, and reasoning. Natural-language queries work - results are ranked by relevance and any term may match. Omit to list recent sessions.',
       ),
     tool: z.enum(['claude', 'codex', 'pi']).optional().describe('Filter to a specific tool'),
     project: z.string().optional().describe('Filter to sessions from this project directory path'),
@@ -1565,7 +1565,7 @@ test('hardening: busy_timeout is set and a corrupt DB rebuilds instead of throwi
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `bun test src/cache.search.test.ts -t "hardening"`
-Expected: FAIL — `cache.closeDb`/`cache.getDbPath` not functions (and/or a corrupt DB throws).
+Expected: FAIL - `cache.closeDb`/`cache.getDbPath` not functions (and/or a corrupt DB throws).
 
 - [ ] **Step 3: Implement in `src/cache.ts`**
 
@@ -1666,7 +1666,7 @@ function getDb(): Database {
 }
 ```
 
-(This replaces the existing inline `getDb` body; the `CREATE TABLE`/`CREATE VIRTUAL TABLE` blocks moved into `openDb` are the Task 5 schema — keep them identical.)
+(This replaces the existing inline `getDb` body; the `CREATE TABLE`/`CREATE VIRTUAL TABLE` blocks moved into `openDb` are the Task 5 schema - keep them identical.)
 
 - [ ] **Step 4: Run the test to verify it passes**
 

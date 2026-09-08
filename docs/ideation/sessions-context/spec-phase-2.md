@@ -1,4 +1,4 @@
-# Implementation Spec: sessions context — Phase 2 (Surfaces + Skill)
+# Implementation Spec: sessions context - Phase 2 (Surfaces + Skill)
 
 **Contract**: ./contract.md
 **Estimated Effort**: M
@@ -6,15 +6,15 @@
 
 ## Technical Approach
 
-Phase 2 exposes the Phase-1 extractor on the two surfaces and ships the skill that turns its structured output into prose. No new extraction logic — every surface calls `getContextPrimer` and formats.
+Phase 2 exposes the Phase-1 extractor on the two surfaces and ships the skill that turns its structured output into prose. No new extraction logic - every surface calls `getContextPrimer` and formats.
 
 Three deliverables:
 
-1. **`get_context_primer` MCP tool** (`src/mcp.ts`) — the primary re-injection surface. Follows the house pattern exactly: `server.tool(name, description, zodRawShape, handler)` returning `{ content: [{ type: 'text', text: JSON.stringify(primer, null, 2) }] }`, with a plain-string message for the empty/not-a-repo case. The agent calls it and synthesizes in-context.
+1. **`get_context_primer` MCP tool** (`src/mcp.ts`) - the primary re-injection surface. Follows the house pattern exactly: `server.tool(name, description, zodRawShape, handler)` returning `{ content: [{ type: 'text', text: JSON.stringify(primer, null, 2) }] }`, with a plain-string message for the empty/not-a-repo case. The agent calls it and synthesizes in-context.
 
-2. **`sessions context` CLI subcommand** — a `Bun.argv.includes('context')` dispatch block in the repo-root `index.ts` (mirroring the `report` block at `index.ts:41`), backed by a new `src/context.ts` holding `parseContextArgs` (mirroring `parseReportArgs` at `src/report/index.ts:45`) and a markdown renderer. This is for paste/pipe into tools without skill support.
+2. **`sessions context` CLI subcommand** - a `Bun.argv.includes('context')` dispatch block in the repo-root `index.ts` (mirroring the `report` block at `index.ts:41`), backed by a new `src/context.ts` holding `parseContextArgs` (mirroring `parseReportArgs` at `src/report/index.ts:45`) and a markdown renderer. This is for paste/pipe into tools without skill support.
 
-3. **The `context` skill** (`plugin/skills/context/SKILL.md`) — instructs the agent to call `get_context_primer`, then synthesize a prose primer of prior decisions / what was tried / open threads, anchoring the open thread on the most-recent session's closing state. Mirrors `plugin/skills/recall/SKILL.md`. Then regenerate the plugin embed and add `/context` to the `sessions setup` advertisement.
+3. **The `context` skill** (`plugin/skills/context/SKILL.md`) - instructs the agent to call `get_context_primer`, then synthesize a prose primer of prior decisions / what was tried / open threads, anchoring the open thread on the most-recent session's closing state. Mirrors `plugin/skills/recall/SKILL.md`. Then regenerate the plugin embed and add `/context` to the `sessions setup` advertisement.
 
 The CLI and MCP surface share one extractor and one renderer-input, so they cannot drift.
 
@@ -52,9 +52,9 @@ None.
 
 ## Implementation Details
 
-### Component 1 — `get_context_primer` MCP tool (`src/mcp.ts`)
+### Component 1 - `get_context_primer` MCP tool (`src/mcp.ts`)
 
-**Pattern to follow**: `src/mcp.ts:81-108` (`get_activity_digest`) — raw-shape zod, `JSON.stringify(..., null, 2)`, plain-string empty case.
+**Pattern to follow**: `src/mcp.ts:81-108` (`get_activity_digest`) - raw-shape zod, `JSON.stringify(..., null, 2)`, plain-string empty case.
 
 **Overview**: Thin handler: resolve repo from an optional `cwd` arg (default `process.cwd()`), call `getContextPrimer`, return JSON.
 
@@ -89,11 +89,11 @@ server.tool(
 
 **Feedback loop**:
 
-- **Playground**: `src/context.test.ts` `describe('mcp')` — call `getContextPrimer` on a temp index and assert the JSON matches what the CLI renderer consumes.
+- **Playground**: `src/context.test.ts` `describe('mcp')` - call `getContextPrimer` on a temp index and assert the JSON matches what the CLI renderer consumes.
 - **Experiment**: empty repo → empty-state string; populated → parseable JSON with `recent`/`headlines`.
 - **Check command**: `bun test src/context.test.ts -t "mcp"`
 
-### Component 2 — `sessions context` CLI (`index.ts`, `src/context.ts`)
+### Component 2 - `sessions context` CLI (`index.ts`, `src/context.ts`)
 
 **Pattern to follow**: `index.ts:41-55` (report dispatch) and `src/report/index.ts:45-109` (`parseReportArgs`).
 
@@ -116,7 +116,7 @@ export function renderMarkdown(primer: ContextPrimer, full: boolean): string;
 ```
 
 ```typescript
-// index.ts — add before the line-57 fall-through
+// index.ts - add before the line-57 fall-through
 if (Bun.argv.includes('context')) {
   const i = Bun.argv.indexOf('context');
   const { parseContextArgs, runContext } = await import('./src/context.ts');
@@ -135,7 +135,7 @@ if (Bun.argv.includes('context')) {
 **Implementation steps**:
 
 1. `parseContextArgs` + a `--help` string in `cli.ts`.
-2. `renderMarkdown` (pure function — test first).
+2. `renderMarkdown` (pure function - test first).
 3. `runContext` wiring resolve→primer→render→output.
 4. Dispatch block in `index.ts`.
 
@@ -145,7 +145,7 @@ if (Bun.argv.includes('context')) {
 - **Experiment**: render a fixture primer and assert it contains a `## Recent` heading, the most-recent session's intent, and an `## Earlier` bullet; empty primer renders the empty-state line; `--out /tmp/p.md` writes the file.
 - **Check command**: `bun test src/context.test.ts -t "cli"`
 
-### Component 3 — `context` skill (`plugin/skills/context/SKILL.md`)
+### Component 3 - `context` skill (`plugin/skills/context/SKILL.md`)
 
 **Pattern to follow**: `plugin/skills/recall/SKILL.md` (frontmatter + `## Steps` + `## Guidelines`).
 
@@ -167,8 +167,8 @@ Synthesize a prose context primer from past sessions on this repo.
 
 1. **Fetch the primer.** Call the `get_context_primer` MCP tool (pass `cwd` if a path was given).
 2. **Synthesize, don't dump.** From the JSON, write: prior decisions, what was tried/abandoned, and the current open thread.
-3. **Anchor the open thread** on the most-recent session's `closing` — but treat `closing.assistant` skeptically (it may be a question or tool call, not an outcome); cross-check `closing.user`.
-4. **Keep it tight** — a short brief the user can act on, not a transcript.
+3. **Anchor the open thread** on the most-recent session's `closing` - but treat `closing.assistant` skeptically (it may be a question or tool call, not an outcome); cross-check `closing.user`.
+4. **Keep it tight** - a short brief the user can act on, not a transcript.
 
 ## Guidelines
 
@@ -178,12 +178,12 @@ Synthesize a prose context primer from past sessions on this repo.
 
 **Key decisions**:
 
-- **Synthesis lives here, not in the binary** — the moat. The skill is the only component that produces prose.
+- **Synthesis lives here, not in the binary** - the moat. The skill is the only component that produces prose.
 - **Skeptical-of-last-assistant instruction** encodes the Phase-1 "both roles" decision into agent behavior.
 
 **Feedback loop**: None (a prompt file; validated by the judgment-call success criterion via human review of a sample primer).
 
-### Component 4 — Packaging (`generate-plugin-embed`, `src/setup.ts`)
+### Component 4 - Packaging (`generate-plugin-embed`, `src/setup.ts`)
 
 **Pattern to follow**: `scripts/generate-plugin-embed.ts`, `src/setup.ts:198-203`.
 

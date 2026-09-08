@@ -1,6 +1,6 @@
 // The durable memory store: a second SQLite database, deliberately NOT index.db.
 //
-// index.db is disposable by design — `--clear-cache` unlinks it (index.ts:17-21),
+// index.db is disposable by design - `--clear-cache` unlinks it (index.ts:17-21),
 // `pacifico cleanup` unlinks it (index.ts:28-34), and getDb's corruption self-heal
 // deletes and rebuilds it on a user_version mismatch (src/cache.ts:216-222). Every
 // one of those is safe there because the index is re-derivable from transcripts.
@@ -55,7 +55,7 @@ function migrate(db: Database): void {
   // A whole new table needs no `PRAGMA table_info` guard and no `user_version` bump:
   // IF NOT EXISTS is already idempotent, and the column guard below exists only
   // because ALTER TABLE is not. It sits here, beside the table it is a sibling of,
-  // rather than inside the version gate — every store written before this phase
+  // rather than inside the version gate - every store written before this phase
   // already reports user_version = 1, so a gated CREATE would never run on them.
   //
   // `mtime` is REAL, matching src/cache.ts:129-130. The value is `stat.mtimeMs`, which
@@ -76,7 +76,7 @@ function migrate(db: Database): void {
   // The guard is `PRAGMA table_info`, NOT the `user_version` gate below, and that is
   // load-bearing rather than belt-and-braces. Every store written by Phase 1 already
   // reports user_version = 1, so an ALTER placed inside `if (current < VERSION)` would
-  // run on fresh databases only — and every listMemories() against an existing store
+  // run on fresh databases only - and every listMemories() against an existing store
   // would then fail with `no such column: always_on`. Asking the table what columns it
   // has is the only question whose answer does not depend on a version number that was
   // stamped before the column existed. It also makes repeat opens (and
@@ -86,7 +86,7 @@ function migrate(db: Database): void {
   // MEMORY_SCHEMA_VERSION deliberately stays 1: it is stamped into every record
   // (src/memory/record.ts:101) and is a z.literal in the wire schema
   // (src/memory/portable.ts:120,134), so bumping it would make every Phase 4 bundle
-  // unimportable in exchange for nothing — the column is additive with a default, so
+  // unimportable in exchange for nothing - the column is additive with a default, so
   // old and new rows read identically.
   const columns = db.query<{ name: string }, []>('PRAGMA table_info(memory)').all();
   if (!columns.some((c) => c.name === 'always_on')) {
@@ -94,7 +94,7 @@ function migrate(db: Database): void {
   }
   // Cluster write-back's column, added the same additive way and for the same reason:
   // a store written before merging existed reports user_version = 1 already, so a
-  // version-gated ALTER would never reach it. Nullable with no default — a row that
+  // version-gated ALTER would never reach it. Nullable with no default - a row that
   // was never merged has no canonical, and '' would be a second way to spell null.
   if (!columns.some((c) => c.name === 'merged_into')) {
     db.run('ALTER TABLE memory ADD COLUMN merged_into TEXT');
@@ -109,7 +109,7 @@ function migrate(db: Database): void {
   if (current < MEMORY_SCHEMA_VERSION) {
     // v0 -> v1 is "the table did not exist", which CREATE TABLE IF NOT EXISTS above
     // already handled. Future bumps add their ALTER TABLE steps here, guarded on
-    // `current` — but prefer the table_info shape above for a plain column add, for
+    // `current` - but prefer the table_info shape above for a plain column add, for
     // the reason spelled out there.
     db.run(`PRAGMA user_version = ${MEMORY_SCHEMA_VERSION}`);
   }
@@ -163,7 +163,7 @@ const EMPTY_EVIDENCE: MemoryEvidence = { distinctPhrasings: 0, sessions: [], fir
  *
  * A record whose evidence is unreadable is still a record the user triaged: degrade the
  * evidence, never drop the row. Field-by-field rather than a cast, because the cast is a
- * lie the type system cannot check — `JSON.parse` happily returns a number or null for a
+ * lie the type system cannot check - `JSON.parse` happily returns a number or null for a
  * hand-edited column, and `unionEvidence` would then throw on `.sessions` while merging.
  */
 // Field-degrading on purpose: a hand-edited column loses only the field that
@@ -203,7 +203,7 @@ function rowToRecord(row: MemoryRow): MemoryRecord {
     alwaysOn: row.always_on === 1,
     // `?? null` rather than the raw value: a store migrated before this column existed
     // hands back undefined, and undefined would vanish from JSON.stringify while null
-    // survives — the determinism comparisons are byte-for-byte over serialized records.
+    // survives - the determinism comparisons are byte-for-byte over serialized records.
     mergedInto: row.merged_into ?? null,
   };
 }
@@ -214,14 +214,14 @@ function rowToRecord(row: MemoryRow): MemoryRecord {
  * `state`, `snoozed_until`, and `always_on` are deliberately absent from the ON CONFLICT
  * update, and so are the two scope columns: a re-mine sees the same corrective turns
  * forever, so overwriting state would resurrect every rejected candidate and the user
- * would re-triage it on every run. `always_on` is the same hazard one level worse —
+ * would re-triage it on every run. `always_on` is the same hazard one level worse -
  * `buildRecord` defaults it to false (src/memory/record.ts:110), so including it here
  * would silently clear a standing constraint on the next `memory mine`, which is
  * exactly the invisible-suppression failure the flag exists to prevent. Scope columns
  * are excluded for the third variant: `deriveScope` only ever produces repo/workflow,
  * so a triage-assigned `group` scope would be reverted by the next mine.
  *
- * `evidence` IS updated, but as a union with what is already stored — never a replace.
+ * `evidence` IS updated, but as a union with what is already stored - never a replace.
  * A mine builds each record from the transcripts it happened to read, which is one
  * phrasing from one session, so writing that blob wholesale would walk a canonical
  * record's clustered evidence back down to a single phrasing the next time anything
@@ -295,7 +295,7 @@ export function listMemories(filter: MemoryFilter = {}): MemoryRecord[] {
   const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
   const rows = db
     .query<MemoryRow, any[]>(
-      // Explicit column list, not SELECT * — a column forgotten here arrives as
+      // Explicit column list, not SELECT * - a column forgotten here arrives as
       // `undefined` at runtime and typecheck says nothing.
       `SELECT id, v, text, kind, scope_type, scope_key, author, evidence, state, snoozed_until, always_on, merged_into
        FROM memory ${where} ORDER BY id`,
@@ -312,7 +312,7 @@ export interface PersistedState {
 /**
  * Persisted triage state for the given ids; ids with no stored row are absent.
  *
- * The store — not a fresh mine — is the authority on state. `mine()` builds records
+ * The store - not a fresh mine - is the authority on state. `mine()` builds records
  * from transcripts, so every record it returns says `candidate`; emitting that
  * straight to stdout would re-present an already-rejected memory to the triage
  * consumer on every run. `upsertCandidates` protects the table (state is excluded
@@ -347,7 +347,7 @@ export function getPersistedStates(ids: string[]): Map<string, PersistedState> {
  * Separate from `upsertCandidates` on purpose: that path refreshes evidence from a
  * fresh mine, which is always a single phrasing. This one writes evidence the agent
  * assembled by clustering paraphrases, and it is the only way `distinctPhrasings`
- * ever exceeds 1 — the thing `shouldResurface` compares against.
+ * ever exceeds 1 - the thing `shouldResurface` compares against.
  */
 export function updateEvidence(id: string, evidence: MemoryEvidence): void {
   const db = getMemoryDb();
@@ -391,7 +391,7 @@ export function setState(id: string, state: MemoryState, snoozedUntil: string | 
  * A sibling of `setState` rather than a parameter on it, because the two are
  * independent axes: `--always-on` on a re-approval must not have to restate the state,
  * and a state change must not be able to clear the flag by omission. Same bare-UPDATE
- * caveat — the caller checks `isKnownMemory` first (src/memory/cli.ts).
+ * caveat - the caller checks `isKnownMemory` first (src/memory/cli.ts).
  */
 export function setAlwaysOn(id: string, alwaysOn: boolean): void {
   const db = getMemoryDb();

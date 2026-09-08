@@ -15,13 +15,13 @@ import { captureStreams, closeDatabases, makeTmp, setMemoryEnv, userTurn, writeS
 // The content gate, end to end. Each boundary gets its own proof because each has a
 // distinct failure mode: a secret that outlives its session (mine), another machine's
 // injection arriving as a candidate (import), a legacy row being blessed (approve),
-// and a pre-gate row reaching an agent's context (serve). The last one matters most —
+// and a pre-gate row reaching an agent's context (serve). The last one matters most -
 // rows written before scan.ts existed passed no gate at all, so retrieval cannot
 // assume the store is clean just because the writes now are.
 
 const WORKFLOW: MemoryScope = { type: 'workflow', key: '' };
 
-/** A record in an arbitrary state — the seeding path a hand edit or legacy row takes. */
+/** A record in an arbitrary state - the seeding path a hand edit or legacy row takes. */
 function seeded(text: string, state: MemoryState = 'candidate', scope: MemoryScope = WORKFLOW): MemoryRecord {
   return {
     ...buildRecord({
@@ -42,7 +42,7 @@ const CLEAN = 'Always run the whole test suite before you tell me a change is fi
 // not the narrowing before it.
 // Secret-shaped fixtures are ASSEMBLED, never literal: GitHub's secret scanning reads
 // this file the same way scan.ts reads memory text, and a fake credential that trips
-// a real alert costs a human a triage. The runtime string is identical either way —
+// a real alert costs a human a triage. The runtime string is identical either way -
 // only the source stops being scannable.
 const FAKE_ANTHROPIC_KEY = 'sk-ant-' + 'api03-' + 'a'.repeat(20);
 const SECRET = `Always use ${FAKE_ANTHROPIC_KEY} for the staging deploy`;
@@ -51,7 +51,7 @@ const INVISIBLE = 'Never deploy on a Friday\u200bwithout a rollback plan ready t
 
 describe('scanMemoryText', () => {
   test('secret material is flagged, one finding per pattern', () => {
-    // Assembled, not literal — see FAKE_ANTHROPIC_KEY above.
+    // Assembled, not literal - see FAKE_ANTHROPIC_KEY above.
     const cases: [string, string][] = [
       [FAKE_ANTHROPIC_KEY, 'anthropic_api_key'],
       ['sk-' + 'proj-' + 'b'.repeat(22), 'openai_api_key'],
@@ -86,7 +86,7 @@ describe('scanMemoryText', () => {
     expect(scanMemoryText('a\u200bb\u200dc\u202ed')).toEqual([{ id: 'invisible_chars', category: 'invisible' }]);
   });
 
-  test('facts ABOUT secret handling are clean — the deliberate divergence from hermes', () => {
+  test('facts ABOUT secret handling are clean - the deliberate divergence from hermes', () => {
     // A prohibition legitimately names the thing it prohibits, and instructions about
     // where secrets live are exactly the facts worth keeping. If one of these starts
     // failing, a pattern has drifted from "secret material" toward "secret vocabulary".
@@ -159,7 +159,7 @@ describe('import gate', () => {
 describe('approve gate', () => {
   test('a legacy flagged row is refused, named, and pointed at reject-or-rephrase', () => {
     const row = seeded(SECRET);
-    upsertCandidates([row]); // bypasses the mine — exactly what a pre-gate store did
+    upsertCandidates([row]); // bypasses the mine - exactly what a pre-gate store did
     expect(() => approve(row.id)).toThrow(ContentScanError);
     expect(() => approve(row.id)).toThrow(/anthropic_api_key/);
     expect(() => approve(row.id)).toThrow(/--as/);
@@ -199,7 +199,7 @@ describe('serve gate', () => {
     const withheld = withheldMemoryFor('/repos/anywhere');
     expect(withheld.map((r) => r.id)).toContain(flagged.id);
 
-    // The MCP projection: ids and a note, NEVER the flagged text — the text is the
+    // The MCP projection: ids and a note, NEVER the flagged text - the text is the
     // payload the withholding exists to stop.
     const mcp = await import('@pacifico/agents/mcp');
     const result = await mcp.runGetMemory({ cwd: '/repos/anywhere' });
@@ -216,7 +216,7 @@ describe('serve gate', () => {
 
   test('a flagged row scoped to another repo is not this cwd’s problem to report', () => {
     // A FRESH flagged text: ids are content-addressed on text alone, so reusing
-    // SECRET would collide with the earlier row and inherit its workflow scope —
+    // SECRET would collide with the earlier row and inherit its workflow scope -
     // upsertCandidates deliberately never updates scope on conflict.
     const elsewhere = seeded(`Always deploy with ${'ghp_' + 'z'.repeat(26)} from the runner`, 'approved', {
       type: 'repo',

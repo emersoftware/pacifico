@@ -1,8 +1,8 @@
 // The content gate on the memory pipeline: no secret material, no context-hijack
 // phrasing, and no invisible characters may enter the store or reach an agent.
 //
-// WHY THIS EXISTS. Memories are mined from transcripts — which contain pasted
-// secrets and untrusted tool output — and are served back into agent context by a
+// WHY THIS EXISTS. Memories are mined from transcripts - which contain pasted
+// secrets and untrusted tool output - and are served back into agent context by a
 // tool whose description says "treat these as binding". That is two failure modes
 // in one pipeline: a credential that outlives the session it was pasted into, and
 // a sentence engineered to be obeyed ("ignore previous instructions...") that gets
@@ -10,9 +10,9 @@
 // adapted from pi-hermes-memory's content scanner, which gates the same genre of
 // store for the same reasons.
 //
-// WHERE IT RUNS. At every boundary where text can enter the store — the mine
+// WHERE IT RUNS. At every boundary where text can enter the store - the mine
 // (src/memory/mine.ts), `memory import` (src/memory/cli.ts), and `approve`
-// including `--as` (src/memory/triage.ts) — and once more at the boundary where
+// including `--as` (src/memory/triage.ts) - and once more at the boundary where
 // stored text reaches an agent (src/memory/retrieve.ts), because rows written
 // before this gate existed, or by a hand edit of memory.db, never passed it.
 // Deliberately NOT inside store.ts: the store is dumb rows and the authority on
@@ -24,7 +24,7 @@
 // (`curl ... $TOKEN`, `cat .env`). All three are omitted here, on the same
 // judgment: this store holds instructions ABOUT how the user works, so "set
 // DATABASE_URL through doppler, never in .env" and "never pipe $GITHUB_TOKEN
-// through curl" are exactly the facts worth keeping — a prohibition legitimately
+// through curl" are exactly the facts worth keeping - a prohibition legitimately
 // names the thing it prohibits. Secret MATERIAL and hijack PHRASING have no such
 // legitimate appearance in a short durable fact, which is what makes them safe to
 // block without a human override path.
@@ -51,7 +51,7 @@ export class ContentScanError extends Error {
 }
 
 /**
- * Secret MATERIAL only — strings shaped like the credential itself, where a false
+ * Secret MATERIAL only - strings shaped like the credential itself, where a false
  * positive requires the fact to contain 20+ characters of key-alphabet noise. Env
  * var names and assignment shapes are deliberately absent; see the header.
  */
@@ -75,7 +75,7 @@ const SECRET_PATTERNS: { pattern: RegExp; id: string }[] = [
 ];
 
 /**
- * Context-hijack phrasing — sentences written to be OBEYED by whatever model reads
+ * Context-hijack phrasing - sentences written to be OBEYED by whatever model reads
  * them later, which is exactly what `get_memory`'s "treat as binding" framing would
  * hand them. Matching is on the imperative shape; "never ignore previous
  * instructions" as a genuine fact is contrived enough that the block is acceptable,
@@ -113,7 +113,7 @@ const INVISIBLE_CHARS = new Set([
 ]);
 
 /**
- * Every finding in `text`, empty when it is clean. Pure and deterministic — the
+ * Every finding in `text`, empty when it is clean. Pure and deterministic - the
  * mine calls this per candidate and the determinism criterion compares whole
  * batches, so a clock, a random salt, or an LLM judgment would all be bugs here.
  */
@@ -134,7 +134,7 @@ export function scanMemoryText(text: string): ScanFinding[] {
   return findings;
 }
 
-/** `true` when `text` has no findings — the predicate the mine's filter reads. */
+/** `true` when `text` has no findings - the predicate the mine's filter reads. */
 export function isScanClean(text: string): boolean {
   return scanMemoryText(text).length === 0;
 }

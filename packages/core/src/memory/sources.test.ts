@@ -162,7 +162,7 @@ describe('hermesScope', () => {
 
   test('a bare project name arrives unbound rather than guessed at', () => {
     // pi-hermes records project NAMES ('coherence', 'ideation'), not paths. Guessing
-    // a home directory would risk binding one repo's fact to another — the inert
+    // a home directory would risk binding one repo's fact to another - the inert
     // empty key plus the import's loud unbound warning is the honest shape.
     expect(hermesScope('coherence', (cwd) => cwd)).toEqual({ type: 'repo', key: '' });
   });
@@ -207,7 +207,7 @@ describe('splitEntryToBand', () => {
     const text = `${pad} config, e.g. in vitest setups, vs. the old path. ${'Z'.repeat(130)} more detail follows here.`;
     const { pieces, skippedLong } = splitEntryToBand(text);
     expect(skippedLong).toBe(0);
-    // "e.g. in" and "vs. the" are lowercase after the period — no boundary there,
+    // "e.g. in" and "vs. the" are lowercase after the period - no boundary there,
     // so no piece may start mid-abbreviation.
     expect(pieces.join(' ')).toContain('e.g. in vitest setups, vs. the old path.');
     expect(pieces.some((p) => p.startsWith('in vitest') || p.startsWith('the old path'))).toBe(false);
@@ -224,7 +224,7 @@ describe('splitEntryToBand', () => {
     const sentence = 'A proper fact of sufficient length to import, restated for volume. ';
     const text = `${sentence.repeat(6)}Then:`; // over the ceiling, with a tiny tail
     const { pieces, skippedShort } = splitEntryToBand(text);
-    // The tail packs into the last piece — dropping text is worse than a short ending.
+    // The tail packs into the last piece - dropping text is worse than a short ending.
     expect(skippedShort).toBe(0);
     expect(pieces[pieces.length - 1]).toContain('Then:');
   });
@@ -283,7 +283,7 @@ describe('similarStoredIds', () => {
     expect(similarStoredIds('Run the linters before pushing anything', stored)).toEqual([]);
   });
 
-  test('abstains below the token floor — tiny entries match everything', () => {
+  test('abstains below the token floor - tiny entries match everything', () => {
     expect(similarStoredIds('use pnpm', stored)).toEqual([]);
   });
 

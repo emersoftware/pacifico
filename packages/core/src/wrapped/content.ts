@@ -1,9 +1,9 @@
-// Index-backed content stats for wrapped — the fun-metric raw material that
+// Index-backed content stats for wrapped - the fun-metric raw material that
 // only message text can provide. All queries go through getIndexDb() (which
 // refreshes first) and scope to the wrapped period by joining message_fts to
 // sessions on file_path. Phrase counts use LIKE, never MATCH: porter stemming
 // makes phrase queries fuzzy ("wait" matches "waiting") and MATCH counts rows
-// anyway — LIKE over stored text is exact and case-insensitive for ASCII.
+// anyway - LIKE over stored text is exact and case-insensitive for ASCII.
 
 import type { Database } from 'bun:sqlite';
 import { z } from 'zod';
@@ -32,7 +32,7 @@ interface PhraseSpec {
   patterns: string[];
 }
 
-// Messages-containing counts (not occurrences) — dispute-proof and cheap.
+// Messages-containing counts (not occurrences) - dispute-proof and cheap.
 // user rows in message_fts are genuine turns only; msg_index >= 0 excludes
 // subagent sentinel rows.
 const PHRASES: PhraseSpec[] = [
@@ -60,7 +60,7 @@ const PHRASES: PhraseSpec[] = [
   { id: 'perfectExclaim', role: 'assistant', patterns: ['%perfect!%'] },
 ];
 
-// Vocabulary mining: words we never crown. Common English + generic dev terms —
+// Vocabulary mining: words we never crown. Common English + generic dev terms -
 // the survivors are the user's own vocabulary, which is the whole joke.
 const STOPWORDS = new Set(
   (
@@ -75,7 +75,7 @@ const STOPWORDS = new Set(
     'work works worked working well better best actually please thanks thank sorry wait maybe probably think thought ' +
     'know known knows knew come comes came back down out off between through during without within instead really always ' +
     'never sometimes often already currently point start starts started end ends ended run runs ran running ' +
-    // dev-generic — true for every developer, so never distinctive
+    // dev-generic - true for every developer, so never distinctive
     'file files code test tests testing function functions error errors bug bugs fix fixes fixed line lines change ' +
     'changes changed update updates updated add adds added remove removes removed delete deleted create creates created ' +
     'build builds built command commands branch commit commits push pull merge main master repo repository project ' +
@@ -86,7 +86,7 @@ const STOPWORDS = new Set(
     'text item items set sets setting settings config options option flag flags default logic implement implementation ' +
     'implemented feature features support supported supports current existing based instead different single multiple ' +
     'able available actual specific proper properly correct correctly wrong empty missing invalid valid every each ' +
-    // agent-era plumbing — true of every heavy agent user, so never distinctive.
+    // agent-era plumbing - true of every heavy agent user, so never distinctive.
     // These are the tools and nouns of the medium itself, not the user's subject,
     // including the assistant/model names that show up in nearly every transcript.
     'read write edit grep bash tool tools agent agents subagent skill skills task tasks context summary session ' +
@@ -109,7 +109,7 @@ interface CountRow {
 // docs: these are UTC-sliced dates while event stats bucket in local tz.
 //
 // message_count > 0 drops empty sessions (a launched-then-quit shell, or a
-// menu-bar app's health-check probe) — they carry no content but would still
+// menu-bar app's health-check probe) - they carry no content but would still
 // count as "drive-bys" and inflate the indexedSessions denominator. junkCwdSql
 // drops automated probe/eval/throwaway sessions that aren't the user's own
 // coding (see exclude.ts). Both apply to every content query, so the per-session
@@ -164,7 +164,7 @@ export function mineWords(
     if (!words) continue;
     // Count each word at most once per message. cleanForMining strips fenced/
     // inline code and paths, but an unfenced log or stack-trace paste still leaks
-    // its vocabulary wholesale — dedup-per-message so one dump can't crown a word
+    // its vocabulary wholesale - dedup-per-message so one dump can't crown a word
     // it repeats 200 times. `count` is therefore "messages containing the word".
     const seen = new Set<string>();
     for (const raw of words) {
@@ -187,7 +187,7 @@ export function mineWords(
     .slice(0, limit);
 }
 
-// Agent plumbing — commands every transcript is full of regardless of the
+// Agent plumbing - commands every transcript is full of regardless of the
 // human's habits. Filtering them makes "featuring: git status" possible;
 // "featuring: ls" says nothing about anyone.
 const PLUMBING = new Set([
@@ -297,7 +297,7 @@ export async function computeContentStats(opts: ContentOptions): Promise<
 
   const phrases = phraseCounts(db, opts.from, opts.to, tool);
 
-  // Monologue asymmetry — the data picks the punchline, copy must not assume a direction.
+  // Monologue asymmetry - the data picks the punchline, copy must not assume a direction.
   const mono = db
     .query<{ role: string; avg: number; max: number }, Record<string, string>>(
       `SELECT m.role AS role, AVG(LENGTH(m.text)) AS avg, MAX(LENGTH(m.text)) AS max
@@ -351,7 +351,7 @@ export async function computeContentStats(opts: ContentOptions): Promise<
       if (c && !PLUMBING.has(c.split(' ')[0]!)) commandCounts.set(c, (commandCounts.get(c) ?? 0) + 1);
     }
 
-    // Key by resolved project (repo), not raw cwd — otherwise a stale worktree
+    // Key by resolved project (repo), not raw cwd - otherwise a stale worktree
     // or subdir (…/cli/some-branch) reads as the whole repo being abandoned even
     // when …/cli/main is active. Repo granularity matches the projects card.
     const projName = resolveProject(r.cwd);
@@ -454,7 +454,7 @@ export function cleanTitle(raw: string): string {
   return cleaned.length > 72 ? `${cleaned.slice(0, 72).trimEnd()}…` : cleaned || 'untitled';
 }
 
-/** Last two path segments — enough to recognize a file without the noise. */
+/** Last two path segments - enough to recognize a file without the noise. */
 export function shortPath(p: string): string {
   const parts = p.split('/').filter(Boolean);
   return parts.slice(-2).join('/');

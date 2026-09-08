@@ -31,7 +31,7 @@ export interface ReportRoots {
   claudeCode: string;
   pi: string;
   codex: string;
-  /** OpenCode's SQLite DB path (not a directory) — its sessions live in one DB. Optional so
+  /** OpenCode's SQLite DB path (not a directory) - its sessions live in one DB. Optional so
    *  callers that predate OpenCode support (and tests) need not supply it. */
   opencode?: string;
 }
@@ -41,17 +41,17 @@ export function defaultRoots(): ReportRoots {
   return {
     claudeCode: join(home, '.claude', 'projects'),
     // Same resolution (SESSIONS_PI_DIR / PI_CODING_AGENT_* overrides included) as
-    // the search index and scanner — one source of truth.
+    // the search index and scanner - one source of truth.
     pi: getPiSessionsDir(),
     codex: join(home, '.codex', 'sessions'),
-    // Same resolution (env override included) as the search index — one source of truth.
+    // Same resolution (env override included) as the search index - one source of truth.
     opencode: getOpencodeDbPath(),
   };
 }
 
 export interface GatherOptions {
   /** Local YYYY-MM-DD lower bound of the report period, when one is set. Files not
-   *  written since then are skipped unread — see parsers/walk.ts. OpenCode reads a
+   *  written since then are skipped unread - see parsers/walk.ts. OpenCode reads a
    *  single SQLite database rather than a file tree, so it ignores this. */
   since?: string;
   /** Skip the incremental parse cache and read every file. */
@@ -74,7 +74,7 @@ function fileSources(roots: ReportRoots, want: (t: ToolId) => boolean): FileSour
         const events = await parsePiFile(p);
         // Register each Pi dispatch under its own (already final) type, so the
         // cross-file resolveAgentTypes pass confirms it instead of renaming it
-        // to 'unknown' — Pi has no parent-record naming step to wait for.
+        // to 'unknown' - Pi has no parent-record naming step to wait for.
         const agentTypes: Record<string, AgentName> = {};
         for (const e of events) if (e.agent) agentTypes[e.agent.id] = { type: e.agent.type, strong: true };
         return { events, agentTypes };

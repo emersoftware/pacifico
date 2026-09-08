@@ -1,7 +1,7 @@
 // The --roast path: ask an installed agent CLI to write a few bespoke roast
 // slides from the already-computed stats, then run its output through the same
 // validation as --extras. This is the one non-deterministic, model-authored
-// seam in wrapped — deliberately opt-in, deliberately fail-open (any failure
+// seam in wrapped - deliberately opt-in, deliberately fail-open (any failure
 // drops the roast and the page still renders), and deliberately fed STATS ONLY
 // (no raw message text), with every slide stamped as model-authored so it can
 // never impersonate a computed stat (the "Pink Pilates Princess" lesson).
@@ -42,7 +42,7 @@ export function detectRoastTool(preferred?: RoastToolId): RoastTool | null {
   return null;
 }
 
-// A compact, STATS-ONLY digest — counts, names, and already-computed stats that
+// A compact, STATS-ONLY digest - counts, names, and already-computed stats that
 // already appear on the page. Deliberately excludes free-text (session titles,
 // message snippets): the model gets numbers to riff on, never transcript prose.
 function roastDigest(d: WrappedData) {
@@ -75,9 +75,9 @@ function roastDigest(d: WrappedData) {
 
 export function buildRoastPrompt(d: WrappedData): string {
   const digest = JSON.stringify(roastDigest(d), null, 2);
-  return `You are the closer at a roast battle, and the target is someone's year of using AI coding agents. Below are their stats (numbers only — no message content).
+  return `You are the closer at a roast battle, and the target is someone's year of using AI coding agents. Below are their stats (numbers only - no message content).
 
-Write 3-5 short, UNHINGED roast slides. Go for the jugular — sharp, dark, deadpan, genuinely mean. Find the most damning number and make it hurt: the 3 AM sessions, the four-figure bill, the drive-bys, the streak that screams "no hobbies." Twist the knife, then twist it again. Savage one-liners, zero gentle ribbing, zero hedging, no "but hey." Profanity is welcome when it lands the punch. The ONLY rule: roast their WORK and these HABITS (the numbers on the page), never protected traits or anything hateful — it's the affection of a friend who knows exactly where it hurts and aims there anyway. Be specific: name the actual figures. No emoji, no clichés, no motivational turn at the end.
+Write 3-5 short, UNHINGED roast slides. Go for the jugular - sharp, dark, deadpan, genuinely mean. Find the most damning number and make it hurt: the 3 AM sessions, the four-figure bill, the drive-bys, the streak that screams "no hobbies." Twist the knife, then twist it again. Savage one-liners, zero gentle ribbing, zero hedging, no "but hey." Profanity is welcome when it lands the punch. The ONLY rule: roast their WORK and these HABITS (the numbers on the page), never protected traits or anything hateful - it's the affection of a friend who knows exactly where it hurts and aims there anyway. Be specific: name the actual figures. No emoji, no clichés, no motivational turn at the end.
 
 Each headline renders as full-screen display type, so brevity IS the punch: a headline over 80 characters gets shrunk to fit and lands soft. Setup-then-twist? Setup in the headline, twist in the subline.
 
@@ -106,7 +106,7 @@ export function extractJsonArray(out: string): unknown[] | null {
 export type RoastRunner = (tool: RoastTool, prompt: string, timeoutMs: number) => Promise<string>;
 
 // Default runner: spawn the CLI, capture stdout, hard-kill on timeout. The child
-// rides the user's own auth/subscription — wrapped never handles credentials.
+// rides the user's own auth/subscription - wrapped never handles credentials.
 const spawnRunner: RoastRunner = async (tool, prompt, timeoutMs) => {
   const proc = Bun.spawn([tool.bin, ...tool.args(prompt)], { stdout: 'pipe', stderr: 'ignore', stdin: 'ignore' });
   const timer = setTimeout(() => proc.kill(), timeoutMs);
@@ -128,11 +128,11 @@ export interface RoastOptions {
 }
 
 /** Generate roast slides, or [] on any failure (no tool, timeout, unparseable
- *  output). Never throws — the roast is sugar, the page must survive without it. */
+ *  output). Never throws - the roast is sugar, the page must survive without it. */
 export async function runRoast(d: WrappedData, opts: RoastOptions = {}): Promise<WrappedExtra[]> {
   const log = opts.log ?? ((m: string) => process.stderr.write(m + '\n'));
   // An injected runner supplies the execution mechanism, so looking for an
-  // executable on PATH is meaningless — and doing it anyway made these paths
+  // executable on PATH is meaningless - and doing it anyway made these paths
   // testable only on a machine that happened to have an agent CLI installed.
   const tool = opts.runner ? namedRoastTool(opts.preferred) : detectRoastTool(opts.preferred);
   if (!tool) {

@@ -1,7 +1,7 @@
 import type { Tool } from './types';
 import { tryParse, asJsonObject, asJsonString } from './extract-util';
 
-/** Total cap on a session's custom context, mirroring MAX_THINKING_LEN — recaps run
+/** Total cap on a session's custom context, mirroring MAX_THINKING_LEN - recaps run
  *  ~2k, so 20k is generous while a pathological extension cannot bloat the FTS row. */
 export const MAX_CUSTOM_CONTEXT_LEN = 20_000;
 
@@ -10,7 +10,7 @@ export const MAX_CUSTOM_CONTEXT_LEN = 20_000;
 const MAX_URL_CONTENT_LEN = 500;
 
 /**
- * Searchable text from pi's `custom`/`custom_message` entries — extension injections
+ * Searchable text from pi's `custom`/`custom_message` entries - extension injections
  * (recaps, web-search fetches, intercom messages), never conversation turns. Feeds the
  * session-level `context_text` FTS column only; the message view stays truthful to pi's
  * rendering and never sees this text.
@@ -48,7 +48,7 @@ function collect(lines: string[]): string {
       }
       // turn-duration and unknown customTypes: excluded (opt-in inclusion).
     } else if (d.type === 'custom_message') {
-      // Any customType — bounded by the 20k cap below. Content is a plain string.
+      // Any customType - bounded by the 20k cap below. Content is a plain string.
       const content = asJsonString(d.content);
       if (content !== undefined) parts.push(content);
     }
@@ -57,7 +57,7 @@ function collect(lines: string[]): string {
 }
 
 /**
- * Custom-entry context for the session_fts `context_text` column. Pi only — other
+ * Custom-entry context for the session_fts `context_text` column. Pi only - other
  * tools write no custom/custom_message lines and return empty.
  */
 export function extractCustomContext(lines: string[], tool: Tool): string {

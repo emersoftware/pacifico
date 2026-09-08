@@ -3,7 +3,7 @@
 // `bun test` so CI enforces it; `bun run eval` runs just this file for tuning.
 //
 // Every golden query is executed ONCE in beforeAll and materialized into plain
-// data — the tests below assert over outcomes, so they don't care about DB env
+// data - the tests below assert over outcomes, so they don't care about DB env
 // state the way cache-importing suites do.
 
 import { test, expect, beforeAll, afterAll } from 'bun:test';
@@ -58,7 +58,7 @@ function expectedIds(g: GoldenQuery): string[] {
   return [...new Set([...(g.top ?? []), ...(g.first ? [g.first] : [])])];
 }
 
-// ——— individual conditions (the failure message names the golden) ———
+// --- individual conditions (the failure message names the golden) ---
 
 for (const g of GOLDEN.filter((g) => g.negative)) {
   test(`[${g.class}] ${g.id} abstains: "${g.query}" returns zero results`, () => {
@@ -74,7 +74,7 @@ for (const g of GOLDEN.filter((g) => g.first || g.absent?.length)) {
   });
 }
 
-// ——— aggregate gates ———
+// --- aggregate gates ---
 
 interface Metrics {
   recallAtK: number;
@@ -106,7 +106,7 @@ function computeMetrics(): Metrics {
         cls.found++;
       } else {
         misses.push(
-          `${golden.id}: "${golden.query}" — expected ${id} in top ${RECALL_K}, got [${ids.join(', ') || '∅'}]`,
+          `${golden.id}: "${golden.query}" - expected ${id} in top ${RECALL_K}, got [${ids.join(', ') || '∅'}]`,
         );
       }
       if (rank >= 0 && (bestRank < 0 || rank < bestRank)) bestRank = rank;
@@ -131,7 +131,7 @@ test(`aggregate gates (${EVAL_V}): recall@${RECALL_K}, MRR, negative abstention`
 
   // The report is the tuning artifact: when a gate fails this is what you read.
   const lines = [
-    `\n——— search eval ${EVAL_V} ———`,
+    `\n--- search eval ${EVAL_V} ---`,
     ...[...m.perClass.entries()].map(([cls, c]) => `  ${cls.padEnd(17)} recall@${RECALL_K} ${c.found}/${c.expected}`),
     `  ${'OVERALL'.padEnd(17)} recall@${RECALL_K} ${m.recallAtK.toFixed(3)} (gate ≥ ${GATES.recallAtK})`,
     `  ${''.padEnd(17)} MRR ${m.mrr.toFixed(3)} (gate ≥ ${GATES.mrr})`,

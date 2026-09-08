@@ -10,7 +10,7 @@ import { getPiSessionsDir } from '@pacifico/core/paths';
 /**
  * Infer the tool from a session file path. The selector TSV now carries filePath,
  * so the preview subcommand gets a path with no tool tag and must recover it from
- * which session root the path lives under — same roots the scanner indexes.
+ * which session root the path lives under - same roots the scanner indexes.
  */
 function toolFromPath(filePath: string): Tool | null {
   if (isOpencodePath(filePath)) return 'opencode';

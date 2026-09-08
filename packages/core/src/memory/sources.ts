@@ -6,7 +6,7 @@
 // own store beside the conversation: pi-hermes-memory writes MEMORY.md / USER.md /
 // failures.md and a categorized SQLite table; Claude Code injects CLAUDE.md files and
 // a per-project memory/ directory; Codex records command-permission rules. A user who
-// hops between agents — the audience this project is for — has facts scattered across
+// hops between agents - the audience this project is for - has facts scattered across
 // all of them, with no single window and no portability between them.
 //
 // This module is that window's read layer. It feeds two MCP tools (get_memory_sources
@@ -15,13 +15,13 @@
 // triage candidates in the local store.
 //
 // READ-ONLY, ALWAYS. Every reader here opens files or databases owned by another tool
-// — the same contract documented.ts states for Claude's surfaces, extended to every
+// - the same contract documented.ts states for Claude's surfaces, extended to every
 // agent. SQLite stores are opened `readonly: true`; a store that cannot be read (a
 // locked WAL, a missing file) degrades to its fallback or is skipped, never created
 // or repaired.
 //
 // WHAT "DURABLE" MEANS. An entry is `durable: true` when it is a standing fact or
-// instruction about how the user works — the genre this project's own store holds,
+// instruction about how the user works - the genre this project's own store holds,
 // and therefore importable as a triage candidate. Codex's allow/deny rules are
 // recorded permission decisions, and Claude's agent-memory files are research
 // knowledge bases; both are worth seeing in an audit and neither is a candidate, so
@@ -54,7 +54,7 @@ export interface AgentStore {
   entries: number;
   /** How many of those entries are importable facts (see the header). */
   durable: number;
-  /** 'YYYY-MM-DD' — newest entry date, else the file's mtime, else null. */
+  /** 'YYYY-MM-DD' - newest entry date, else the file's mtime, else null. */
   lastUpdated: string | null;
   description: string;
 }
@@ -67,7 +67,7 @@ export interface AgentMemoryEntry {
   /**
    * Sessions-style scope, derived from provenance: a pi-hermes row's project, the
    * repo a CLAUDE.md sits in, workflow for anything global. A repo scope with an
-   * EMPTY key is "repo-scoped but unbound" — the source named a project this
+   * EMPTY key is "repo-scoped but unbound" - the source named a project this
    * machine cannot resolve to a path (pi-hermes records bare repo names), and the
    * same inert-until-triage semantics apply as for a bundle import (retrieve.ts
    * skips a keyless repo memory rather than matching every cwd).
@@ -81,12 +81,12 @@ export interface AgentMemoryEntry {
   lastUpdated?: string;
 }
 
-// ——— path resolvers ———
+// --- path resolvers ---
 
 /**
  * pi-hermes-memory's home. SESSIONS_PI_HERMES_DIR is the explicit override; absent
  * one, the dir is derived from getPiSessionsDir() so a test that already redirects
- * SESSIONS_PI_DIR into a tmp tree gets a hermetic `<tmp>/pi-hermes-memory` for free —
+ * SESSIONS_PI_DIR into a tmp tree gets a hermetic `<tmp>/pi-hermes-memory` for free -
  * the real store never leaks into a test that forgot this module existed.
  */
 export function piHermesDir(): string {
@@ -96,7 +96,7 @@ export function piHermesDir(): string {
 
 /**
  * Codex's home (`~/.codex`). SESSIONS_CODEX_DIR points at the SESSIONS subdirectory
- * (src/preview.ts:19), so the home is its dirname — the same trick as piHermesDir,
+ * (src/preview.ts:19), so the home is its dirname - the same trick as piHermesDir,
  * and likewise hermetic under the existing test env.
  */
 export function codexHome(): string {
@@ -104,7 +104,7 @@ export function codexHome(): string {
   return dirname(sessionsDir);
 }
 
-// ——— small helpers ———
+// --- small helpers ---
 
 /** 'YYYY-MM-DD' from a path's mtime, or null when it cannot be statted. */
 function mtimeDate(path: string): string | null {
@@ -139,7 +139,7 @@ function latestDate(dates: (string | undefined)[]): string | null {
   return best;
 }
 
-// ——— pi-hermes ———
+// --- pi-hermes ---
 
 /** What SQLite's dynamic typing can hand back for a column. */
 type SqlColumnValue = string | number | bigint | null | Uint8Array;
@@ -156,7 +156,7 @@ interface HermesRow {
 /**
  * Kind from a pi-hermes category. Corrections, preferences, and conventions are
  * directives ("do it this way"); failures, insights, and tool quirks are state of
- * the world. Absent a category the row is informational — the conservative default,
+ * the world. Absent a category the row is informational - the conservative default,
  * since get_memory serves both kinds identically and kind is only a label.
  */
 export function hermesKind(category: string | null): MemoryKind {
@@ -169,7 +169,7 @@ export function hermesKind(category: string | null): MemoryKind {
  * same container resolution the mine uses, so a row recorded in a linked worktree
  * binds to the repo it belongs to. Bare repo NAMES (what pi actually writes) are
  * unresolvable without guessing at the user's directory layout, and a wrong guess
- * binds one repo's fact to another — so they arrive unbound instead, and the import
+ * binds one repo's fact to another - so they arrive unbound instead, and the import
  * path names the fix (`approve --scope repo:.`).
  */
 export function hermesScope(project: string | null, containerOf: (cwd: string) => string): MemoryScope {
@@ -286,7 +286,7 @@ function collectHermes(): AgentCollection {
   }
 
   // Fallback: the markdown rendering the extension maintains for its own context
-  // injection. Global by construction — the .md layer has no per-project split.
+  // injection. Global by construction - the .md layer has no per-project split.
   const stores: AgentStore[] = [];
   const entries: AgentMemoryEntry[] = [];
   for (const file of HERMES_MD_FILES) {
@@ -307,7 +307,7 @@ function collectHermes(): AgentCollection {
       entries: sections.length,
       durable: sections.length,
       lastUpdated: latestDate(sections.map((s) => s.lastUpdated)) ?? mtimeDate(path),
-      description: `pi-hermes-memory's ${file} — ${file === 'USER.md' ? 'user profile and working preferences' : file === 'failures.md' ? 'recorded corrections and conventions' : 'environment facts and tool quirks'}.`,
+      description: `pi-hermes-memory's ${file} - ${file === 'USER.md' ? 'user profile and working preferences' : file === 'failures.md' ? 'recorded corrections and conventions' : 'environment facts and tool quirks'}.`,
     });
     for (const s of sections) {
       entries.push({
@@ -325,7 +325,7 @@ function collectHermes(): AgentCollection {
   return { stores, entries };
 }
 
-// ——— claude ———
+// --- claude ---
 
 function readStatements(path: string): string[] {
   try {
@@ -397,7 +397,7 @@ function collectClaude(cwd: string): AgentCollection {
     fileStore(
       'claude:repo-claude-md',
       join(container, 'CLAUDE.md'),
-      "This repo's CLAUDE.md — version-controlled project conventions Claude Code injects (and other agents read).",
+      "This repo's CLAUDE.md - version-controlled project conventions Claude Code injects (and other agents read).",
       repoScope,
       true,
     ),
@@ -406,7 +406,7 @@ function collectClaude(cwd: string): AgentCollection {
     fileStore(
       'claude:repo-agents-md',
       join(container, 'AGENTS.md'),
-      "This repo's AGENTS.md — the cross-agent convention file.",
+      "This repo's AGENTS.md - the cross-agent convention file.",
       repoScope,
       true,
     ),
@@ -414,7 +414,7 @@ function collectClaude(cwd: string): AgentCollection {
 
   // Claude Code's per-project memory store: the same genre as this project's own
   // store, captured from Claude sessions. MEMORY.md is the index of pointers, not a
-  // fact file — documented.ts already excludes it for the same reason.
+  // fact file - documented.ts already excludes it for the same reason.
   const memoryDir = join(projectsDir(), projectSlug(container), 'memory');
   if (existsSync(memoryDir)) {
     let files: string[] = [];
@@ -448,7 +448,7 @@ function collectClaude(cwd: string): AgentCollection {
         entries: dirEntries.length,
         durable: dirEntries.length,
         lastUpdated: latestDate(dirEntries.map((e) => e.lastUpdated)),
-        description: "Claude Code's per-project memory store — facts captured from past Claude sessions in this repo.",
+        description: "Claude Code's per-project memory store - facts captured from past Claude sessions in this repo.",
       });
       entries.push(...dirEntries);
     }
@@ -487,7 +487,7 @@ function collectClaude(cwd: string): AgentCollection {
         entries: dirEntries.length,
         durable: 0,
         lastUpdated: latestDate(dirEntries.map((e) => e.lastUpdated)),
-        description: "Claude Code's agent research memory — agent-written knowledge bases, not standing instructions.",
+        description: "Claude Code's agent research memory - agent-written knowledge bases, not standing instructions.",
       });
       entries.push(...dirEntries);
     }
@@ -496,7 +496,7 @@ function collectClaude(cwd: string): AgentCollection {
   return { stores, entries };
 }
 
-// ——— codex ———
+// --- codex ---
 
 const CODEX_RULE = /^prefix_rule\(pattern=\[(.*)\],\s*decision="(allow|deny)"\)\s*$/;
 
@@ -547,9 +547,9 @@ function collectCodex(): AgentCollection {
         agent: 'codex',
         path: collapseHome(path),
         entries: rules.length,
-        durable: 0, // permission decisions, not durable facts — audit only
+        durable: 0, // permission decisions, not durable facts - audit only
         lastUpdated: mtimeDate(path),
-        description: `Codex command permissions (${file}) — allow/deny decisions recorded from past approvals.`,
+        description: `Codex command permissions (${file}) - allow/deny decisions recorded from past approvals.`,
       });
       for (const rule of rules) {
         entries.push({
@@ -565,7 +565,7 @@ function collectCodex(): AgentCollection {
     }
   }
 
-  // Thread objectives: ephemeral per-thread state, so inventory only — there is no
+  // Thread objectives: ephemeral per-thread state, so inventory only - there is no
   // fact here a future session should treat as standing.
   const goalsDb = join(home, 'goals_1.sqlite');
   if (existsSync(goalsDb)) {
@@ -588,14 +588,14 @@ function collectCodex(): AgentCollection {
       entries: count,
       durable: 0,
       lastUpdated: mtimeDate(goalsDb),
-      description: "Codex's thread objectives — ephemeral per-thread goals, not durable memory.",
+      description: "Codex's thread objectives - ephemeral per-thread goals, not durable memory.",
     });
   }
 
   return { stores, entries };
 }
 
-// ——— assembly ———
+// --- assembly ---
 
 /** Every store and entry visible from `cwd`, sorted deterministically. */
 export function collectAgentMemory(cwd: string): AgentCollection {
@@ -604,7 +604,7 @@ export function collectAgentMemory(cwd: string): AgentCollection {
   const entries = families.flatMap((f) => f.entries);
   stores.sort((a, b) => (a.agent < b.agent ? -1 : a.agent > b.agent ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   // Entries follow the store order and keep SOURCE order within each store (file
-  // order, row order) — the author's ordering is meaningful, and a stable sort keeps
+  // order, row order) - the author's ordering is meaningful, and a stable sort keeps
   // it while making the whole batch deterministic. Fingerprinting happens at the
   // consumers that need ids (the review projection, the import's dedupe), not here.
   const storeOrder = new Map(stores.map((s, index) => [s.id, index]));
@@ -612,7 +612,7 @@ export function collectAgentMemory(cwd: string): AgentCollection {
   return { stores, entries };
 }
 
-// ——— reshaping long entries to the memory band ———
+// --- reshaping long entries to the memory band ---
 
 export interface SplitResult {
   /** Pieces within the mine's text band, in source order. */
@@ -627,11 +627,11 @@ export interface SplitResult {
  * Sentence boundary: terminal punctuation, whitespace, then something that can start
  * a sentence. The lookahead deliberately excludes lowercase letters, which is what
  * keeps "e.g. in vitest config" and "vs. the old path" from being read as boundaries
- * at the cost of never splitting "...end. then we..." — a missed boundary merges two
+ * at the cost of never splitting "...end. then we..." - a missed boundary merges two
  * sentences into one candidate, and triage merges and splits routinely, so the safe
  * direction is not splitting.
  */
-const SENTENCE_BOUNDARY = /(?<=[.!?])\s+(?=[A-Z0-9`"'(●—–\-•§])/;
+const SENTENCE_BOUNDARY = /(?<=[.!?])\s+(?=[A-Z0-9`"'(●\u2014–\-•§])/;
 
 /** Abbreviations whose trailing period SENTENCE_BOUNDARY can misread. */
 const ABBREVIATION_END = /\b(e\.g|i\.e|etc|vs|cf|ca)\.$/;
@@ -654,17 +654,17 @@ function splitSentences(text: string): string[] {
  * whole entry would bring in NOTHING from the store this feature exists for. The
  * split uses the source's own structure, in order:
  *
- *  1. Enumeration markers `(1) (2) …` — hermes's explicit sub-fact boundaries.
+ *  1. Enumeration markers `(1) (2) …` - hermes's explicit sub-fact boundaries.
  *  2. Sentence boundaries inside an over-long chunk, packed greedily up to the band
  *     so related sentences stay together rather than arriving as orphaned fragments.
  *
  * Everything here is deterministic and conservative: it never reorders, never
  * paraphrases, and prefers a too-long skip to a mid-sentence cut. The pieces are
- * CANDIDATES — a wrong boundary costs one triage decision, which is where the
+ * CANDIDATES - a wrong boundary costs one triage decision, which is where the
  * judgment lives (the /memory skill's merge and approve --as).
  *
  * A leading fragment under the floor ("Env tool-quirks:" before the first `(1)`)
- * folds FORWARD into the next chunk when the combination fits — it is the chunk's
+ * folds FORWARD into the next chunk when the combination fits - it is the chunk's
  * label, and dropping it would orphan every fact that follows from its topic.
  */
 export function splitEntryToBand(text: string): SplitResult {
@@ -692,7 +692,7 @@ export function splitEntryToBand(text: string): SplitResult {
   for (const chunk of chunks) {
     const combined = carry ? `${carry} ${chunk}` : chunk;
     if (combined.length < MIN_TEXT_LENGTH) {
-      carry = combined; // a label fragment — keep accumulating forward
+      carry = combined; // a label fragment - keep accumulating forward
       continue;
     }
     carry = '';
@@ -746,7 +746,7 @@ export const SIMILARITY_THRESHOLD = 0.6;
  *
  * Overlap is `|∩| / min(|A|, |B|)` over the stemmed token sets (src/memory/topic.ts),
  * so a short stored rule fully contained in a longer agent entry still flags. Both
- * sets need at least three tokens — below that, containment is vocabulary, not
+ * sets need at least three tokens - below that, containment is vocabulary, not
  * redundancy ("use pnpm" matches everything about pnpm).
  *
  * Exact text duplicates are caught separately by fingerprint equality at the call

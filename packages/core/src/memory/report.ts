@@ -4,7 +4,7 @@
 // reproducible-from-inputs). Both `pacifico memory report` (src/memory/cli.ts)
 // and the get_memory_recurrence MCP tool (src/mcp.ts) run through runRecurrence,
 // so the two surfaces can never drift on what "this repo" means or on what the
-// JSON holds — the scope-drift failure mode the phase-3 spec's failure table
+// JSON holds - the scope-drift failure mode the phase-3 spec's failure table
 // names. Only the READ of the trend snapshot lives here; the append stays in
 // cli.ts so the MCP tool keeps its read-only annotation.
 
@@ -43,7 +43,7 @@ export interface ReportScope {
  * share for two call sites. Three surfaces disagreeing about "this repo" is the
  * drift that comment was betting against, so the bet is cashed in here.
  *
- * An explicit `repo` is containerized unconditionally — a path that is not a git
+ * An explicit `repo` is containerized unconditionally - a path that is not a git
  * repo still scopes to itself (createContainerResolver's raw-cwd fallback). A
  * defaulted cwd that is not a repo reports across everything and says so via
  * `outsideRepo`, matching the CLI's stderr note.
@@ -59,14 +59,14 @@ export function resolveReportScope(opts: { repo?: string; all?: boolean; cwd?: s
 
 /**
  * Run the whole report pipeline: resolve the scope, mine fresh clusters, classify
- * them against the store, wrap in the envelope. Read-only like the CLI's report —
- * no upsert, no watermark advance — but not free: every call pays for an index
+ * them against the store, wrap in the envelope. Read-only like the CLI's report -
+ * no upsert, no watermark advance - but not free: every call pays for an index
  * read, because recurrence is defined against fresh evidence.
  *
  * Returns null when there is no memory store. Checked by PATH because
  * getMemoryDb() would CREATE the file as a side effect of asking (store.ts), and
  * the MCP read-only provenance guard's byte-compare cannot see a newly created
- * empty db. An absent store is an empty report, not an error — each caller renders
+ * empty db. An absent store is an empty report, not an error - each caller renders
  * its own friendly form of that (CLI stderr note, MCP sentinel).
  */
 export async function runRecurrence(opts: {
@@ -75,7 +75,7 @@ export async function runRecurrence(opts: {
   since?: string;
   /** 'YYYY-MM-DD'; passed in because the no-clock-read rule extends to this module. */
   today: string;
-  /** Called once the scope is resolved, before the mine — the CLI's progress lines. */
+  /** Called once the scope is resolved, before the mine - the CLI's progress lines. */
   onScope?: (scope: ReportScope) => void;
 }): Promise<{ scope: ReportScope; report: RecurrenceEnvelope } | null> {
   if (!existsSync(getMemoryDbPath())) return null;
@@ -83,7 +83,7 @@ export async function runRecurrence(opts: {
   opts.onScope?.(scope);
   const mined = await mine({ repo: scope.repo });
   // Suppressed rows stay out of the report exactly as they stay out of the triage
-  // batch — this is the write-through the phase-3 spec's failure table names: the
+  // batch - this is the write-through the phase-3 spec's failure table names: the
   // skill's fuzzy-pair deny is a `snooze` (SKILL.md step 2), and without this filter
   // a denied pair would be re-asked on every report run. The report never upserts,
   // so the live store contents ARE the pre-upsert snapshot dropSuppressed's
@@ -92,7 +92,7 @@ export async function runRecurrence(opts: {
   const clusters = dropSuppressed(mined, suppressedMemories(), opts.today);
   const report = classifyRecurrence(clusters, listMemories(), { since: opts.since });
   // The previous-snapshot READ lives on this shared path (both the CLI and the
-  // get_memory_recurrence MCP tool get the same trend) — the APPEND does not.
+  // get_memory_recurrence MCP tool get the same trend) - the APPEND does not.
   // cli.ts's runReport appends after rendering; this read must see the file state
   // BEFORE that, and the MCP read-only annotation (mcp.ts) holds because reading
   // here never writes. classifyRecurrence leaves `trend` empty per its purity
@@ -103,13 +103,13 @@ export async function runRecurrence(opts: {
   let trendSince: string | undefined;
   let trendNote: string | undefined;
   if (previous === null) {
-    trendNote = 'first snapshot — no previous run';
+    trendNote = 'first snapshot - no previous run';
   } else if (previous.scope !== scopeLabel(scope)) {
     // The failure mode the spec's failure table names: a `--repo` snapshot read
     // against an `--all` one (or vice versa). Per-id counts are truth per row
     // either way, but the header note says the populations differ.
     trendSince = previous.date;
-    trendNote = `scopes differ between snapshots (${previous.scope} → ${scopeLabel(scope)}) — deltas compare different populations`;
+    trendNote = `scopes differ between snapshots (${previous.scope} → ${scopeLabel(scope)}) - deltas compare different populations`;
   } else {
     trendSince = previous.date;
   }

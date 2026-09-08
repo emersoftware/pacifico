@@ -1,6 +1,6 @@
 // Token volume, restated as something a person can feel.
 //
-// A raw token count is unreadable at every scale — "1,247,003,912" and
+// A raw token count is unreadable at every scale - "1,247,003,912" and
 // "84,209,551" produce the same shrug. The fix both `pacifico report` and
 // `pacifico wrapped` use is an equivalence: divide the number by something the
 // reader has actually finished.
@@ -29,13 +29,13 @@ export const WORDS_PER_TOKEN = 0.75;
 
 const tokensFromWords = (words: number): number => words / WORDS_PER_TOKEN;
 
-/** Source trees tokenize denser than prose — punctuation and short identifiers
+/** Source trees tokenize denser than prose - punctuation and short identifiers
  *  split hard. ~9 tokens per line is the working estimate, and it is disclosed
  *  wherever a code unit is shown. */
 const tokensFromLines = (lines: number): number => lines * 9;
 
 export interface Equivalence {
-  /** Stable across renders — the seed indexes this, and tests name it. */
+  /** Stable across renders - the seed indexes this, and tests name it. */
   id: string;
   /** The multiplier alone, formatted: "830", "3.3", "21 yrs". */
   value: string;
@@ -169,7 +169,7 @@ const MAX_RATIO = 999;
 /** A span shorter than a full day is not a boast. */
 const MIN_SPAN_HOURS = 24;
 
-/** Two significant-ish digits under 10, whole numbers above — "3.3" and "830"
+/** Two significant-ish digits under 10, whole numbers above - "3.3" and "830"
  *  both read instantly, "3.28" and "829.6" do not. A trailing ".0" is noise
  *  that makes a clean number look like a rounding artifact, so it goes. */
 function ratio(n: number): string {
@@ -183,7 +183,7 @@ interface TimeSpan {
   long: string;
 }
 
-/** Hours, days, or years — whichever keeps the number under three digits. */
+/** Hours, days, or years - whichever keeps the number under three digits. */
 function span(hours: number): TimeSpan {
   if (hours < 48) {
     const n = Math.round(hours);
@@ -212,7 +212,7 @@ function render(unit: Unit, tokens: number): Equivalence | null {
 }
 
 /** Every unit that lands in a readable range for this many tokens, in table
- *  order. Empty for a trivial total, which is the honest answer — there is no
+ *  order. Empty for a trivial total, which is the honest answer - there is no
  *  flattering comparison for two sessions. */
 export function equivalences(tokens: number): Equivalence[] {
   if (!Number.isFinite(tokens) || tokens <= 0) return [];
@@ -224,7 +224,7 @@ export function equivalences(tokens: number): Equivalence[] {
   return out;
 }
 
-/** FNV-1a. Not cryptographic — it just needs to scatter similar seeds to
+/** FNV-1a. Not cryptographic - it just needs to scatter similar seeds to
  *  unrelated indexes so two adjacent years don't draw the same unit. */
 function hash(seed: string): number {
   let h = 2166136261;
@@ -250,7 +250,7 @@ export function equivalenceChoices(tokens: number, seed: string): EquivalenceCho
 }
 
 /** One equivalence, stable for a given (tokens, seed). `seed` should carry
- *  whatever makes this render distinct — the period, and a slot name when one
+ *  whatever makes this render distinct - the period, and a slot name when one
  *  page shows two of these and they should not match. */
 export function pickEquivalence(tokens: number, seed: string): Equivalence | null {
   const { options, start } = equivalenceChoices(tokens, seed);

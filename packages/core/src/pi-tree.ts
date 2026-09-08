@@ -20,7 +20,7 @@ export interface PiFork {
   atLine: number;
   /** id of the entry the branch forked from (on the active path) */
   fromEntryId: string;
-  /** number of ENTRIES in the abandoned branch — not messages. toolResult/custom
+  /** number of ENTRIES in the abandoned branch - not messages. toolResult/custom
    *  entries and pure-toolCall assistant lines produce no extracted message, so the
    *  message-level count on the fork marker in parser.ts is usually smaller. */
   abandonedCount: number;
@@ -53,7 +53,7 @@ const FORK_TEXT_MAX = 80;
  * the header-adjacent model_change (which carries both `id` and `parentId: null`)
  * line 2 of every real pi file; the slack absorbs a truncated or blank-padded head.
  * Sniffing keeps this cheap on non-pi transcripts: buildPiTree runs once per
- * extractMessages call — including on multi-megabyte Claude logs during indexing —
+ * extractMessages call - including on multi-megabyte Claude logs during indexing -
  * and those must be rejected without a full parse.
  */
 const PI_SNIFF_LINES = 20;
@@ -63,14 +63,14 @@ const PI_SNIFF_LINES = 20;
  *
  * Pi session files are trees, not logs: every entry carries `id`/`parentId`, /tree
  * navigation leaves abandoned branches behind in the same append-only JSONL, and the
- * shared parser reads the file linearly — so without this, dead-branch exchanges
+ * shared parser reads the file linearly - so without this, dead-branch exchanges
  * render inline as if they happened in the live conversation. buildPiTree parses the
  * entries, chains them by parentId, and computes the active path (root → final leaf)
  * plus the fork list: every abandoned entry whose parent sits ON the active path.
  *
  * Returns null for non-pi transcripts: detection requires a line with BOTH `id` and
  * `parentId` keys, a shape only pi writes (Claude uses uuid/parentUuid, Codex nests
- * under `payload` envelopes, OpenCode's reconstructed lines carry no id fields —
+ * under `payload` envelopes, OpenCode's reconstructed lines carry no id fields -
  * verified against ~2,700 Claude, 305 Codex, and the reconstructed-OpenCode shapes).
  *
  * Never throws: malformed lines are skipped, unknown parentIds fall back to the
@@ -108,7 +108,7 @@ export function buildPiTree(lines: string[]): PiTree | null {
 
   // Pass 2: resolve parents. Two conventions, both corpus-verified: a null parentId
   // (the header-adjacent model_change in EVERY pi file) chains to the preceding
-  // entry, and an unknown parentId does the same (defensive — never observed). First
+  // entry, and an unknown parentId does the same (defensive - never observed). First
   // occurrence wins on duplicate ids, so a later duplicate cannot re-fork.
   const byId = new Map<string, number>();
   entries.forEach((e, i) => {
@@ -121,7 +121,7 @@ export function buildPiTree(lines: string[]): PiTree | null {
     parentIdx.push(known !== undefined ? known : i - 1); // -1 on the first entry: the root
   }
 
-  // Pass 3: the active path — parent backlinks from the final entry (the current
+  // Pass 3: the active path - parent backlinks from the final entry (the current
   // leaf) to the root. The visited-set guards against a corrupt cycle (A.parent=B,
   // B.parent=A): a cyclic file is treated as fully active, with no forks, rather
   // than looping forever.

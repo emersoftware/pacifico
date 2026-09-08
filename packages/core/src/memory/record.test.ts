@@ -48,7 +48,7 @@ describe('buildRecord', () => {
   });
 
   test('is byte-identical across two runs given the same inputs in different orders', () => {
-    // The determinism criterion compares whole records, not just ids — unsorted
+    // The determinism criterion compares whole records, not just ids - unsorted
     // evidence arrays are the likeliest source of a run-to-run byte difference.
     const run1 = buildRecord(base);
     const run2 = buildRecord({

@@ -1,8 +1,8 @@
-// Sessions-owned (forked from tokenmaxing's parser — no longer byte-comparable with upstream).
+// Sessions-owned (forked from tokenmaxing's parser - no longer byte-comparable with upstream).
 // Local divergences from the vendored original, in emit order below:
 //   - nested subagent transcripts (`<project>/<ts>_<parentSession>/<dispatch>/run-N/*.jsonl`)
 //     are attributed to the PARENT session and tagged as subagent dispatches, mirroring
-//     how claude-code.ts treats `<session>/subagents/` — their tokens were always
+//     how claude-code.ts treats `<session>/subagents/` - their tokens were always
 //     counted (the walk recurses), but as phantom independent sessions;
 //   - compaction / branch_summary entries that carry `usage` are counted (Pi ≥0.83
 //     writes the summarization LLM spend there), attributed to the session's current
@@ -58,7 +58,7 @@ const piModelChangeLineSchema = z.object({
   modelId: z.string().optional(),
 });
 // CompactionEntry / BranchSummaryEntry: `usage` is the LLM spend of generating the
-// summary — "included in session token and cost totals" per Pi's session-format doc.
+// summary - "included in session token and cost totals" per Pi's session-format doc.
 const piSummaryLineSchema = z.object({
   type: z.enum(['compaction', 'branch_summary']),
   timestamp: z.string(),

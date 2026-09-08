@@ -9,7 +9,7 @@ import { closeDatabases, makeTmp, setMemoryEnv, userTurn, writeSession } from '.
 // Memory are out-of-band by design: the alternative considered and rejected was
 // promoting them into a repo's AGENTS.md via pull request, which would expose tool
 // usage and put churn in repos the user may not control. Nothing the memory code does
-// may write into a repo working tree — not the mine, not the store, not triage.
+// may write into a repo working tree - not the mine, not the store, not triage.
 
 const FACT = 'Always run the test suite before you tell me a change is finished';
 

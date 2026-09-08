@@ -53,7 +53,7 @@ export type MessageLine = {
   message?: JsonValue;
 };
 
-/** Parse one JSONL line to an object, or null — never throws, never yields a bare primitive. */
+/** Parse one JSONL line to an object, or null - never throws, never yields a bare primitive. */
 export function tryParse(line: string): JsonObject | null {
   try {
     const parsed = jsonObjectSchema.safeParse(JSON.parse(line));
@@ -123,7 +123,7 @@ export function isUserMessage(d: MessageLine): boolean {
 const SKILL_INJECTION_PREAMBLE = /^Base directory for this skill:/;
 
 /**
- * Whether a user-role line is a genuine human turn — not a tool result, a
+ * Whether a user-role line is a genuine human turn - not a tool result, a
  * system-injected turn, a compaction summary, or a skill body injected as a
  * user message. The disqualifiers below fire regardless of `promptSource`
  * because agent/harness injections (compaction carryover, task-completion
@@ -132,8 +132,8 @@ const SKILL_INJECTION_PREAMBLE = /^Base directory for this skill:/;
  * `typed` and `queued` count (a present-but-null value, as tool results and
  * skill loads have, is rejected). Older logs and pi/codex have no
  * `promptSource`, so fall back to a heuristic: non-empty text that isn't a
- * skill-injection preamble. (Tag-wrapped injections — <task-notification>,
- * <bash-input>, <bash-stdout>, <teammate-message> — are already emptied by
+ * skill-injection preamble. (Tag-wrapped injections - <task-notification>,
+ * <bash-input>, <bash-stdout>, <teammate-message> - are already emptied by
  * stripInjected upstream, so they never reach here with text.)
  */
 export function isGenuineUserTurn(d: MessageLine, strippedText: string): boolean {
@@ -147,7 +147,7 @@ export function isGenuineUserTurn(d: MessageLine, strippedText: string): boolean
 }
 
 /**
- * OpenCode content blocks of every assistant turn, in order — the one place the
+ * OpenCode content blocks of every assistant turn, in order - the one place the
  * OpenCode extractors (files, commands, errors) share their traversal of the
  * synthesized `{type:'message', message:{role:'assistant', content:[…]}}` shape.
  */

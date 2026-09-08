@@ -1,4 +1,4 @@
-// Shared slide validator for the two extra-slide sources — --extras (a file)
+// Shared slide validator for the two extra-slide sources - --extras (a file)
 // and --roast (model output). Whatever the origin, the page owns shape, field
 // length, and count. Kept in its own module so index.ts and roast.ts can both
 // import it without a cycle.
@@ -17,7 +17,7 @@ const rawExtraSchema = z.object({
 });
 
 export function coerceExtras(parsed: unknown[]): WrappedExtra[] {
-  // Cap by code points, not UTF-16 units — String.slice can split a surrogate
+  // Cap by code points, not UTF-16 units - String.slice can split a surrogate
   // pair and leave a lone half that renders as U+FFFD on the slide.
   const cap = (s: string | undefined, n: number): string | undefined => {
     if (s === undefined || s.trim().length === 0) return undefined;

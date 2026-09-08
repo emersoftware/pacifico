@@ -5,7 +5,7 @@ import { resolveSessionFile } from './cache';
 import { readSessionLines } from './session-io';
 
 export interface DigestExchange {
-  /** Message index of the user turn — feeds get_session_messages(offset). */
+  /** Message index of the user turn - feeds get_session_messages(offset). */
   index: number;
   /** Genuine user turn, stripped + truncated. */
   user: string;
@@ -22,9 +22,9 @@ export interface SessionDigest {
   elided: number;
 }
 
-/** Hard cap on the serialized digest (~2k tokens) — one bounded call, no knobs. */
+/** Hard cap on the serialized digest (~2k tokens) - one bounded call, no knobs. */
 export const DIGEST_MAX_CHARS = 8000;
-/** Per-field truncation caps — starting points per spec, tuned against the budget test. */
+/** Per-field truncation caps - starting points per spec, tuned against the budget test. */
 export const USER_MAX = 200;
 export const ASSISTANT_MAX = 300;
 
@@ -42,11 +42,11 @@ export function clip(text: string, max: number): string {
 
 /**
  * The arc of one session: every genuine human turn paired with the last
- * assistant text of its exchange (outcome, not narration — the same tradeoff
+ * assistant text of its exchange (outcome, not narration - the same tradeoff
  * closingMessages makes session-level). Non-genuine user turns (injected skill
  * bodies, hook context) neither start exchanges nor appear; they only consume
- * message indices. The serialized digest is elided from the middle — never the
- * head or tail — until it fits DIGEST_MAX_CHARS.
+ * message indices. The serialized digest is elided from the middle - never the
+ * head or tail - until it fits DIGEST_MAX_CHARS.
  */
 export function buildSessionDigest(lines: string[]): SessionDigest {
   const messages = extractMessages(lines);
@@ -91,7 +91,7 @@ export function buildSessionDigest(lines: string[]): SessionDigest {
 
   let digest = candidate(all.length);
   if (JSON.stringify(digest).length > DIGEST_MAX_CHARS) {
-    // Largest k that fits, by binary search — each kept exchange adds more
+    // Largest k that fits, by binary search - each kept exchange adds more
     // serialized length than the shrinking `elided` digits remove, so length
     // is monotone in k. k = 1 always fits given the field caps.
     let lo = 1;
@@ -136,7 +136,7 @@ export function renderDigestMarkdown(digest: SessionDigest, label: string): stri
   return out.join('\n');
 }
 
-// ——— CLI: `pacifico digest <session>` ———
+// --- CLI: `pacifico digest <session>` ---
 
 export interface DigestArgs {
   /** A session JSONL file path, or an indexed session id. */
@@ -149,7 +149,7 @@ function die(msg: string): never {
 }
 
 function help(): never {
-  process.stderr.write(`pacifico digest — the arc of one session as compact markdown
+  process.stderr.write(`pacifico digest - the arc of one session as compact markdown
 
 Prints every genuine user turn paired with the exchange's final assistant
 reply, bounded to ~8k chars (long sessions elide middle exchanges, keeping
@@ -181,14 +181,14 @@ export function parseDigestArgs(argv: string[]): DigestArgs {
 export async function runDigest(args: DigestArgs): Promise<void> {
   // Try the target as a session path first (real file or synthetic OpenCode path);
   // only a target that doesn't exist on disk is treated as a session id and
-  // resolved through the index — an existing-but-unreadable path is a read error,
+  // resolved through the index - an existing-but-unreadable path is a read error,
   // never silently reinterpreted as an (possibly colliding) id.
   let filePath = args.target;
   let lines = readSessionLines(filePath);
   if (lines.length === 0) {
     if (existsSync(filePath)) die(`could not read ${filePath}`);
     const resolved = await resolveSessionFile(args.target);
-    if (!resolved) die(`no session matching ${args.target} — try \`sessions <query>\` to find it`);
+    if (!resolved) die(`no session matching ${args.target} - try \`sessions <query>\` to find it`);
     filePath = resolved;
     lines = readSessionLines(filePath);
     if (lines.length === 0) die(`could not read ${filePath}`);

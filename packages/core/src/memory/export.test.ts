@@ -19,7 +19,7 @@ import { MEMORY_SCHEMA_VERSION, type PortableMemory, type MemoryBundle, type Mem
 //  - PURITY of `merge`: shuffling the input must not change the output, which is what
 //    lets a future transport concatenate sets in any arrival order and just call it.
 //
-// The dates are literals throughout — `exportedAt` is injected, so nothing here is
+// The dates are literals throughout - `exportedAt` is injected, so nothing here is
 // green only until UTC midnight.
 
 // A username and a project name, in the field the spec's own field list would have
@@ -67,14 +67,14 @@ function portable(text: string, over: Partial<Omit<PortableMemory, 'id' | 'text'
 }
 
 describe('toPortable', () => {
-  test('exports approved records only — a candidate is unreviewed model output', () => {
+  test('exports approved records only - a candidate is unreviewed model output', () => {
     // The filter must be `=== 'approved'`, never `!== 'rejected'`: the second form
     // ships candidates and snoozed rows as if the user had endorsed them.
     const bundle = toPortable(ALL_STATES, '2026-06-01');
     expect(bundle.memories.map((s) => s.text)).toEqual([APPROVED.text]);
   });
 
-  test('carries no local paths — session paths and the repo container both', () => {
+  test('carries no local paths - session paths and the repo container both', () => {
     const bundle = toPortable(ALL_STATES, '2026-06-01');
     const json = JSON.stringify(bundle);
     expect(json).not.toContain('"sessions"');
@@ -83,14 +83,14 @@ describe('toPortable', () => {
     expect(bundle.memories[0]!.scope).toEqual({ type: 'repo', key: '' });
   });
 
-  test('carries no triage state — a recipient imports the fact, not your opinion of it', () => {
+  test('carries no triage state - a recipient imports the fact, not your opinion of it', () => {
     const json = JSON.stringify(toPortable([{ ...APPROVED, snoozedUntil: '2026-03-15' }], '2026-06-01'));
     expect(json).not.toContain('"state"');
     expect(json).not.toContain('snoozedUntil');
     expect(json).not.toContain('2026-03-15');
   });
 
-  test('carries no alwaysOn — bypassing your matcher is a claim on your attention alone', () => {
+  test('carries no alwaysOn - bypassing your matcher is a claim on your attention alone', () => {
     const json = JSON.stringify(toPortable([{ ...APPROVED, alwaysOn: true }], '2026-06-01'));
     expect(json).not.toContain('alwaysOn');
   });
@@ -106,7 +106,7 @@ describe('toPortable', () => {
 
   test('a group-scoped bundle round-trips through its own reader', () => {
     // Widening MemoryScope['type'] does NOT widen the zod enum, and typecheck flags
-    // nothing — leaving 'group' out of the schema produces an export fromPortable
+    // nothing - leaving 'group' out of the schema produces an export fromPortable
     // rejects with `scope.type: invalid`.
     const grouped = record(APPROVED_TEXT, { state: 'approved', scope: { type: 'group', key: 'authkit' } });
     const bundle = toPortable([grouped], '2026-06-01');
@@ -173,7 +173,7 @@ describe('fromPortable', () => {
 
   test('recomputes the content-addressed id and rejects one that does not match its text', () => {
     // The id is the merge key AND the store's primary key, and the file came from
-    // another machine — trusting it lets a peer fragment clusters or collide rows.
+    // another machine - trusting it lets a peer fragment clusters or collide rows.
     const forged = {
       ...bundle,
       memories: [{ ...bundle.memories[0]!, text: 'Always do something else entirely, please' }],
@@ -215,7 +215,7 @@ describe('merge', () => {
   const OWN_A = 'Never rewrite a published branch without telling the other reviewers';
   const OWN_B = 'Prefer a migration over an ad-hoc script when the schema has to change';
 
-  // Three authors, six records, one id in common — the spec's experiment.
+  // Three authors, six records, one id in common - the spec's experiment.
   const INPUT: PortableMemory[] = [
     portable(SHARED, {
       author: 'ann@example.com',
@@ -236,7 +236,7 @@ describe('merge', () => {
     portable(OWN_A, { author: 'ANN@example.com' }),
   ];
 
-  test('is order-independent — the property a transport depends on', () => {
+  test('is order-independent - the property a transport depends on', () => {
     // A fixed permutation, not Math.random(): a random failure is unreproducible.
     const shuffled = [INPUT[3]!, INPUT[0]!, INPUT[5]!, INPUT[1]!, INPUT[4]!, INPUT[2]!];
     expect(JSON.stringify(merge(shuffled))).toBe(JSON.stringify(merge(INPUT)));
@@ -262,7 +262,7 @@ describe('merge', () => {
     expect(shared.scope).toEqual({ type: 'workflow', key: '' });
   });
 
-  test('widens two different repo keys too — same fact, different repos', () => {
+  test('widens two different repo keys too - same fact, different repos', () => {
     const merged = merge([
       portable(SHARED, { author: 'ann@example.com', scope: { type: 'repo', key: '/a' } }),
       portable(SHARED, { author: 'bob@example.com', scope: { type: 'repo', key: '/b' } }),
@@ -335,7 +335,7 @@ describe('toRecord', () => {
     }),
   ])[0]!;
 
-  test('lands an imported memory as a candidate — importing is not consent', () => {
+  test('lands an imported memory as a candidate - importing is not consent', () => {
     const built = toRecord(incoming);
     expect(built.state).toBe('candidate');
     expect(built.snoozedUntil).toBeNull();
@@ -471,7 +471,7 @@ describe('memory import', () => {
     expect(stored.state).toBe('candidate');
     expect(stored.author).toBe('peer@example.com');
     // Scope arrives keyless, and retrieve.ts skips a keyless repo memory rather than
-    // matching every cwd — an imported repo memory is inert until it is re-derived.
+    // matching every cwd - an imported repo memory is inert until it is re-derived.
     expect(stored.scope).toEqual({ type: 'repo', key: '' });
   });
 
@@ -498,7 +498,7 @@ describe('memory import', () => {
     expect(listMemories().filter((r) => r.id === peer.id)).toHaveLength(1);
   });
 
-  test('writes nothing to stdout — it fills the store, it does not emit a batch', async () => {
+  test('writes nothing to stdout - it fills the store, it does not emit a batch', async () => {
     const out = join(tmp, 'quiet.json');
     await capture(['export', '--out', out]);
     expect((await capture(['import', out])).stdout).toBe('');

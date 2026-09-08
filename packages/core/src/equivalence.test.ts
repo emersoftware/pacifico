@@ -42,7 +42,7 @@ describe('equivalences', () => {
   });
 
   test('drops a trailing .0 but keeps a real decimal', () => {
-    // 2M tokens puts Dune at exactly 8.0x — "8.0" reads like a rounding artifact.
+    // 2M tokens puts Dune at exactly 8.0x - "8.0" reads like a rounding artifact.
     const dune = equivalences(2_000_000).find((e) => e.id === 'dune');
     expect(dune?.value).toBe('8');
     const kernel = equivalences(1_200_000_000).find((e) => e.id === 'linux');

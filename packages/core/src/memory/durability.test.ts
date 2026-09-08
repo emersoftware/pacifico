@@ -68,7 +68,7 @@ describe('memory state survives index invalidation', () => {
   test('survives the cleanup path removing the installer-owned files', () => {
     // `pacifico cleanup` runs runUninstall() then clearCache() (index.ts:28-34).
     // runUninstall also rewrites ~/.claude/.mcp.json and shells out to
-    // `claude plugins uninstall`, so a test must never call it — removeInstalledFiles
+    // `claude plugins uninstall`, so a test must never call it - removeInstalledFiles
     // is the only part that touches the data dir, and this asserts its scope.
     const dataDir = join(tmp, 'data');
     mkdirSync(join(dataDir, 'plugin'), { recursive: true });
@@ -122,7 +122,7 @@ describe('store schema handling', () => {
     // listMemories() would then fail with `no such column: always_on`. The column is
     // dropped here to reconstruct that store exactly, which no other test does.
     const db = getMemoryDb();
-    // The index has to go first — SQLite refuses to drop a column one references, which
+    // The index has to go first - SQLite refuses to drop a column one references, which
     // is itself the reason the CREATE INDEX sits after the ALTER in migrate().
     db.run('DROP INDEX IF EXISTS idx_memory_always_on');
     db.run('ALTER TABLE memory DROP COLUMN always_on');

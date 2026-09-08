@@ -1,6 +1,6 @@
 /**
  * Recency-weighted significance scoring for the context primer's recent tier.
- * Pure and deterministic — `nowMs` is injected so tests need no clock.
+ * Pure and deterministic - `nowMs` is injected so tests need no clock.
  */
 
 export interface ScorableSession {
@@ -10,7 +10,7 @@ export interface ScorableSession {
   createdAt: string; // 'YYYY-MM-DD' or '?'
 }
 
-// Tunable knobs — the deliberate magic numbers.
+// Tunable knobs - the deliberate magic numbers.
 export const HALF_LIFE_DAYS = 7; // recency decay half-life
 export const FILES_WEIGHT = 0.5; // per edited file, capped
 export const FILES_CAP = 10; // max files counted

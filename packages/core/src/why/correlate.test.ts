@@ -7,7 +7,7 @@ import type { JsonObject, JsonValue } from '../extract-util';
 const j = (o: JsonValue): string => JSON.stringify(o);
 
 let tmp: string;
-let repo: string; // the resolved toplevel (realpath) — sessions cwd must match this
+let repo: string; // the resolved toplevel (realpath) - sessions cwd must match this
 let correlate: typeof import('./correlate');
 let cache: typeof import('../cache');
 
@@ -36,7 +36,7 @@ function commit(gitDir: string, relPath: string, content: string, dateIso: strin
   return git(gitDir, ['rev-parse', 'HEAD']);
 }
 
-// —— session fixtures (cwd = the resolved repo toplevel) ——
+// -- session fixtures (cwd = the resolved repo toplevel) --
 
 function writeClaude(id: string, records: JsonObject[]): string {
   const dir = join(process.env.SESSIONS_CLAUDE_DIR!, 'proj');
@@ -208,7 +208,7 @@ afterAll(() => {
   delete process.env.SESSIONS_REFRESH_INTERVAL_MS;
 });
 
-describe('why — file form', () => {
+describe('why - file form', () => {
   test('resolves the most recent commit and ranks files+time above time-only', async () => {
     setEnv();
     cache.closeDb();
@@ -254,7 +254,7 @@ describe('why — file form', () => {
   });
 });
 
-describe('why — commit form', () => {
+describe('why - commit form', () => {
   test('a sha resolves to that commit and its sessions', async () => {
     setEnv();
     cache.closeDb();
@@ -280,7 +280,7 @@ describe('why — commit form', () => {
     setEnv();
     cache.closeDb();
     // git cat-file rejects it, so it is not a commit target; it has no slash or
-    // extension, so it is not a path either — it falls through to a free-text query.
+    // extension, so it is not a path either - it falls through to a free-text query.
     const out = await correlate.why('deadbeefdeadbeef', repo);
     expect(out.kind).toBe('evidence');
     if (out.kind !== 'evidence') return;
@@ -288,7 +288,7 @@ describe('why — commit form', () => {
   });
 });
 
-describe('why — query form', () => {
+describe('why - query form', () => {
   test('free text searches this repo with a null commit', async () => {
     setEnv();
     cache.closeDb();
@@ -299,7 +299,7 @@ describe('why — query form', () => {
   });
 });
 
-describe('why — window slack', () => {
+describe('why - window slack', () => {
   test('a commit 90 min after session end is included; 3 h after is excluded', async () => {
     setEnv();
     cache.closeDb();
@@ -320,7 +320,7 @@ describe('why — window slack', () => {
   });
 });
 
-describe('why — unlanded attempts', () => {
+describe('why - unlanded attempts', () => {
   test('a session that touched the file with no landing commit is flagged; landed sessions are not', async () => {
     setEnv();
     cache.closeDb();
@@ -332,7 +332,7 @@ describe('why — unlanded attempts', () => {
     expect(attempts.map((a) => a.headline)).toContain('old work');
     // Sessions whose work landed in the file's history are not attempts.
     expect(attempts.every((a) => !['cl1', 'cx1', 'pi2'].includes(a.sessionId))).toBe(true);
-    // Verified file overlap, but no commit window — the weaker confidence label.
+    // Verified file overlap, but no commit window - the weaker confidence label.
     expect(attempts.every((a) => a.confidence === 'time-only')).toBe(true);
   });
 
@@ -366,7 +366,7 @@ describe('why — unlanded attempts', () => {
   });
 });
 
-describe('why — errors and latency', () => {
+describe('why - errors and latency', () => {
   test('a non-git cwd is a clean error for a file target', async () => {
     setEnv();
     cache.closeDb();

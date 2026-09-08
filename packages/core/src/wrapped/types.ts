@@ -1,4 +1,4 @@
-// Data contract for `pacifico wrapped` — a Spotify-Wrapped-style year in review.
+// Data contract for `pacifico wrapped` - a Spotify-Wrapped-style year in review.
 // Assembled from two sources with different truths: the report pipeline's raw
 // UsageEvent[] (full timestamps: durations, rhythm, model adoption) and the
 // search index (message content: phrase censuses, mined vocabulary). Each stat
@@ -12,7 +12,7 @@ export interface WrappedTotals {
   tokens: number;
   cacheReadTokens: number;
   costUSD: number;
-  /** Distinct `${tool}|${sessionId}` over raw events — no cross-midnight double count. */
+  /** Distinct `${tool}|${sessionId}` over raw events - no cross-midnight double count. */
   sessions: number;
   messages: number;
   activeDays: number;
@@ -53,7 +53,7 @@ export interface WrappedModel {
   /** Share of total messages, 0-1. */
   share: number;
   firstSeen: string;
-  /** First local date this model was the day's most-used — the adoption story. */
+  /** First local date this model was the day's most-used - the adoption story. */
   firstTopDay: string | null;
 }
 
@@ -74,8 +74,8 @@ export interface WrappedLongestSession {
   project: string;
 }
 
-/** Autonomous runs — "loops": back-to-back assistant events ≤ 30 min apart with
- *  no genuine human turn between them. Claude Code sessions only — the one log
+/** Autonomous runs - "loops": back-to-back assistant events ≤ 30 min apart with
+ *  no genuine human turn between them. Claude Code sessions only - the one log
  *  format whose `promptSource` proves a human typed; boundaries inferred from
  *  other tools' logs could be agents prompting agents, and a superlative is
  *  exactly where one automated session would steal the crown. */
@@ -83,9 +83,9 @@ export interface WrappedLoops {
   longest: {
     /** From the launching prompt (when it immediately precedes the run) to the run's last event. */
     durationMs: number;
-    /** Assistant API calls in the run — the loop's step count. */
+    /** Assistant API calls in the run - the loop's step count. */
     steps: number;
-    /** input + output + cacheWrite over the run — same counting rule as totals. */
+    /** input + output + cacheWrite over the run - same counting rule as totals. */
     tokens: number;
     date: string;
     /** Local wall-clock moment the human stepped away, e.g. "9:42 PM". */
@@ -128,7 +128,7 @@ export interface WrappedContentStats {
   /** Mined from genuine user prompts: distinctive vocabulary, not stopwords.
    *  `count` is messages containing the word (deduped per message, paste-proof). */
   words: { word: string; count: number; sessions: number }[];
-  /** Median raw message_count per engaged session (drive-bys excluded) — the persona depth axis. */
+  /** Median raw message_count per engaged session (drive-bys excluded) - the persona depth axis. */
   depthMedian: number | null;
 }
 
@@ -138,7 +138,7 @@ export interface FunStat {
   sub?: string;
 }
 
-/** A themed fun slide assembled from the highest-scoring candidates — only
+/** A themed fun slide assembled from the highest-scoring candidates - only
  *  notable stats render, so nobody sees "0 times" filler. */
 export interface FunCard {
   id: string;
@@ -162,7 +162,7 @@ export interface WrappedPersona {
   flavor: string | null;
 }
 
-/** Extra slides injected via --extras — the hook for agent-authored roasts. */
+/** Extra slides injected via --extras - the hook for agent-authored roasts. */
 export interface WrappedExtra {
   title?: string;
   headline: string;
@@ -176,7 +176,7 @@ export interface WrappedData {
   generatedAt: string;
   year: number;
   period: { from: string; to: string };
-  /** First event's local date — disclosed when transcript retention truncates the year. */
+  /** First event's local date - disclosed when transcript retention truncates the year. */
   dataBegins: string | null;
   tz: string;
   warnings: PricingWarning[];
@@ -190,7 +190,7 @@ export interface WrappedData {
   longestGap: { days: number; from: string; to: string } | null;
   projects: WrappedProject[];
   models: WrappedModel[];
-  /** Distinct model ids seen all year — the top-5 list is the cast, this is the audition count. */
+  /** Distinct model ids seen all year - the top-5 list is the cast, this is the audition count. */
   modelsTried: number;
   tools: WrappedTool[];
   cacheHitRate: number | null;

@@ -10,7 +10,7 @@ const j = (o: JsonValue): string => JSON.stringify(o);
 
 // cache.ts now resolves SESSIONS_* env lazily, but the module instance is shared
 // across test files in one `bun test` run. So we (re)assert our env and reset the
-// cached DB connection before each test — keeping this file hermetic regardless of
+// cached DB connection before each test - keeping this file hermetic regardless of
 // which other cache-importing file (e.g. context.test.ts) ran first or interleaves.
 let tmp: string;
 let cache: typeof import('./cache');
@@ -89,7 +89,7 @@ beforeAll(async () => {
     },
   ]);
 
-  // Session C: message-granularity fixture — a genuine typed turn (msg 0), an
+  // Session C: message-granularity fixture - a genuine typed turn (msg 0), an
   // injected non-genuine turn (msg 1, consumes an index but must not be indexed),
   // and an assistant turn (msg 2). Each carries a unique term for localization.
   writeClaude(process.env.SESSIONS_CLAUDE_DIR!, 'c', '/repoC', [
@@ -217,7 +217,7 @@ test('errored filter and metadata: only errored sessions, with files/commands/er
   expect(a.files).toContain('/repoA/src/cache.ts'); // read target surfaced in metadata
 });
 
-// ——— message-granularity (schema v7) tests — additive; do not modify cases above ———
+// --- message-granularity (schema v7) tests - additive; do not modify cases above ---
 
 function ignoredRow(filePath: string): { mtime: number; size: number } | null {
   const db = new Database(cache.getDbPath(), { readonly: true });
@@ -332,7 +332,7 @@ test('pruning: deleting the source keeps the session (vault-backed); removing th
   expect(messageRowCount(path)).toBeGreaterThan(0);
   expect((await cache.searchSessions('grobblewick', {})).map((x) => x.sessionId)).toContain('c');
 
-  // Remove the vault copy too — now neither source nor vault has it, so it prunes
+  // Remove the vault copy too - now neither source nor vault has it, so it prunes
   // (the both-missing case the negative-inventory behavior preserved).
   const entry = loadManifest(process.env.SESSIONS_ARCHIVE_DIR!)[path];
   expect(entry).toBeDefined();
@@ -350,7 +350,7 @@ test('pruning: deleting the source keeps the session (vault-backed); removing th
   expect(r.map((x) => x.sessionId)).not.toContain('c');
 });
 
-// ——— files filter (phase 3) tests — additive; do not modify cases above ———
+// --- files filter (phase 3) tests - additive; do not modify cases above ---
 
 test('files filter: matches touched (d) and read (e) paths, newest-first, others absent', async () => {
   const r = await cache.searchSessions('', { files: ['src/auth.ts'] });
@@ -385,7 +385,7 @@ test('files filter: empty array is treated as absent', async () => {
 });
 
 test('files filter: a short fragment matches multiple distinct paths (documented false positive)', async () => {
-  // 'file.ts' is a substring of both '/repoD/src/my_file.ts' and '/repoE/src/myXfile.ts' —
+  // 'file.ts' is a substring of both '/repoD/src/my_file.ts' and '/repoE/src/myXfile.ts' -
   // substring matching trades precision for zero normalization; pass longer suffixes to narrow.
   const r = await cache.searchSessions('', { files: ['file.ts'] });
   expect(r.map((x) => x.sessionId)).toEqual(['e', 'd']);
@@ -460,7 +460,7 @@ test('grep: non-genuine (injected) user text is not searchable', async () => {
   expect((await cache.grepSessions('ghostterm', {})).totalHits).toBe(0); // injected turn excluded
 });
 
-test('grep: exhaustiveness at message granularity — 2 matches in one session', async () => {
+test('grep: exhaustiveness at message granularity - 2 matches in one session', async () => {
   // The shared fixtures never put 2+ matching messages in one session, so totalHits and
   // totalSessions always coincide there. This proves grep counts every matching MESSAGE,
   // not just every session.
@@ -544,7 +544,7 @@ test('grep: an invalid regex throws a friendly error', async () => {
   await expect(cache.grepSessions('(unclosed', { regex: true })).rejects.toThrow(/Invalid regex/);
 });
 
-// ——— pi custom-type session-level indexing (schema v10) tests — additive ———
+// --- pi custom-type session-level indexing (schema v10) tests - additive ---
 
 function writePi(id: string, records: JsonValue[]): void {
   const dir = join(process.env.SESSIONS_PI_DIR!, 'proj');
@@ -602,7 +602,7 @@ test('custom content findable at session level: recap, web-search fetch, and cus
   for (const term of ['quixoticrecap', 'zibblefetch', 'intercomwobble']) {
     const r = await cache.searchSessions(term, {});
     expect(r.map((x) => x.sessionId)).toContain('customctx');
-    // Session-level only: these are extension injections, not turns — the message
+    // Session-level only: these are extension injections, not turns - the message
     // view never sees them, so the hit must not localize to a message.
     expect(r.find((x) => x.sessionId === 'customctx')!.messageHits).toEqual([]);
   }

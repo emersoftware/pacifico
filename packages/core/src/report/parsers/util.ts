@@ -1,4 +1,4 @@
-// VENDORED VERBATIM from tokenmaxing/src/parsers/util.ts — do not edit logic here; keep in sync. Public contract: schemaVersion 2.
+// VENDORED VERBATIM from tokenmaxing/src/parsers/util.ts - do not edit logic here; keep in sync. Public contract: schemaVersion 2.
 // Local divergence: readJsonlLines yields JsonValue (sessions' typed JSON domain), not unknown.
 import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';

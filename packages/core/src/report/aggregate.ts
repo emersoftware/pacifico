@@ -28,7 +28,7 @@ const TOOL_LABEL = {
   'claude-code': 'Claude Code',
   pi: 'Pi',
   codex: 'Codex',
-  opencode: 'OpenCode', // sessions-local extension — not in upstream tokenmaxing (see header)
+  opencode: 'OpenCode', // sessions-local extension - not in upstream tokenmaxing (see header)
 } satisfies Record<ToolId, string>;
 interface ProviderLabels {
   [provider: string]: string;
@@ -37,7 +37,7 @@ const PROVIDER_LABEL: ProviderLabels = {
   anthropic: 'Anthropic',
   openai: 'OpenAI',
   baseten: 'Baseten',
-  // sessions-local extensions — providers Pi emits that upstream does not label
+  // sessions-local extensions - providers Pi emits that upstream does not label
   // (see the opencode note in the header). Preserve when re-syncing.
   'openai-codex': 'OpenAI (Codex)',
   openrouter: 'OpenRouter',
@@ -48,7 +48,7 @@ export interface AggregateInput {
   prs: PullRequest[];
   now: string;
   tz: string;
-  exclude: Set<string>; // basenames (existing — keep name for tests)
+  exclude: Set<string>; // basenames (existing - keep name for tests)
   excludePrefixes?: string[]; // optional prefix matches
   include?: Set<string>; // allowlist basenames; if absent or empty, no allowlist
   includePrefixes?: string[]; // allowlist prefixes
@@ -215,7 +215,7 @@ function buildFreshDaily(enriched: EnrichedEvent[]): DailyEntry[] {
   return out;
 }
 
-// Merge by date — fresh wins on collision.
+// Merge by date - fresh wins on collision.
 export function mergeDaily(prior: DailyEntry[], fresh: DailyEntry[]): DailyEntry[] {
   const m = new Map<string, DailyEntry>();
   for (const d of prior) m.set(d.date, d);
@@ -455,7 +455,7 @@ export function computeInsights(daily: DailyEntry[], prs: PullRequest[], tz: str
     }
   }
 
-  // 3. Fold in merged PRs — only weeks already in range get counted.
+  // 3. Fold in merged PRs - only weeks already in range get counted.
   for (const pr of prs) {
     if (pr.state !== 'merged' || !pr.mergedAt) continue;
     const wk = weekEnding(localDate(pr.mergedAt, tz));
@@ -552,7 +552,7 @@ export function aggregate(input: AggregateInput): TokenmaxingData {
   const { current, longest } = computeStreaks(activeDates, todayLocal);
   const dates = [...activeDates].sort();
 
-  // 5. Weekly highlights — always fresh from current PR data, no merge
+  // 5. Weekly highlights - always fresh from current PR data, no merge
   const weekMap = new Map<string, PullRequest[]>();
   for (const pr of prs) {
     const ts = pr.mergedAt ?? pr.createdAt;

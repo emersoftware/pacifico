@@ -83,7 +83,7 @@ function extractPi(lines: string[], push: (m: string) => void): void {
   }
 }
 
-// OpenCode: a tool block whose `state.status` is 'error' — the message is `state.error`.
+// OpenCode: a tool block whose `state.status` is 'error' - the message is `state.error`.
 function extractOpencode(lines: string[], push: (m: string) => void): void {
   for (const block of opencodeAssistantBlocks(lines)) {
     if (block.type !== 'tool') continue;
@@ -94,7 +94,7 @@ function extractOpencode(lines: string[], push: (m: string) => void): void {
   }
 }
 
-/** Whether (and how) a session hit errors — drives the `errored` filter + `context_text` FTS column. */
+/** Whether (and how) a session hit errors - drives the `errored` filter + `context_text` FTS column. */
 export function extractErrors(lines: string[], tool: Tool): SessionErrors {
   const messages: string[] = [];
   let count = 0;

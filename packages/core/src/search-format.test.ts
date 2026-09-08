@@ -50,7 +50,7 @@ test('formatResult: shapes a SessionResult for callers, including resumeCommand'
   });
 });
 
-// ——— message-granularity (schema v7) tests — additive ———
+// --- message-granularity (schema v7) tests - additive ---
 
 const baseResult: SessionResult = {
   date: '2026-06-01',
@@ -94,14 +94,14 @@ test('formatLine: no msg# badge when there are no message hits', () => {
   expect(formatLine(baseResult, 120)).not.toContain('msg#');
 });
 
-// ——— payload diet (phase 1) tests — additive ———
+// --- payload diet (phase 1) tests - additive ---
 
 /**
  * A worst-case indexed session sized from the measured distribution: 100 commands
  * (one ~4,200-char outlier, the rest ~96), 40 file paths, and the full 3 messageHits.
  *
  * The outlier sits at index 50 on purpose. It is exactly the payload MAX_COMMANDS has
- * to drop, and parking it at index 0 would let a *capped* payload keep it — which would
+ * to drop, and parking it at index 0 would let a *capped* payload keep it - which would
  * quietly weaken the budget test below.
  */
 function worstCaseSession(i: number): SessionResult {
@@ -136,14 +136,14 @@ function worstCaseSession(i: number): SessionResult {
 }
 
 // ~15k tokens. Measured on this fixture: 339,234 chars with uncapped arrays, 38,444 with
-// the caps — so the ceiling is red on unpatched formatResult and green after, with ~21,500
+// the caps - so the ceiling is red on unpatched formatResult and green after, with ~21,500
 // chars of headroom for future fields.
 const BUDGET_CHARS = 60_000;
 
 /**
  * The uncapped fixture must stay far enough over the ceiling that the budget assertion
  * cannot pass for the wrong reason. Without this, shrinking worstCaseSession until the
- * ceiling is unreachable turns the budget test green while removing all of its meaning —
+ * ceiling is unreachable turns the budget test green while removing all of its meaning -
  * the "vacuous pass" failure mode. Asserted on the raw SessionResult array, which
  * formatResult has not touched, so it is a property of the fixture rather than of the caps.
  */
@@ -166,7 +166,7 @@ describe('caps', () => {
     expect(out.commandCount).toBe(100);
     expect(out.files).toHaveLength(MAX_FILES);
     expect(out.fileCount).toBe(40);
-    // Truncation keeps the head of the array — the dropped outlier lived at index 50.
+    // Truncation keeps the head of the array - the dropped outlier lived at index 50.
     expect(out.commands[0]).toContain('module-0.test.ts');
     expect(out.commands.join('')).not.toContain('sessions_v7_backfill_chunk');
   });

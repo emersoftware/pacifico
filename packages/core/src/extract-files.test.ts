@@ -10,7 +10,7 @@ function claudeToolUse(name: string, input: JsonObject): JsonObject {
   return { type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', name, input }] } };
 }
 
-describe('extractFiles — claude', () => {
+describe('extractFiles - claude', () => {
   test('returns [] for a session with no edits', () => {
     const lines = jsonl(
       { type: 'user', message: { role: 'user', content: 'hello' } },
@@ -47,7 +47,7 @@ describe('extractFiles — claude', () => {
   });
 });
 
-describe('extractFiles — codex', () => {
+describe('extractFiles - codex', () => {
   // Envelope confirmed against real ~/.codex/sessions logs: a response_item whose
   // payload is a custom_tool_call named apply_patch, with payload.input holding the patch.
   function applyPatch(input: string): JsonObject {
@@ -88,7 +88,7 @@ describe('extractFiles — codex', () => {
   });
 });
 
-describe('extractFiles — opencode', () => {
+describe('extractFiles - opencode', () => {
   function ocAssistant(...content: JsonObject[]): JsonObject {
     return { type: 'message', message: { role: 'assistant', content } };
   }
@@ -135,7 +135,7 @@ describe('extractFiles — opencode', () => {
   });
 });
 
-describe('extractFiles — pi', () => {
+describe('extractFiles - pi', () => {
   // Fixture blocks are sanitized lines lifted from a real ~/.pi/agent/sessions log
   // (2026-08-04): assistant `type:'message'` lines whose content[] carry
   // `{type:'toolCall', name, arguments:{path}}` blocks.

@@ -4,7 +4,7 @@ export const repository = 'https://github.com/emersoftware/pacifico';
 
 export const content = {
   "en": {
-    "title": "pacifico — search your coding sessions",
+    "title": "pacifico: search your coding sessions",
     "description": "Save and search Claude Code, Codex, Pi, and OpenCode conversations on your computer. Give your agents access through MCP.",
     "skip": "Skip to content",
     "nav": [
@@ -146,7 +146,7 @@ export const content = {
     "returnHome": "Go to Pacifico"
   },
   "es": {
-    "title": "pacifico — busca en tus sesiones de código",
+    "title": "pacifico: busca en tus sesiones de código",
     "description": "Guarda y busca conversaciones de Claude Code, Codex, Pi y OpenCode en tu equipo. Dales acceso a tus agentes mediante MCP.",
     "skip": "Saltar al contenido",
     "nav": [

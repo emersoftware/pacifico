@@ -1,4 +1,4 @@
-// `pacifico wrapped` — a Spotify-Wrapped-style year in review, rendered as a
+// `pacifico wrapped` - a Spotify-Wrapped-style year in review, rendered as a
 // self-contained HTML story and opened in the browser. Mirrors runReport's
 // sequence (gather → period filter → pricing → aggregate) and layers wrapped-
 // only passes on top: raw-event superlatives (compute.ts), index-backed content
@@ -67,7 +67,7 @@ function die(msg: string): never {
 }
 
 function help(): never {
-  process.stderr.write(`pacifico wrapped — your year with AI agents, Spotify-Wrapped style
+  process.stderr.write(`pacifico wrapped - your year with AI agents, Spotify-Wrapped style
 
 Generates a scroll-through story page from your local session transcripts:
 tokens, cost, streaks, rhythm, top projects and models, plus fun stats mined
@@ -85,7 +85,7 @@ Options:
   --tz <zone>      Timezone for day/hour bucketing (default: TIMEZONE env or America/Chicago)
   --extras <path>  JSON file of extra slides: [{"headline": "...", "title"?, "subline"?, "footnote"?}]
   --roast          Let an installed agent CLI (claude/codex/pi) improvise a few
-                   roast slides from your stats — opt-in, needs no setup, and the
+                   roast slides from your stats - opt-in, needs no setup, and the
                    page still renders if it fails. Stats only; nothing else is sent.
   --roast-with <tool>  Force the roast CLI: claude, codex, or pi
   --out <path>     Write HTML here instead of a temp file (implies no auto-open)
@@ -187,7 +187,7 @@ export async function runWrapped(opts: WrappedOptions): Promise<WrappedResult> {
   const events = await gatherEvents(roots, tools);
   // The spend/volume headline (tokens, cost, messages, sessions, rhythm, models,
   // projects) is computed from the SAME events as `pacifico report` so the two
-  // reconcile exactly — automated eval/tmp runs cost real money and belong in the
+  // reconcile exactly - automated eval/tmp runs cost real money and belong in the
   // total. Junk exclusion is a *content-pass* concern only (content.ts): it keeps
   // probes/evals out of the fun story (abandoned, drive-bys, word of year,
   // errors) where report has nothing to compare against and the noise misleads.
@@ -208,7 +208,7 @@ export async function runWrapped(opts: WrappedOptions): Promise<WrappedResult> {
   const warnings = drainPricingWarnings();
   if (warnings.length > 0) {
     const models = warnings.map((w) => w.model).join(', ');
-    process.stderr.write(`warning: ${warnings.length} model(s) had no pricing — cost may be understated: ${models}\n`);
+    process.stderr.write(`warning: ${warnings.length} model(s) had no pricing - cost may be understated: ${models}\n`);
   }
 
   const ev = computeEventStats(inRange, tz);
@@ -228,7 +228,7 @@ export async function runWrapped(opts: WrappedOptions): Promise<WrappedResult> {
 
   let extras: WrappedExtra[] = [];
   if (opts.extras) {
-    // Size-check before reading — the per-field caps in parseExtras can't
+    // Size-check before reading - the per-field caps in parseExtras can't
     // help if JSON.parse already swallowed a multi-gigabyte file.
     let size = 0;
     try {
@@ -247,7 +247,7 @@ export async function runWrapped(opts: WrappedOptions): Promise<WrappedResult> {
   }
 
   // Content pass degrades gracefully: no index (or a broken one) simply means
-  // no fun cards — the dynamic selection treats absence like non-notability.
+  // no fun cards - the dynamic selection treats absence like non-notability.
   let content = null;
   let sessionOfYear = null;
   if (!opts.noContent && inRange.length > 0) {
@@ -255,19 +255,19 @@ export async function runWrapped(opts: WrappedOptions): Promise<WrappedResult> {
       const c = await computeContentStats({ from, to, tool: opts.tool });
       const { sessionOfYear: soy, ...rest } = c;
       // An index with zero sessions for the period must not feed the fun
-      // cards — a "0 times" joke claiming to be counted from transcripts
+      // cards - a "0 times" joke claiming to be counted from transcripts
       // that were never indexed is a fabrication.
       if (rest.indexedSessions > 0) {
         content = rest;
         sessionOfYear = soy;
       }
     } catch (err) {
-      process.stderr.write(`warning: could not read the search index — skipping conversation stats (${String(err)})\n`);
+      process.stderr.write(`warning: could not read the search index - skipping conversation stats (${String(err)})\n`);
     }
   }
 
   const totalTokens = agg.summary.totalTokens;
-  // aggregate sorts by cost; the page ranks by tokens — re-sort so bars are
+  // aggregate sorts by cost; the page ranks by tokens - re-sort so bars are
   // monotone. Session counts come from the event pass (distinct per project),
   // never aggregate's sum-of-daily, which double-counts cross-midnight sessions.
   // On local-model years (no token meter) rank by sessions so the list isn't a
@@ -287,9 +287,9 @@ export async function runWrapped(opts: WrappedOptions): Promise<WrappedResult> {
       share: totalTokens > 0 ? p.tokens / totalTokens : 0,
     }));
 
-  // aggregate keys byModel by tool|provider|id, so one model split across tools —
+  // aggregate keys byModel by tool|provider|id, so one model split across tools -
   // and across dated snapshots / provider aliases (opus-4-5 vs opus-4-5-20251101
-  // vs openai/gpt-oss-120b) — shows up as several rows. Merge on the canonical
+  // vs openai/gpt-oss-120b) - shows up as several rows. Merge on the canonical
   // display name so the cast list never lists the same model twice, and drop the
   // '<synthetic>' sentinel (turns with no real model) entirely.
   const totalMessages = agg.summary.messages;
@@ -418,7 +418,7 @@ export async function runWrapped(opts: WrappedOptions): Promise<WrappedResult> {
   };
 
   // The roast runs last: it needs the finished stats to riff on, and it appends
-  // to whatever --extras already supplied (capped at 6 total). Fail-open — a
+  // to whatever --extras already supplied (capped at 6 total). Fail-open - a
   // missing/failed CLI just leaves the deterministic page untouched.
   if (opts.roast) {
     const roasted = await runRoast(data, { preferred: opts.roastWith, runner: opts.roastRunner });

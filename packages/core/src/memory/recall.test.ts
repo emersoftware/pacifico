@@ -1,7 +1,7 @@
 // The G1 gate: run the mine over a corpus built from corrections-golden.json and
 // assert >=90% recall on `correction` entries and ZERO candidates from `not` entries.
 //
-// This is an extraction gate, not a ranking gate — it lives in src/memory/ rather
+// This is an extraction gate, not a ranking gate - it lives in src/memory/ rather
 // than src/eval/ because the eval harness ranks sessions while this measures
 // candidate extraction (docs/ideation/memory-recurrence/spec-phase-1.md).
 //
@@ -79,7 +79,7 @@ describe('corrections golden set', () => {
 
   test('zero candidates come from not entries', async () => {
     // The precision half of the gate. A `not` entry that becomes a candidate means
-    // a term is matching complaints or requests rather than corrections — the term
+    // a term is matching complaints or requests rather than corrections - the term
     // goes, not the label (labels change only with a recorded reason).
     const records = await mine({});
     const mined = new Set(records.map((r) => r.text));

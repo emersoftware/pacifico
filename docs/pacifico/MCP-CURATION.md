@@ -9,7 +9,7 @@ This inventory was checked against Pacifico's registrations in `packages/agents/
 | MCP tools              | 12                               | 5                       | None exposed by this CLI/skill workflow       |
 | MCP prompts            | 4                                | 0                       | None exposed                                  |
 | Bundled skills         | 7                                | 0                       | 1 routing skill                               |
-| Skill reference guides | —                                | —                       | 4: finding, forking, handoffs, recovery       |
+| Skill reference guides | -                                | -                       | 4: finding, forking, handoffs, recovery       |
 | Harness readers        | Claude Code, Codex, Pi, OpenCode | Same four               | 15 provider IDs documented in the local skill |
 
 Mosaic's documented providers are Claude Code, Cursor, OpenCode, Codex, Pi, Amp, GitHub Copilot, Cline, OpenClaw, Hermes, Droid, Grok, Kimi Code, Antigravity, and Devin. Documented support is not a claim that all have been tested here. Devin is browse-only in that workflow.

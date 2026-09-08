@@ -6,7 +6,7 @@ import { closeDatabases, makeTmp, setMemoryEnv, userTurn, writeSession } from '.
 // The measured failure this test exists to prevent: one eval fixture prompt appeared
 // 14 times byte-identical in the real corpus. Counting raw occurrences would have
 // promoted a copy-pasted clipboard artifact as the top candidate, because author
-// diversity — not repetition — is what makes a repeat evidential, and solo there is
+// diversity - not repetition - is what makes a repeat evidential, and solo there is
 // none.
 const REPEATED = 'Always regenerate the fixture snapshot before running the eval suite';
 const SPACED = 'Always   regenerate the fixture snapshot\nbefore running the eval suite';
@@ -53,7 +53,7 @@ describe('byte-exact collapse', () => {
 
   test('whitespace variants land in the same cluster, never a duplicate id', async () => {
     // Whitespace variants fingerprint identically, so two clusters would mean two
-    // records with the same id — a primary-key collision on the very next upsert.
+    // records with the same id - a primary-key collision on the very next upsert.
     const records = await mine({});
     const ids = records.map((r) => r.id);
     expect(new Set(ids).size).toBe(ids.length);

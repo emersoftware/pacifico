@@ -1,6 +1,6 @@
 // Runtime pricing refresh: load the latest LiteLLM pricing from a disk cache,
 // fetching once when the cache is stale/missing, and return compact records that
-// runReport merges OVER the embedded snapshot (live wins) — current prices with
+// runReport merges OVER the embedded snapshot (live wins) - current prices with
 // no recompile. Any fetch/parse/IO failure degrades down the chain
 // (fresh → stale cache → embedded snapshot) and never blocks the report.
 //
@@ -61,7 +61,7 @@ function isFresh(path: string): boolean {
 }
 
 // Atomic write: tmp file + rename so a concurrent report never reads a
-// half-written file. A non-writable cache dir is non-fatal — warn once and let
+// half-written file. A non-writable cache dir is non-fatal - warn once and let
 // the caller use the fetched records in-memory for this run.
 function writeCacheAtomic(path: string, raw: string): void {
   const tmp = path + '.tmp';
@@ -105,7 +105,7 @@ export async function loadRuntimePricing(
   try {
     raw = await fetcher(PRICING_URL);
   } catch {
-    // Network failed — fall back to whatever is on disk (even stale), else nothing.
+    // Network failed - fall back to whatever is on disk (even stale), else nothing.
     const stale = readCache(path);
     if (Object.keys(stale).length > 0) {
       warn('could not refresh pricing; using cached prices');
@@ -117,7 +117,7 @@ export async function loadRuntimePricing(
 
   const records = parseOrEmpty(raw);
   if (Object.keys(records).length === 0) {
-    // Fetched payload was empty/garbage — fall back to disk, then embedded.
+    // Fetched payload was empty/garbage - fall back to disk, then embedded.
     const fallback = readCache(path);
     if (Object.keys(fallback).length > 0) {
       warn('fetched pricing was unusable; using cached prices');

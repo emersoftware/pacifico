@@ -2,7 +2,7 @@ export type Tool = 'claude' | 'pi' | 'codex' | 'opencode';
 
 /** A search match localized to one message inside a session. */
 export interface MessageHit {
-  /** Message index within the session — feeds get_session_messages(offset) directly. */
+  /** Message index within the session - feeds get_session_messages(offset) directly. */
   index: number;
   role: 'user' | 'assistant';
   snippet: string;
@@ -23,11 +23,11 @@ export interface SessionResult {
   commands: string[];
   errored: boolean;
   /** In-file fork count: pi /tree abandoned branches (from buildPiTree). 0 for
-   *  other tools and unbranched sessions — including the no-index scanner
+   *  other tools and unbranched sessions - including the no-index scanner
    *  fallback, which does not parse topology. */
   branches: number;
   /** Absolute path of the parent session on pi /fork /clone copies; '' otherwise.
-   *  Stored unresolved by design (the parent file may not exist on disk) — display
+   *  Stored unresolved by design (the parent file may not exist on disk) - display
    *  surfaces basename it, nothing joins it back to the sessions table. */
   forkedFrom: string;
   /** Top message-level matches (≤3, best first). Empty for metadata-only matches;
@@ -95,7 +95,7 @@ export interface ContextSession {
   date: string;
   messageCount: number;
   intent: string; // first_prompt
-  /** Parsed files_touched, capped at MAX_FILES — fileCount carries the true total. */
+  /** Parsed files_touched, capped at MAX_FILES - fileCount carries the true total. */
   files: string[];
   /** Total files touched before truncation, so a capped list never reads as complete. */
   fileCount: number;
@@ -110,7 +110,7 @@ export interface ContextHeadline {
   intent: string;
 }
 
-/** An approved memory as the primer carries it — the claim and enough to weigh it. */
+/** An approved memory as the primer carries it - the claim and enough to weigh it. */
 export interface PrimerMemory {
   text: string;
   kind: string;

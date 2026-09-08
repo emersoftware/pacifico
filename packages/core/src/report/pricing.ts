@@ -9,7 +9,7 @@
 // Matching rules mirror ccusage `rust/crates/ccusage/src/pricing.rs`
 // (`normalized_pricing_key`, `pricing_key_matches`, `find_entry`). Any model
 // that has tokens but no price match is recorded in a drainable warning
-// collector and surfaced loudly — never silently zeroed.
+// collector and surfaced loudly - never silently zeroed.
 
 import { z } from 'zod';
 
@@ -43,7 +43,7 @@ export interface PricingWarning {
 }
 
 // ---------------------------------------------------------------------------
-// BUILTIN_OVERRIDES — verified rates only (no invented numbers).
+// BUILTIN_OVERRIDES - verified rates only (no invented numbers).
 //
 // Sources:
 //   - ccusage `put_builtin_pricing` (rust/crates/ccusage/src/pricing.rs)
@@ -58,7 +58,7 @@ export interface PricingMap {
 }
 
 export const BUILTIN_OVERRIDES: PricingMap = {
-  // Anthropic — Claude (ccusage put_builtin_pricing)
+  // Anthropic - Claude (ccusage put_builtin_pricing)
   'claude-opus-4-8': {
     inputPerToken: 5e-6,
     outputPerToken: 25e-6,
@@ -83,7 +83,7 @@ export const BUILTIN_OVERRIDES: PricingMap = {
     cacheWritePerToken: 6.25e-6,
     cacheReadPerToken: 0.5e-6,
   },
-  // Legacy Opus 4 — kept so the version-boundary rule has a distinct, cheaper
+  // Legacy Opus 4 - kept so the version-boundary rule has a distinct, cheaper
   // target (claude-opus-4 must never resolve to the 4-8 rate).
   'claude-opus-4': {
     inputPerToken: 15e-6,
@@ -111,7 +111,7 @@ export const BUILTIN_OVERRIDES: PricingMap = {
     cacheReadPerToken: 1e-6,
   },
 
-  // OpenAI — Codex / GPT (ccusage put_builtin_pricing)
+  // OpenAI - Codex / GPT (ccusage put_builtin_pricing)
   'gpt-5.5': {
     inputPerToken: 5e-6,
     outputPerToken: 30e-6,
@@ -128,7 +128,7 @@ export const BUILTIN_OVERRIDES: PricingMap = {
 
 // Embedded snapshot is the base; BUILTIN_OVERRIDES fills/overrides entries the
 // snapshot lacks. A runtime live fetch (Phase 2) is merged over the top via
-// mergeRuntimePricing — live wins over snapshot + overrides.
+// mergeRuntimePricing - live wins over snapshot + overrides.
 const baseMap = (): PricingMap => ({ ...GENERATED_PRICING, ...BUILTIN_OVERRIDES });
 const PRICING_MAP: PricingMap = baseMap();
 
@@ -150,7 +150,7 @@ export function resetPricing(): void {
 }
 
 // ---------------------------------------------------------------------------
-// LiteLLM parsing — shared with the build-time generator (and Phase 2).
+// LiteLLM parsing - shared with the build-time generator (and Phase 2).
 // LiteLLM fields are already per single token, so they map across directly.
 // Cache defaults are applied lazily in computeCost, not here, so the snapshot
 // stays a near-direct copy of LiteLLM.
@@ -218,7 +218,7 @@ const isBoundary = (ch: string | undefined): boolean => ch === undefined || !/[a
 
 // True when the suffix immediately following a key match begins a *numeric*
 // model-version bump (e.g. key `claude-opus-4` + suffix `-8`), which must block
-// the match — UNLESS the run is exactly an 8-digit date suffix (`-20251101`).
+// the match - UNLESS the run is exactly an 8-digit date suffix (`-20251101`).
 function suffixStartsWithNumericModelVersion(key: string, suffix: string): boolean {
   const lastKeyChar = key[key.length - 1];
   if (lastKeyChar === undefined || !/[0-9]/.test(lastKeyChar)) return false;
@@ -231,7 +231,7 @@ function suffixStartsWithNumericModelVersion(key: string, suffix: string): boole
   if (digitLen === 0) return false;
 
   const afterDigits = rest[digitLen];
-  // An 8-digit run followed by a boundary/end is a date alias — allow it.
+  // An 8-digit run followed by a boundary/end is a date alias - allow it.
   return !(digitLen === MODEL_DATE_SUFFIX_DIGITS && isBoundary(afterDigits));
 }
 
@@ -300,7 +300,7 @@ function findUncached(modelId: string): ModelPricing | undefined {
 // A model that ships before the price map catches up (a fresh `claude-opus-5`,
 // say) otherwise costs $0, which silently understates the headline number by
 // however much of the period ran on it. Bill it at the newest rate in its own
-// family instead, and keep the warning — flagged with what it was priced as, so
+// family instead, and keep the warning - flagged with what it was priced as, so
 // an estimate never passes for a quote.
 //
 // Candidates come from BUILTIN_OVERRIDES, not the full LiteLLM map: those keys
@@ -408,7 +408,7 @@ function tiered(tokens: number, base: number, above?: number): number {
 }
 
 // ---------------------------------------------------------------------------
-// Warning collector — drained by runReport, surfaced loudly (stderr + JSON +
+// Warning collector - drained by runReport, surfaced loudly (stderr + JSON +
 // HTML). Module-level state; tests reset it via resetPricingWarnings().
 // ---------------------------------------------------------------------------
 let warnings: PricingWarning[] = [];

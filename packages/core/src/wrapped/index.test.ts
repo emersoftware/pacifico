@@ -40,22 +40,22 @@ const userLine = (sessionId: string, timestamp: string, content: JsonValue, extr
 
 writeFileSync(
   join(claudeDir, 'proj', 'a.jsonl'),
-  // The human speaks at 13:58 — the loop's anchor.
+  // The human speaks at 13:58 - the loop's anchor.
   userLine('s1', '2026-06-01T13:58:00Z', 'make the tests pass and do not stop', { promptSource: 'typed' }) +
     // One long sitting (three replies 10 min apart) …
     event('s1', '2026-06-01T14:00:00Z') +
-    // A tool_result user line mid-run — not a human, must not split the loop.
+    // A tool_result user line mid-run - not a human, must not split the loop.
     userLine('s1', '2026-06-01T14:05:00Z', [{ type: 'tool_result', content: 'ok' }]) +
     event('s1', '2026-06-01T14:10:00Z') +
-    // A sidechain (subagent) prompt mid-run — an agent talking, must not split the loop.
+    // A sidechain (subagent) prompt mid-run - an agent talking, must not split the loop.
     userLine('s1', '2026-06-01T14:15:00Z', 'Explore the codebase thoroughly.', { isSidechain: true }) +
     event('s1', '2026-06-01T14:20:00Z') +
-    // … then the same session resumed three weeks later — must not count as a 3-week sitting.
+    // … then the same session resumed three weeks later - must not count as a 3-week sitting.
     // The injected continuation (promptSource null) is not a human turn either.
     userLine('s1', '2026-06-22T08:59:00Z', 'auto continuation', { promptSource: null }) +
     event('s1', '2026-06-22T09:00:00Z') +
     // A small-hours event (03:30 UTC = 22:30 America/Chicago the previous day; use UTC tz in tests).
-    // s2 has no genuine human turn at all — automation, invisible to the loop pass.
+    // s2 has no genuine human turn at all - automation, invisible to the loop pass.
     event('s2', '2026-06-03T03:30:00Z', 'claude-fable-5') +
     // Out-of-year noise that must be filtered.
     event('s3', '2025-11-11T11:00:00Z'),
@@ -137,7 +137,7 @@ describe('parseExtras', () => {
     expect(parseExtras(JSON.stringify(many))).toHaveLength(6);
   });
 
-  test('caps by code points — never splits a surrogate pair', () => {
+  test('caps by code points - never splits a surrogate pair', () => {
     const emoji = '🎉'.repeat(200); // 400 UTF-16 units, 200 code points
     const [slide] = parseExtras(JSON.stringify([{ headline: emoji }]));
     expect([...slide!.headline]).toHaveLength(120);
@@ -175,7 +175,7 @@ describe('runWrapped', () => {
 
     expect(data.year).toBe(2026);
     expect(data.period).toEqual({ from: '2026-01-01', to: '2026-07-13' });
-    // s3 is 2025 — filtered; s1 + s2 remain.
+    // s3 is 2025 - filtered; s1 + s2 remain.
     expect(data.totals.sessions).toBe(2);
     expect(data.totals.messages).toBe(5);
     // Longest sitting is the 20-minute run, not the 3-week session span.
@@ -186,7 +186,7 @@ describe('runWrapped', () => {
     expect(data.rhythm.latestNight.clock).toContain('3:30');
     // Token rule matches the report: all processed input and output, including cache traffic.
     expect(data.totals.tokens).toBe(5 * (1000 + 500 + 10000 + 200));
-    // Per-tool sessions are distinct (s1 spans June 1 + June 22 — aggregate's
+    // Per-tool sessions are distinct (s1 spans June 1 + June 22 - aggregate's
     // sum-of-daily would say 3; the headline total and tools[] must agree).
     expect(data.tools[0].sessions).toBe(2);
     expect(data.totals.cacheReadTokens).toBe(5 * 10_000);
@@ -196,13 +196,13 @@ describe('runWrapped', () => {
     expect(fable.firstSeen).toBe('2026-06-03');
     expect(fable.firstTopDay).toBe('2026-06-03');
     expect(data.dataBegins).toBe('2026-06-01');
-    // Active days are Jun 1, 3, and 22 — the 18 silent days between the 3rd
+    // Active days are Jun 1, 3, and 22 - the 18 silent days between the 3rd
     // and the 22nd are the year's longest disappearance.
     expect(data.longestGap).toEqual({ days: 18, from: '2026-06-04', to: '2026-06-21' });
     expect(data.modelsTried).toBe(2);
     // The loop: anchored at the 13:58 typed prompt, ended by the 30-min gap
     // after 14:20. The tool_result at 14:05 and the sidechain prompt at 14:15
-    // are not humans — neither may split the run.
+    // are not humans - neither may split the run.
     expect(data.loops.longest.durationMs).toBe(22 * 60_000);
     expect(data.loops.longest.steps).toBe(3);
     expect(data.loops.longest.tokens).toBe(3 * 1700);
@@ -210,7 +210,7 @@ describe('runWrapped', () => {
     expect(data.loops.longest.startClock).toBe('1:58 PM');
     expect(data.loops.longest.date).toBe('2026-06-01');
     // The June 22 resume is a second run: its injected continuation is not
-    // genuine, and the real trigger is 3 weeks stale — so it's timed on its
+    // genuine, and the real trigger is 3 weeks stale - so it's timed on its
     // own single event (0 ms). s2 (no human turns) contributes nothing.
     expect(data.loops.count).toBe(2);
     expect(data.loops.medianMs).toBe(11 * 60_000);
@@ -251,7 +251,7 @@ describe('runWrapped', () => {
     // It uses the system stack precisely so the file works with the network
     // off. Checked by the positions that actually cause a GET rather than by
     // the raw string "https://", because the credits card now carries a link
-    // to the project site — a link is something the reader may follow, not
+    // to the project site - a link is something the reader may follow, not
     // something the document goes and gets.
     for (const pattern of [
       /\bsrc=["']([^"']+)["']/g,
@@ -281,7 +281,7 @@ describe('runWrapped', () => {
     expect(html).toContain('so far');
   });
 
-  test('an empty year still renders a page — including any extras', async () => {
+  test('an empty year still renders a page - including any extras', async () => {
     const extrasPath = join(tmp, 'empty-extras.json');
     writeFileSync(extrasPath, JSON.stringify([{ headline: 'Even quiet years get a slide' }]));
     const out = join(tmp, 'empty.html');

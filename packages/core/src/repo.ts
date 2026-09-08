@@ -90,11 +90,11 @@ export function branchLabel(cwd: string, branches: Map<string, string>): string 
   return branches.get(cwd) ?? basename(cwd);
 }
 
-// ——— read-only git readers for `pacifico why` ———
+// --- read-only git readers for `pacifico why` ---
 //
 // Every reader here goes through the private git() above (exit-code checked, {ok:false}
 // on any failure or throw) and returns a null/[] safe value rather than throwing. None of
-// them ever write to a repository — no hooks, no trailers, no branches.
+// them ever write to a repository - no hooks, no trailers, no branches.
 
 /** A commit reduced to what correlation needs: identity, time, subject, files, trailers. */
 export interface CommitInfo {
@@ -104,7 +104,7 @@ export interface CommitInfo {
   authoredAt: string;
   /** Repo-relative paths from --name-only. */
   files: string[];
-  /** Co-Authored-By and other trailers, verbatim — annotation only, never a confidence tier. */
+  /** Co-Authored-By and other trailers, verbatim - annotation only, never a confidence tier. */
   trailers: string[];
   /** Two or more parents (%P): this is the merge that landed the change, not the commit that wrote it. */
   merge: boolean;

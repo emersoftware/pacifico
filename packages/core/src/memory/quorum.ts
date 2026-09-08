@@ -1,7 +1,7 @@
 // The quorum metric: the signal that makes volume evidential once more than one
 // author exists.
 //
-// Pure, and deliberately tiny. It imports only the `MergedMemory` TYPE — an erased
+// Pure, and deliberately tiny. It imports only the `MergedMemory` TYPE - an erased
 // import under `verbatimModuleSyntax`, so nothing in this module's runtime graph can
 // open a database or read a clock, and quorum.test.ts needs no harness at all.
 
@@ -19,12 +19,12 @@ import type { MergedMemory } from './portable';
  * fixture prompt appeared 14 times byte-identical in the real corpus and would have
  * been promoted as the strongest fact on the machine. Five records from one author
  * must score 1; one record each from five authors scores 5. A verbose individual
- * cannot manufacture a quorum — only independent agreement can.
+ * cannot manufacture a quorum - only independent agreement can.
  *
  * KNOWN, and not a bug: `totalPhrasings` and `authors.length` are numerically
  * identical today, because `mine()` hardcodes `distinctPhrasings = 1` per cluster
  * (src/memory/mine.ts:234-237) with no write-back path from the triage skill. The two
- * numbers coincide by accident of the current pipeline, not by definition — the moment
+ * numbers coincide by accident of the current pipeline, not by definition - the moment
  * merged phrasing counts reach the store they diverge, and the wrong one silently
  * becomes wrong. Read `authors`.
  *

@@ -47,14 +47,14 @@ const READ_ONLY = { readOnlyHint: true, openWorldHint: false } as const;
 /**
  * Hard ceilings on every caller-supplied page size. A DEFAULT is not a bound: an agent
  * that passes `limit: 100000` gets the whole index back, and `limit: -1` is worse than
- * unbounded — SQLite treats a negative LIMIT as "no limit at all", so the one number that
+ * unbounded - SQLite treats a negative LIMIT as "no limit at all", so the one number that
  * looks like it must return nothing returns everything. Either one reproduces the payload
  * blowup the projections in this file exist to prevent, and neither is a hypothetical: the
  * caller is a model reading a `describe()` string.
  *
  * The ceilings live at the tool boundary rather than in cache.ts because they are budgets
  * for a model's context, not facts about the query. `sessions search` passes 1,000 for an
- * interactive fzf list and is right to (src/cli.ts) — a human scrolling a terminal has no
+ * interactive fzf list and is right to (src/cli.ts) - a human scrolling a terminal has no
  * context window to blow.
  */
 export const MAX_SEARCH_RESULTS = 50;
@@ -65,7 +65,7 @@ export const MAX_PRIMER_RECENT = 25;
 /**
  * What every tool handler returns. `structuredContent` is not optional in practice: each
  * tool declares an `outputSchema`, and the SDK rejects any non-`isError` result that
- * omits it — including the empty-result sentinels, which is why every sentinel below
+ * omits it - including the empty-result sentinels, which is why every sentinel below
  * carries a payload. Only the `isError` paths may leave it out.
  */
 type ToolResult = {
@@ -82,7 +82,7 @@ type ToolResult = {
  *
  * Both ship. Claude Code's normalizer drops `type:'text'` blocks whenever
  * `structuredContent` is present, so the duplicate costs local pipe bytes and zero
- * model-context tokens — while still rendering on a client that ignores structured output.
+ * model-context tokens - while still rendering on a client that ignores structured output.
  */
 function toolResult(payload: NonNullable<CallToolResult['structuredContent']>): ToolResult {
   return {
@@ -92,8 +92,8 @@ function toolResult(payload: NonNullable<CallToolResult['structuredContent']>): 
 }
 
 /**
- * A successful empty result: keep the human sentence — it tells a model something the
- * payload does not — and attach a conforming empty payload so output validation passes.
+ * A successful empty result: keep the human sentence - it tells a model something the
+ * payload does not - and attach a conforming empty payload so output validation passes.
  * Never solve an empty result with `isError`; that bypasses validation rather than
  * satisfying it, and these calls did succeed.
  */
@@ -150,14 +150,14 @@ export async function runGetMemory(args: { cwd?: string; topic?: string }): Prom
   const memory = activeMemoryFor(cwd, args.topic);
   // A projection, not the record: ids, evidence arrays, and session paths are triage
   // concerns and would spend the agent's context on nothing it can act on. Deliberately
-  // no `score` and no `alwaysOn` either — a relevance number invites the agent to
+  // no `score` and no `alwaysOn` either - a relevance number invites the agent to
   // second-guess the filter, and "this is a standing constraint" is already carried by
   // the ordering, which puts always-on memory first.
   const formatted = memory.map((s) => ({ text: s.text, kind: s.kind, scope: s.scope.type }));
   const payload: z.infer<typeof GetMemoryOutput> = { results: formatted, count: formatted.length };
 
   // Approved rows the scan gate refused to serve (src/memory/retrieve.ts). Ids and a
-  // count, never the text — the text is the payload the withholding exists to stop.
+  // count, never the text - the text is the payload the withholding exists to stop.
   // Reported rather than silent because an approved row is a human decision, and the
   // only person who can resolve the conflict is the one this note asks the agent to tell.
   const withheld = withheldMemoryFor(cwd);
@@ -167,14 +167,14 @@ export async function runGetMemory(args: { cwd?: string; topic?: string }): Prom
       ids: withheld.map((r) => r.id),
       note:
         'These approved memories were withheld: their text matches secret or prompt-injection ' +
-        'patterns. Tell the user — each can be dismissed with `pacifico memory reject <id>` or ' +
+        'patterns. Tell the user - each can be dismissed with `pacifico memory reject <id>` or ' +
         'restored as a clean rephrasing with `pacifico memory approve <id> --as "<text>"`.',
     };
   }
 
   // The always-on budget's serve-side backstop. `approve --always-on` refuses new
   // grants past the cap (src/memory/triage.ts), but a store written before the cap
-  // existed — or hand-edited — can arrive over it. Everything is still SERVED:
+  // existed - or hand-edited - can arrive over it. Everything is still SERVED:
   // truncating a standing constraint is exactly the silent suppression alwaysOn
   // exists to prevent. Over-budget is stated instead, so the set gets trimmed by a
   // decision rather than by a filter.
@@ -196,7 +196,7 @@ export async function runGetMemory(args: { cwd?: string; topic?: string }): Prom
     const empty = args.topic?.trim()
       ? 'No memory matched this topic for this repo. Call again without `topic` to see everything stored.'
       : 'No memories for this repo.';
-    const tail = payload.withheld ? ` ${payload.withheld.count} approved but withheld — see \`withheld\`.` : '';
+    const tail = payload.withheld ? ` ${payload.withheld.count} approved but withheld - see \`withheld\`.` : '';
     return sentinel(empty + tail, payload);
   }
   return toolResult(payload);
@@ -205,7 +205,7 @@ export async function runGetMemory(args: { cwd?: string; topic?: string }): Prom
 /**
  * Hard ceiling on review_agent_memories' served entries. Every agent store together
  * can hold hundreds of statements (the author's machine: ~40 pi-hermes rows, ~50
- * CLAUDE.md statements, ~30 Codex rules), and this tool's consumer is a model's context — the
+ * CLAUDE.md statements, ~30 Codex rules), and this tool's consumer is a model's context - the
  * same budget argument as MAX_SEARCH_RESULTS. `total` rides along so a capped answer
  * says what it left out rather than reading as the whole set.
  */
@@ -244,7 +244,7 @@ export async function runReviewAgentMemories(args: {
   // Redundancy against the local store: approved rows are what get_memory serves
   // and candidates are what triage is still deciding, so an agent entry matching
   // either is a fact sessions already holds. Rejected and merged rows are not
-  // redundancy — a dismissal is a verdict, not a copy. Skipped entirely when the
+  // redundancy - a dismissal is a verdict, not a copy. Skipped entirely when the
   // store is empty, which is every fresh machine.
   const stored = listMemories().filter((r) => r.state === 'approved' || r.state === 'candidate');
   const storedIds = new Set(stored.map((r) => r.id));
@@ -279,7 +279,7 @@ export async function runReviewAgentMemories(args: {
       count: flagged.length,
       note:
         'These agent-store entries were withheld: their text matches secret or prompt-injection patterns ' +
-        '(src/memory/scan.ts). They are not in the sessions store — tell the user, and review the source ' +
+        '(src/memory/scan.ts). They are not in the sessions store - tell the user, and review the source ' +
         'store directly before importing anything from it.',
     };
   }
@@ -296,12 +296,12 @@ export async function runReviewAgentMemories(args: {
 // Exported, testable seam: the get_memory_recurrence tool delegates here so the
 // absent-store sentinel and the shared report pipeline can be unit-tested without MCP.
 export async function runGetMemoryRecurrence(args: { repo?: string; all?: boolean }): Promise<ToolResult> {
-  // The clock read lives at the I/O layer — everything under src/memory/ takes the
+  // The clock read lives at the I/O layer - everything under src/memory/ takes the
   // date as an argument so tests stay hermetic (same rule as cli.ts's todayIso).
   const today = new Date().toISOString().slice(0, 10);
   const run = await runRecurrence({ repo: args.repo, all: args.all, today });
   if (!run) {
-    // Absent store = empty report, never an error — and never a bare isError, which
+    // Absent store = empty report, never an error - and never a bare isError, which
     // would bypass output validation. The existence check (inside runRecurrence) is
     // by path precisely so this call cannot CREATE the db as a side effect.
     const empty: z.infer<typeof GetMemoryRecurrenceOutput> = {
@@ -313,7 +313,7 @@ export async function runGetMemoryRecurrence(args: { repo?: string; all?: boolea
       // Absent store = no previous snapshot to read; the trend simply has no rows.
       trend: [],
     };
-    return sentinel('No memory store — run `pacifico memory mine` first.', empty);
+    return sentinel('No memory store - run `pacifico memory mine` first.', empty);
   }
   // Spread into a fresh literal: TS gives named interfaces no implicit index
   // signature, and the SDK's structuredContent contract is an index-signature record.
@@ -402,7 +402,7 @@ export async function runGetSessionMessages(args: {
       // (pure-tool-use turns have no index of their own).
       if (includeTools) message.tools = m.tools.map((t) => (t.summary ? `${t.name}(${t.summary})` : t.name));
       // Pi branch labels and fork markers are FIELDS, orthogonal to include_tools and
-      // present in both modes. A marker is never a synthetic message row — that would
+      // present in both modes. A marker is never a synthetic message row - that would
       // change `total` and drift every messageHits offset this tool's contract pins.
       // Conditional assignment keeps unbranched sessions key-free (zero token cost).
       if (m.branch) message.branch = m.branch;
@@ -414,12 +414,12 @@ export async function runGetSessionMessages(args: {
   return toolResult(result);
 }
 
-/** The human-readable rendering inside a fork marker — chat display reads `marker`,
+/** The human-readable rendering inside a fork marker - chat display reads `marker`,
  *  programmatic consumers read the structured fields beside it. */
 function renderForkMarker(fork: PiForkMarker): string {
   const count = `${fork.abandonedCount} message${fork.abandonedCount === 1 ? '' : 's'}`;
   const text = fork.firstUserText ? `: "${fork.firstUserText}"` : '';
-  return `⑂ forked from msg #${fork.fromIndex} — abandoned branch, ${count}${text}`;
+  return `⑂ forked from msg #${fork.fromIndex} - abandoned branch, ${count}${text}`;
 }
 
 // Exported, testable seam like runGetSessionMessages: the read_session digest mode
@@ -644,11 +644,11 @@ function modeResult(mode: string, result: ToolResult): ToolResult {
   return toolResult({ result: { mode, data: result.structuredContent } });
 }
 
-// ——— resources ———
+// --- resources ---
 
 /**
  * Hard cap on `resources/list`. The index holds thousands of sessions across every repo on
- * the machine; enumerating all of them costs ~157,000 tokens — worse than the payload
+ * the machine; enumerating all of them costs ~157,000 tokens - worse than the payload
  * defect this project exists to fix. Discovery is therefore repo-scoped and capped, while
  * the `sessions://{sessionId}` template keeps every indexed session addressable at zero
  * enumeration cost.
@@ -661,7 +661,7 @@ const MAX_RESOURCE_NAME = 60;
 
 /** One format for both surfaces: the template advertises it and every read returns it.
  *  Markdown rather than JSON because a resource is text a client injects into a model's
- *  context, not an API payload — `read_session` already serves the structured form. */
+ *  context, not an API payload - `read_session` already serves the structured form. */
 const SESSION_MIME = 'text/markdown';
 
 /** A `resources/list` entry. No `mimeType`: the SDK spreads the template's metadata onto
@@ -674,13 +674,13 @@ export interface SessionResourceEntry {
 
 /**
  * Exported, testable seam: `resources/list` takes no parameters, so its repo scope can only
- * come from the server process cwd — and `plugin/.mcp.json` registers the server with no
+ * come from the server process cwd - and `plugin/.mcp.json` registers the server with no
  * `cwd`, which makes that whatever directory the client happened to spawn in. Injecting
  * `cwd` here makes that assumption explicit and lets a test pin it.
  *
  * `totalInRepo` is the untruncated count. It cannot ride the protocol: the SDK rebuilds the
  * list result as `{ resources }` and drops every other top-level field, so the count is
- * returned here for callers and folded into the first entry's description for clients — a
+ * returned here for callers and folded into the first entry's description for clients - a
  * truncated list must never be presented as complete.
  */
 export async function listRepoSessions(args: { cwd?: string }): Promise<{
@@ -711,7 +711,7 @@ export async function listRepoSessions(args: { cwd?: string }): Promise<{
 /**
  * The one resource: any indexed session, addressed by id.
  *
- * Extracted alongside registerTools for the same reason — `resources/list`, `read`, and the
+ * Extracted alongside registerTools for the same reason - `resources/list`, `read`, and the
  * template advertisement have no `run*` seam that exercises the protocol, so the only test
  * that covers them drives a client over an in-memory transport.
  */
@@ -719,7 +719,7 @@ function registerResources(server: McpServer): void {
   server.registerResource(
     'session',
     new ResourceTemplate('sessions://{sessionId}', {
-      // The only hook that can populate resources/list — registerResource has no list
+      // The only hook that can populate resources/list - registerResource has no list
       // callback of its own. Bounded and repo-scoped via listRepoSessions, so enumeration
       // costs ~1,500 tokens instead of the ~157,000 the whole index would.
       list: async () => ({ resources: (await listRepoSessions({})).resources }),
@@ -727,7 +727,7 @@ function registerResources(server: McpServer): void {
     {
       // No `title`. The SDK spreads this metadata onto every resources/list entry
       // (mcp.js:359-363), and a template title is by definition the same string for all of
-      // them — 50 rows displaying one identical title, for ~1,400 characters of the
+      // them - 50 rows displaying one identical title, for ~1,400 characters of the
       // enumeration budget. With it absent, clients fall back to each entry's own `name`,
       // which is that session's intent. `description` and `mimeType` are safe to spread:
       // both are true of every entry, and entries override `description` with their own.
@@ -742,7 +742,7 @@ function registerResources(server: McpServer): void {
       if (!filePath) {
         // Resources throw where tools return isError: the SDK converts this into a JSON-RPC
         // error that rejects the client's readResource call. InvalidParams (-32602) rather
-        // than the 2026-07-28 resource-not-found renumber — we serve 2025-11-25.
+        // than the 2026-07-28 resource-not-found renumber - we serve 2025-11-25.
         throw new McpError(ErrorCode.InvalidParams, `Unknown session: ${id}`);
       }
 

@@ -2,10 +2,10 @@ import { C, disableColors } from '../colors';
 import { why, type WhyEvidence, type WhySessionEvidence } from './correlate';
 
 function help(): never {
-  process.stderr.write(`${C.bold}pacifico why${C.reset} — why does this code exist?
+  process.stderr.write(`${C.bold}pacifico why${C.reset} - why does this code exist?
 
 Correlate a file, line, commit, or topic to the AI coding sessions behind it.
-Read-only on git and the session index — nothing is ever written to any repo.
+Read-only on git and the session index - nothing is ever written to any repo.
 
 ${C.bold}Usage:${C.reset}
   pacifico why <path>              Commits that last touched a file, and their sessions
@@ -33,7 +33,7 @@ function render(evidence: WhyEvidence): void {
     w.write(`${C.bold}${c.sha.slice(0, 12)}${C.reset} ${c.subject}\n`);
     w.write(`${C.dim}${c.authoredAt}${C.reset}\n`);
     if (c.merge) {
-      w.write(`${C.dim}merge — the merge that landed this; the change itself is in its parents${C.reset}\n`);
+      w.write(`${C.dim}merge - the merge that landed this; the change itself is in its parents${C.reset}\n`);
     }
     if (c.trailers.length) w.write(`${C.dim}${c.trailers.join('; ')}${C.reset}\n`);
     w.write('\n');
@@ -49,7 +49,7 @@ function render(evidence: WhyEvidence): void {
   if (evidence.unlandedAttempts.length) {
     const n = evidence.unlandedAttempts.length;
     w.write(
-      `${C.yellow}${n} session${n === 1 ? '' : 's'} touched this file with no commit in its history — possible abandoned attempt${C.reset}\n\n`,
+      `${C.yellow}${n} session${n === 1 ? '' : 's'} touched this file with no commit in its history - possible abandoned attempt${C.reset}\n\n`,
     );
     for (const s of evidence.unlandedAttempts) renderSession(s);
   }
@@ -80,7 +80,7 @@ export async function runWhy(argv: string[]): Promise<void> {
     else if (!target) target = arg;
   }
 
-  if (!target) die('a target is required — a path, path:line, commit-ish, or "free text"');
+  if (!target) die('a target is required - a path, path:line, commit-ish, or "free text"');
 
   const outcome = await why(target, process.cwd());
   if (outcome.kind === 'error') die(outcome.message);

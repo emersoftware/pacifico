@@ -17,7 +17,7 @@ beforeEach(() => {
   process.env.SESSIONS_CACHE_DIR = caseDir;
 });
 
-// Only the columns lookupIntents reads — deliberately not the full index schema,
+// Only the columns lookupIntents reads - deliberately not the full index schema,
 // so this test does not silently depend on unrelated parts of it.
 function seed(rows: { tool: string; sessionId: string; title?: string; prompt?: string; messages?: number }[]): void {
   const db = new Database(join(caseDir, 'index.db'));

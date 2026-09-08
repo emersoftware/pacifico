@@ -1,6 +1,6 @@
 // Sessions-owned report facets: dimensions the vendored tokenmaxing aggregation
 // does not model. Computed from the same UsageEvent[] the aggregation consumes,
-// so nothing here can drift from the headline totals — but kept in a separate
+// so nothing here can drift from the headline totals - but kept in a separate
 // module so aggregate.ts / types.ts stay byte-comparable with upstream.
 //
 // Each facet answers a question the base report cannot:
@@ -24,7 +24,7 @@ export interface CacheStats {
   outputTokens: number;
   cacheWriteTokens: number;
   cacheReadTokens: number;
-  /** cacheRead / (cacheRead + input + cacheWrite) — the share of prompt context
+  /** cacheRead / (cacheRead + input + cacheWrite) - the share of prompt context
    *  served from cache rather than re-sent. 0 when there is no input at all. */
   hitRate: number;
   /** What the cacheRead tokens would have cost at full input rates, minus what
@@ -60,7 +60,7 @@ export interface SubagentReport {
   /** Subagent cost as a fraction (0..1) of total cost in the period. */
   shareOfCost: number;
   byType: SubagentTypeBreakdown[]; // cost desc
-  /** Most expensive individual dispatches, cost desc. Capped — see TOP_DISPATCHES. */
+  /** Most expensive individual dispatches, cost desc. Capped - see TOP_DISPATCHES. */
   topDispatches: SubagentDispatch[];
   /** Total dispatches before the topDispatches cap, so a truncated list is visible as truncated. */
   totalDispatches: number;
@@ -79,7 +79,7 @@ export interface SessionCost {
   /** How much of this session's cost was spent by subagents it dispatched. */
   subagentCostUSD: number;
   /** Custom title or opening prompt, from the search index. Null when the index
-   *  has nothing for this session — see ./session-intent.ts. */
+   *  has nothing for this session - see ./session-intent.ts. */
   intent: string | null;
 }
 
@@ -121,13 +121,13 @@ export interface BurnStats {
 export interface ReportFacets {
   cache: CacheStats;
   subagents: SubagentReport;
-  /** Most expensive sessions, cost desc. Capped — see TOP_SESSIONS. */
+  /** Most expensive sessions, cost desc. Capped - see TOP_SESSIONS. */
   topSessions: SessionCost[];
   /** Sessions in the period before the cap, so a truncated list reads as truncated. */
   totalSessions: number;
   sessionDistribution: SessionDistribution;
   modelWeekly: ModelWeek[];
-  /** Models present in the period, cost desc — the draw order for the series. */
+  /** Models present in the period, cost desc - the draw order for the series. */
   modelOrder: string[];
 }
 
@@ -155,7 +155,7 @@ function cacheStats(events: UsageEvent[]): CacheStats {
     // family estimate counts as a hit: computeCost prices it (at the family rate),
     // so gating it out would understate savings for models like Pi's kimi-k3.
     if (e.tokens.cacheRead > 0 && (find(e.model) || findFamily(e.model))) {
-      // Price the same tokens twice — once as cache reads, once as fresh input —
+      // Price the same tokens twice - once as cache reads, once as fresh input -
       // through the real pricing path, so tiering and per-model rates apply.
       const zero = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
       const asRead = computeCost(e.model, { ...zero, cacheRead: e.tokens.cacheRead }, e.speed);

@@ -165,11 +165,11 @@ export async function runReport(opts: ReportOptions): Promise<ReportResult> {
 
   // The equally long window immediately before this one, gathered so the report
   // can say whether spend is up or down. Only the comparison total is taken from
-  // it — these events never enter the report's own figures.
+  // it - these events never enter the report's own figures.
   const priorFrom = from ? previousWindowStart(from, to ?? todayLocal) : undefined;
 
   // Resolved before gathering so a bounded period can skip transcripts that were
-  // last written before the window — the difference between reading the whole
+  // last written before the window - the difference between reading the whole
   // corpus and reading the part that can matter. `since` reaches back to the
   // comparison window, which is why the range filter below is what defines the
   // report, not the gather.
@@ -209,7 +209,7 @@ export async function runReport(opts: ReportOptions): Promise<ReportResult> {
     if (live) mergeRuntimePricing(live);
   }
 
-  // Facets price the same events a second time, so they run BEFORE the reset —
+  // Facets price the same events a second time, so they run BEFORE the reset -
   // otherwise every unpriced model would be warned about twice and its token
   // count doubled in the drained warning.
   const facets = computeFacets(inRange, tz);
@@ -233,7 +233,7 @@ export async function runReport(opts: ReportOptions): Promise<ReportResult> {
   report.burn = burn;
 
   // Drain unpriced-model warnings into the report and surface them loudly. A
-  // model with tokens but no price match is never silently zeroed — it is either
+  // model with tokens but no price match is never silently zeroed - it is either
   // estimated at a same-family rate (pricedAs) or reported as a $0 shortfall.
   report.warnings = drainPricingWarnings();
   if (report.warnings.length > 0) {
@@ -245,13 +245,13 @@ export async function runReport(opts: ReportOptions): Promise<ReportResult> {
     }
     if (zeroed.length > 0) {
       const list = zeroed.map((w) => w.model).join(', ');
-      process.stderr.write(`warning: ${zeroed.length} model(s) had no pricing — cost is understated: ${list}\n`);
+      process.stderr.write(`warning: ${zeroed.length} model(s) had no pricing - cost is understated: ${list}\n`);
     }
   }
   const json = JSON.stringify(report, null, 2);
   const result: ReportResult = { json };
 
-  // `text` goes straight to stdout and writes nothing to disk — it's the quick
+  // `text` goes straight to stdout and writes nothing to disk - it's the quick
   // "what did today cost" answer, not an artifact.
   if (opts.format === 'text') {
     await writeStdoutFully(renderText(report));

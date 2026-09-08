@@ -16,7 +16,7 @@ import { getArchiveDir, loadManifest } from '@pacifico/core/vault/archive';
 
 // The resource surface is pure protocol: `resources/list` accepts no parameters and
 // `resources/read` has no run* seam, so an in-memory Client over createServer() is the only
-// thing that exercises either one. The one seam that does exist — listRepoSessions({ cwd }) —
+// thing that exercises either one. The one seam that does exist - listRepoSessions({ cwd }) -
 // is asserted directly for the two facts the protocol cannot carry: the untruncated repo
 // count (the SDK rebuilds the list result as `{ resources }` and drops everything else) and
 // the behavior of a cwd that is not inside a git repo.
@@ -35,11 +35,11 @@ function textOf(content: { text: string } | { blob: string }): string {
   return content.text;
 }
 
-/** Container of the repo the list is scoped to. 60 indexed sessions — above the cap. */
+/** Container of the repo the list is scoped to. 60 indexed sessions - above the cap. */
 let mainRepo: string;
 /** Exactly MAX_LISTED_RESOURCES sessions: the boundary where the cap and the total meet. */
 let edgeRepo: string;
-/** Three sessions — below the cap, so no truncation note may appear. */
+/** Three sessions - below the cap, so no truncation note may appear. */
 let smallRepo: string;
 /** A `…-v2` SIBLING of mainRepo. Its sessions must never appear in mainRepo's list: the
  *  scope predicate is `cwd = root OR cwd GLOB root/*`, and a plain prefix match would
@@ -49,7 +49,7 @@ let siblingDir: string;
 let nonGitDir: string;
 /** Main worktree of a NORMAL (non-bare) repo with a linked worktree added beside it. */
 let wtMain: string;
-/** `git worktree add ../wt-repo-feature` — a SIBLING of wtMain, which is where git puts a
+/** `git worktree add ../wt-repo-feature` - a SIBLING of wtMain, which is where git puts a
  *  linked worktree of a normal repo, and the case a container prefix cannot reach. */
 let wtLinked: string;
 /** Same path prefix as wtMain, not a worktree of it. The control for the test above. */
@@ -98,7 +98,7 @@ const GIT_ENV = {
   GIT_CONFIG_NOSYSTEM: '1',
 };
 
-/** A real repo, because resolveRepo shells out to git — there is no stub seam under it. */
+/** A real repo, because resolveRepo shells out to git - there is no stub seam under it. */
 function initRepo(path: string): string {
   mkdirSync(path, { recursive: true });
   const r = Bun.spawnSync(['git', '-C', path, 'init', '-q', '-b', 'main'], { env: GIT_ENV });
@@ -176,7 +176,7 @@ beforeAll(async () => {
   seed(otherId('wtlink00', 0), wtLinked, 2, 'work on the linked worktree', 'linked');
   seed(otherId('wtdecoy0', 0), wtDecoy, 3, 'work in the v2 decoy', 'decoy');
 
-  // 59 in the repo root plus one in a subdirectory — a descendant cwd must count as the
+  // 59 in the repo root plus one in a subdirectory - a descendant cwd must count as the
   // same repo, and making it the newest puts it at the head of the list.
   for (let i = 0; i < REPO_SESSIONS - 1; i++) {
     seed(repoSessionId(i), mainRepo, i, longPrompt(i), `worked on session ${i}`);
@@ -218,7 +218,7 @@ afterAll(() => {
 const SIBLING_URIS = [0, 1, 2].map((i) => `sessions://${otherId('siblin00', i)}`);
 
 describe('resources template', () => {
-  test('resources/templates/list advertises sessions://{sessionId} — one variable, no enumeration', async () => {
+  test('resources/templates/list advertises sessions://{sessionId} - one variable, no enumeration', async () => {
     const client = await connect();
     const { resourceTemplates } = await client.listResourceTemplates();
 
@@ -232,7 +232,7 @@ describe('resources template', () => {
     // where one constant title would be both misleading and 1,400 chars of budget.
     expect(t.title).toBeUndefined();
     // The template addresses every indexed session, including the ones the repo-scoped
-    // list never mentions — that split is the whole point of advertising a template.
+    // list never mentions - that split is the whole point of advertising a template.
     expect(t.uriTemplate).not.toContain('{tool}');
     await client.close();
   });
@@ -255,7 +255,7 @@ describe('resources template', () => {
     await client.close();
   });
 
-  test('resources/read of a session outside the listed repo still resolves — the template is not repo-scoped', async () => {
+  test('resources/read of a session outside the listed repo still resolves - the template is not repo-scoped', async () => {
     const client = await connect();
     // This id lives on the sibling path that the repo-scoped list deliberately excludes.
     const res = await client.readResource({ uri: SIBLING_URIS[0]! });
@@ -266,7 +266,7 @@ describe('resources template', () => {
   test('resources/read on an unknown id rejects with InvalidParams rather than serving empty content', async () => {
     const client = await connect();
     // Resources are the opposite of tools here: tools/call returns isError, resources/read
-    // rejects. Substring, not equality — the SDK double-prefixes the error message.
+    // rejects. Substring, not equality - the SDK double-prefixes the error message.
     await expect(client.readResource({ uri: 'sessions://does-not-exist' })).rejects.toThrow(
       /Unknown session: does-not-exist/,
     );
@@ -279,12 +279,12 @@ describe('resources template', () => {
     const contents = await Bun.file(path).text();
     // Freeze the freshness window so the read below reuses the row indexed while the file
     // still existed. Without this the read's own ensureIndexFresh would rescan, drop the
-    // row, and the assertion would land on "unknown id" — a different branch entirely.
+    // row, and the assertion would land on "unknown id" - a different branch entirely.
     process.env.SESSIONS_REFRESH_INTERVAL_MS = '600000';
     try {
       await mcp.listRepoSessions({ cwd: mainRepo }); // forces the scan, stamps the window
       // The scan also archived this transcript into the vault, which is a durable read
-      // fallback — so to reach the genuinely-unreadable branch both copies must be gone.
+      // fallback - so to reach the genuinely-unreadable branch both copies must be gone.
       const vaultCopy = loadManifest(getArchiveDir())[path]?.vaultPath;
       rmSync(path);
       if (vaultCopy) rmSync(vaultCopy, { force: true });
@@ -303,7 +303,7 @@ describe('resources template', () => {
 });
 
 describe('resources bounded list', () => {
-  test('the cap is 50 — the enumeration budget is a constant, not a caller argument', () => {
+  test('the cap is 50 - the enumeration budget is a constant, not a caller argument', () => {
     expect(mcp.MAX_LISTED_RESOURCES).toBe(50);
   });
 
@@ -312,7 +312,7 @@ describe('resources bounded list', () => {
 
     expect(resources).toHaveLength(50);
     expect(totalInRepo).toBe(REPO_SESSIONS);
-    // Newest first, and the newest session's cwd is a SUBDIRECTORY of the repo — a
+    // Newest first, and the newest session's cwd is a SUBDIRECTORY of the repo - a
     // descendant scopes to the same repo.
     expect(resources[0]!.uri).toBe(`sessions://${repoSessionId(REPO_SESSIONS - 1)}`);
     // The 10 oldest fall off the end rather than the 10 newest.
@@ -322,8 +322,8 @@ describe('resources bounded list', () => {
 
   test('a truncated list says so: the untruncated count rides an entry description', async () => {
     const { resources } = await mcp.listRepoSessions({ cwd: mainRepo });
-    // The count cannot ride the protocol — the SDK drops every top-level field but
-    // `resources` — so a client that only ever sees the list still learns it is partial.
+    // The count cannot ride the protocol - the SDK drops every top-level field but
+    // `resources` - so a client that only ever sees the list still learns it is partial.
     expect(resources[0]!.description).toContain(`showing 50 of ${REPO_SESSIONS} in this repo`);
     expect(resources[0]!.description).toMatch(/^claude · 2026-04-29/); // tool and date, not the URI
   });
@@ -348,7 +348,7 @@ describe('resources bounded list', () => {
     // Measured against this fixture, not inherited from the spec. A 6,000-char list is
     // arithmetically impossible at a 50 cap: uri + name alone serialize to ~107 chars an
     // entry, and the SDK spreads the template's metadata onto every one (mcp.js:359-363).
-    // This fixture is the worst case — all 50 names at the 60-char cap — and measures 9,533
+    // This fixture is the worst case - all 50 names at the 60-char cap - and measures 9,533
     // chars (~2,400 tokens); the developer's real 134-session repo measures 8,534. Both are
     // ~16x under the ~157,000 tokens enumerating the whole index would cost, which is the
     // number the cap exists to prevent. A regression that removed the cap fails here long
@@ -362,13 +362,13 @@ describe('resources bounded list', () => {
     await client.close();
   });
 
-  test('sessions from a sibling path are excluded — scoping is boundary-aware, not a prefix match', async () => {
+  test('sessions from a sibling path are excluded - scoping is boundary-aware, not a prefix match', async () => {
     const { resources, totalInRepo } = await mcp.listRepoSessions({ cwd: mainRepo });
     const uris = new Set(resources.map((r) => r.uri));
     for (const sibling of SIBLING_URIS) {
       expect(uris.has(sibling)).toBe(false);
     }
-    // `repos/live-v2` shares every character of `repos/live` — if it leaked in, the count
+    // `repos/live-v2` shares every character of `repos/live` - if it leaked in, the count
     // would climb past the sessions actually in this repo.
     expect(totalInRepo).toBe(REPO_SESSIONS);
     expect(uris.has(`sessions://${UPPERCASE_ID}`)).toBe(false);
@@ -418,7 +418,7 @@ describe('resources across a normal repo’s worktrees', () => {
       const uris = new Set(resources.map((r) => r.uri));
       expect(uris.has(MAIN_URI)).toBe(true);
       expect(uris.has(LINKED_URI)).toBe(true);
-      // The scope is an enumeration of live worktrees, not a path prefix — so a directory
+      // The scope is an enumeration of live worktrees, not a path prefix - so a directory
       // that merely shares the prefix is still excluded.
       expect(uris.has(DECOY_URI)).toBe(false);
       expect(totalInRepo).toBe(2);

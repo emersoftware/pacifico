@@ -28,7 +28,7 @@ test('parseArgs: --file is repeatable and maps through toSearchOptions', () => {
   expect(opts.files).toEqual(['src/auth.ts', 'docs/plan.md']);
 });
 
-// ——— fork badge / lineage (pi first-class phase 2) — additive ———
+// --- fork badge / lineage (pi first-class phase 2) - additive ---
 
 const piResult: SessionResult = {
   date: '2026-08-04',
@@ -64,7 +64,7 @@ describe('formatLine fork badge', () => {
       60,
     );
     // Field 7 of the TSV is the display string (field 6 is the untruncated prompt,
-    // consumed positionally by index.ts — its rawness is load-bearing). filePath
+    // consumed positionally by index.ts - its rawness is load-bearing). filePath
     // now leads as field 1 so fzf --preview can reference {1}.
     const display = line.split('\t')[6]!;
     expect(display).toContain('⑂3');

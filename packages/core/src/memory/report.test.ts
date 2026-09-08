@@ -5,8 +5,8 @@ import { resolveReportScope } from './report';
 import { makeTmp } from './fixtures';
 
 // The phase-3 spec's scope-drift mitigation, asserted directly: the CLI and the
-// get_memory_recurrence MCP tool share resolveReportScope, so this matrix — repo /
-// all / defaulted-cwd, inside and outside a git repo — is the parity both surfaces
+// get_memory_recurrence MCP tool share resolveReportScope, so this matrix - repo /
+// all / defaulted-cwd, inside and outside a git repo - is the parity both surfaces
 // are held to. mcp-read-only.test.ts proves the tool is read-only and
 // schema-conformant; this file proves the scoping both callers inherit.
 

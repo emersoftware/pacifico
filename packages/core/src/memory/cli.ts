@@ -55,7 +55,7 @@ function die(msg: string): never {
 }
 
 function help(): never {
-  process.stderr.write(`pacifico memory — mine durable facts out of past sessions
+  process.stderr.write(`pacifico memory - mine durable facts out of past sessions
 
 Narrows past user turns to corrective-shaped candidates, collapses repeats, and
 lists them. Candidates are also written to a durable store
@@ -88,7 +88,7 @@ Options:
   --all                 Mine every repo in the index
   --since-last          Mine only sessions changed since the last mine
   --json                Emit the machine-readable batch on stdout. The default is
-                        a prose listing — the JSON is the seam the /memory skill
+                        a prose listing - the JSON is the seam the /memory skill
                         parses, not something to read at a terminal
   --out <path>          Write the export bundle to a file instead of stdout
   --as "<text>"         (approve) Store this phrasing instead of the mined
@@ -98,19 +98,19 @@ Options:
                         original is kept as evidence, not discarded
   --always-on           (approve) Return this memory for every topic, and first.
                         Budgeted: at most ${ALWAYS_ON_MAX_ENTRIES} entries, so each one stays read
-  --no-always-on        (approve) Explicitly revoke --always-on — the release valve
+  --no-always-on        (approve) Explicitly revoke --always-on - the release valve
                         when the budget refuses a new grant
   --no-snapshot         (report) Render the TREND section without appending a
-                        snapshot — for dry inspection of a per-run audit trail
+                        snapshot - for dry inspection of a per-run audit trail
   --scope group:<name>  (approve) Assign a project group, not the derived scope
-  --scope repo:<path>   (approve) Bind to one repo — the path is resolved to its
+  --scope repo:<path>   (approve) Bind to one repo - the path is resolved to its
                         repo container. Needed for an imported memory, whose
                         repo key is stripped on export (\`repo:.\` for this repo)
   -h, --help            Show this help
 
 <id> is the \`id\` field of a record from the mine's JSON batch. A rejected
 candidate never returns. A snoozed one returns once its 30 days are up AND you
-have said the same thing in a new way since — snooze records no verdict, so
+have said the same thing in a new way since - snooze records no verdict, so
 continued repetition is treated as evidence the dismissal was wrong.
 
 That count only moves through \`merge\`. Every phrasing is its own record (an id
@@ -119,13 +119,13 @@ judgment the /memory skill makes and then writes back:
 
   pacifico memory merge <canonical-id> <member-id> [<member-id>...]
 
-The canonical row absorbs the members' evidence — distinct phrasings counted,
-sessions unioned, date range widened — and the members stop being offered
+The canonical row absorbs the members' evidence - distinct phrasings counted,
+sessions unioned, date range widened - and the members stop being offered
 separately. Merging into a snoozed row whose date has passed resurfaces it.
 
 Retrieval is topic-conditional: the \`get_memory\` MCP tool takes a topic and
 returns the memories relevant to it. --always-on exempts a memory from that filter,
-for standing constraints a badly worded topic must never hide. It is set-only —
+for standing constraints a badly worded topic must never hide. It is set-only -
 approving again without the flag does not clear it.
 
 Project groups are the scope between repo and workflow: a fact true of several
@@ -139,7 +139,7 @@ mine, so a repeat run over an unchanged corpus emits an empty batch instead of
 the whole backfill. The first run records a watermark and therefore mines
 everything. \`pending\` reports the untriaged backlog without mining at all.
 
-Export carries approved memories only, and strips session paths and repo paths —
+Export carries approved memories only, and strips session paths and repo paths -
 nothing about this machine's directory layout leaves it. There is no transport:
 the bundle is a plain file, so whatever you already use (a git ref, a shared
 drive, scp) carries it. Imported memories land as candidates for you to triage,
@@ -147,19 +147,19 @@ never as approved. Records merge on a hash of their text, so two people who
 phrase one fact differently produce two records; clustering those is the /memory
 skill's job, and \`merge\` is how it records the result.
 
-\`import --from\` reads the memory stores of the OTHER agents on this machine —
+\`import --from\` reads the memory stores of the OTHER agents on this machine -
 pi-hermes-memory's structured store (or its MEMORY.md/USER.md/failures.md files),
 and Claude Code's global CLAUDE.md, repo CLAUDE.md/AGENTS.md, and per-project
-memory — and lands their durable facts as candidates with the same gates as a
+memory - and lands their durable facts as candidates with the same gates as a
 bundle import. Codex has no fact store (its rules are command permissions), so
 --from codex reports that and imports nothing. Entries already in the store are
 counted as known, not duplicated. A pi-hermes fact recorded against a bare
-project name arrives unbound — bind it at approve time with --scope repo:.
+project name arrives unbound - bind it at approve time with --scope repo:.
 `);
   process.exit(0);
 }
 
-/** Today in UTC as 'YYYY-MM-DD'. The only clock read in the memory pipeline — every
+/** Today in UTC as 'YYYY-MM-DD'. The only clock read in the memory pipeline - every
  *  function under src/memory/ takes the date as an argument so tests stay hermetic. */
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
@@ -170,7 +170,7 @@ export interface MineArgs {
   all: boolean;
   /**
    * `--since-last` was passed. Absent rather than false so an untouched parse stays
-   * bare, matching `TriageArgs.alwaysOn` — the shape `parseMineArgs([])` returns is
+   * bare, matching `TriageArgs.alwaysOn` - the shape `parseMineArgs([])` returns is
    * asserted verbatim in cli.test.ts.
    */
   sinceLast?: boolean;
@@ -227,7 +227,7 @@ export interface TriageArgs {
   /** `--always-on` was passed. Absent rather than false so an untouched parse stays bare. */
   alwaysOn?: boolean;
   /** `--scope group:<name>` or `--scope repo:<path>` was passed. A repo key is still the
-   *  RAW path here — `canonicalizeScope` resolves it, because this parser does no I/O. */
+   *  RAW path here - `canonicalizeScope` resolves it, because this parser does no I/O. */
   scope?: MemoryScope;
   /** `--as "<text>"`: store this phrasing instead of the mined utterance. */
   as?: string;
@@ -243,13 +243,13 @@ export interface TriageArgs {
  * repos share a convention", so a human assigns it.
  *
  * `repo:` exists for the one case where the derivation is not merely overridable but
- * ABSENT. Export blanks a repo key on purpose — it is an absolute path on someone else's
- * machine (src/memory/portable.ts) — so an imported repo memory arrives with `key: ''`,
+ * ABSENT. Export blanks a repo key on purpose - it is an absolute path on someone else's
+ * machine (src/memory/portable.ts) - so an imported repo memory arrives with `key: ''`,
  * retrieval skips a keyless repo memory rather than matching every cwd
  * (src/memory/retrieve.ts), and nothing re-derives it: a mine builds records from
  * transcripts, and no transcript on THIS machine ever said the imported sentence. Without
  * this form such a memory can be approved and can never be returned, which is worse than
- * rejecting it — the user believes it is active.
+ * rejecting it - the user believes it is active.
  *
  * `workflow:` is still not assignable. It is the only direction that WIDENS, and a typo
  * that turns one repo's convention into a rule for every repo is silent by construction.
@@ -265,7 +265,7 @@ function parseScopeValue(value: string): MemoryScope {
   }
   if (value.startsWith('repo:')) {
     const path = value.slice('repo:'.length);
-    if (!path) throw new UsageError(`--scope repo: requires a path — use \`repo:.\` for the current repo`);
+    if (!path) throw new UsageError(`--scope repo: requires a path - use \`repo:.\` for the current repo`);
     return { type: 'repo', key: path };
   }
   throw new UsageError(`--scope only accepts ${forms}, got: ${value}`);
@@ -280,7 +280,7 @@ function parseScopeValue(value: string): MemoryScope {
  * worktree of the same repo both canonicalize to the one container; an unresolved relative
  * path or a worktree path would not match and the memory would be silently inert.
  *
- * Both failures throw instead of falling back to the raw path — which is what
+ * Both failures throw instead of falling back to the raw path - which is what
  * `createContainerResolver` does, correctly, for a mine that must not die on one bad cwd.
  * Here a fallback would store a key that can never match and report success, recreating
  * the exact dead end this form exists to remove.
@@ -291,7 +291,7 @@ function parseScopeValue(value: string): MemoryScope {
 export function canonicalizeScope(scope: MemoryScope, resolveRepoInfo: typeof resolveRepo = resolveRepo): MemoryScope {
   if (scope.type !== 'repo') return scope;
   const abs = resolvePath(scope.key);
-  if (!existsSync(abs)) throw new UsageError(`--scope repo:${scope.key} — no such directory: ${abs}`);
+  if (!existsSync(abs)) throw new UsageError(`--scope repo:${scope.key} - no such directory: ${abs}`);
   const info = resolveRepoInfo(abs);
   if (!info) throw new UsageError(`--scope repo:${scope.key} is not inside a git repository: ${abs}`);
   return { type: 'repo', key: containerFor(info) };
@@ -305,7 +305,7 @@ export function canonicalizeScope(scope: MemoryScope, resolveRepoInfo: typeof re
  * an unknown option, because `mine` takes no positionals. These take exactly one.
  *
  * Both flags parse for all three subcommands and are rejected for two of them in
- * `runTriage`. That split is deliberate — the parser stays a pure function of argv with
+ * `runTriage`. That split is deliberate - the parser stays a pure function of argv with
  * no knowledge of which subcommand invoked it, and `pacifico memory reject <id>
  * --always-on` gets "reject does not take --always-on" instead of the far more
  * confusing "unknown option: --always-on".
@@ -323,7 +323,7 @@ export function parseTriageArgs(argv: string[]): TriageArgs {
       // means the user's intent is unknown, and recording a guess would be worse
       // than asking.
       if (args.alwaysOn !== undefined && args.alwaysOn !== value) {
-        throw new UsageError('--always-on and --no-always-on are contradictory — pass one');
+        throw new UsageError('--always-on and --no-always-on are contradictory - pass one');
       }
       args.alwaysOn = value;
     } else if (a === '--scope') {
@@ -362,7 +362,7 @@ export interface ExportArgs {
  *
  * A third parser rather than a reuse: `parseTriageArgs` rejects anything starting
  * with `-`, so it cannot take `--out`, and its duplicate-positional message names a
- * "memory id" — misleading for a file path.
+ * "memory id" - misleading for a file path.
  */
 export function parseExportArgs(argv: string[]): ExportArgs {
   const args: ExportArgs = { help: false };
@@ -483,7 +483,7 @@ export function parsePendingArgs(argv: string[]): PendingArgs {
 export const PENDING_PREVIEW = 5;
 
 export interface PendingBatch {
-  /** Every untriaged candidate in the store — NOT the preview length. */
+  /** Every untriaged candidate in the store - NOT the preview length. */
   count: number;
   preview: { id: string; text: string }[];
 }
@@ -492,13 +492,13 @@ export interface PendingBatch {
  * The untriaged backlog, as a count plus a short preview.
  *
  * Pure over `listMemories`'s output so the projection is testable without a CLI.
- * `listMemories` already returns `ORDER BY id`, which is arbitrary but stable — the
+ * `listMemories` already returns `ORDER BY id`, which is arbitrary but stable - the
  * preview is "five of them", not "the five most recent", and nothing here should be
  * read as recency.
  *
  * KNOWN LIMIT: this is a RUNNING TOTAL of everything untriaged, not "new since last
  * week". Until the backlog is worked down, the weekly digest carries the same non-zero
- * block with the same texts every week — which is the skim-past failure the "silent
+ * block with the same texts every week - which is the skim-past failure the "silent
  * when empty" rule exists to prevent, arrived at from the other side. Reporting a delta
  * needs a per-row "first surfaced" timestamp the store does not keep; that is the
  * spec's open item, deliberately not resolved by guessing here.
@@ -536,7 +536,7 @@ async function runPending(argv: string[]): Promise<void> {
  *
  * `mine()` reads transcripts, so every record it builds says `candidate`. The pipe
  * is the documented Phase 2 interface, so it has to carry the same truth the table
- * does — otherwise a memory the user rejected last week is re-presented as a fresh
+ * does - otherwise a memory the user rejected last week is re-presented as a fresh
  * candidate on every run. Spreading over the existing keys preserves field order,
  * which the determinism criterion compares byte for byte.
  */
@@ -554,7 +554,7 @@ export function applyPersistedStates(records: MemoryRecord[], persisted: Map<str
  * A changed set that covers the WHOLE scoped inventory is the first `--since-last` run
  * (and any run after `DELETE FROM mine_watermark`): every session is new, so pass 1's
  * `m.file_path IN (...)` matches every row it could match and the restriction is pure
- * cost — `ceil(N/FILE_CHUNK)` extra `MATCH` scans on top of the full-corpus pass 2, or
+ * cost - `ceil(N/FILE_CHUNK)` extra `MATCH` scans on top of the full-corpus pass 2, or
  * ~13 of them at the author's 4,498-session inventory. Handing `mine` `undefined`
  * instead makes "the first run is equivalent to a full backfill" true of cost as well
  * as of output; the emitted records are identical either way, because a filter that
@@ -562,7 +562,7 @@ export function applyPersistedStates(records: MemoryRecord[], persisted: Map<str
  *
  * `changed.length > 0` is load-bearing and not a paranoia guard: an EMPTY inventory
  * also produces an empty changed set, and `undefined` there would mean "mine the whole
- * corpus" rather than "nothing changed" — the one place the two spellings disagree.
+ * corpus" rather than "nothing changed" - the one place the two spellings disagree.
  *
  * Exported as a pure function so the decision is asserted directly (stream.test.ts);
  * observing it through wall-clock time would be a flaky test of the same claim.
@@ -576,7 +576,7 @@ export function mineRestriction(changed: string[], inventorySize: number): strin
  *
  * The ordering is the whole failure mode: a watermark advanced before the upsert marks
  * material as mined that was never stored, and if the write then throws, those facts
- * are skipped by every future `--since-last` run — silently and unrecoverably. Because
+ * are skipped by every future `--since-last` run - silently and unrecoverably. Because
  * `advanceWatermark` only runs after `upsert` returns, a throw leaves the watermark
  * exactly where it was and the next run re-mines the same window.
  *
@@ -605,7 +605,7 @@ async function runMine(argv: string[]): Promise<void> {
     if (args.repo || resolveRepo(target)) {
       repo = containerOf(target);
     } else {
-      process.stderr.write('  not inside a git repository — mining every repo in the index\n');
+      process.stderr.write('  not inside a git repository - mining every repo in the index\n');
     }
   }
 
@@ -617,12 +617,12 @@ async function runMine(argv: string[]): Promise<void> {
     const inventory = await indexedSessions({ repo });
     const watermark = readWatermark();
     if (watermark.size === 0) {
-      process.stderr.write('  no watermark yet — this run mines everything and records one\n');
+      process.stderr.write('  no watermark yet - this run mines everything and records one\n');
     }
     const changed = changedSessions(inventory, watermark);
     const byPath = new Map(inventory.map((entry) => [entry.filePath, entry]));
     // `undefined` when everything changed: same batch, one scan instead of thirteen.
-    // See mineRestriction. The watermark still advances over the full changed set —
+    // See mineRestriction. The watermark still advances over the full changed set -
     // the short-circuit is about how the mine is asked, not about what it saw.
     files = mineRestriction(changed, inventory.length);
     advance = changed.map((path) => byPath.get(path)!);
@@ -640,7 +640,7 @@ async function runMine(argv: string[]): Promise<void> {
   // deliberately preserves a stored state (store.ts ON CONFLICT), so the batch on
   // stdout would otherwise disagree with the database it just wrote.
   const records = applyPersistedStates(mined, getPersistedStates(mined.map((r) => r.id)));
-  // Everything the user already dismissed leaves the pipe — re-presenting it on
+  // Everything the user already dismissed leaves the pipe - re-presenting it on
   // every run is the triage-fatigue failure mode. The rows stay in the table with
   // their evidence refreshed; only the batch narrows.
   const batch = dropSuppressed(records, suppressed, todayIso());
@@ -666,7 +666,7 @@ export interface ReportArgs {
   /**
    * `--since YYYY-MM-DD` was passed: drop cluster evidence that ends before the
    * date. Absent rather than false so an untouched parse stays bare, matching
-   * `MineArgs.sinceLast` — the shape `parseReportArgs([])` returns is asserted
+   * `MineArgs.sinceLast` - the shape `parseReportArgs([])` returns is asserted
    * verbatim in cli.test.ts.
    */
   since?: string;
@@ -736,7 +736,7 @@ function shortDate(iso: string): string {
 }
 
 /**
- * The recurrence classification as prose. Three sections, never three flags — the
+ * The recurrence classification as prose. Three sections, never three flags - the
  * comparison between "working" and "failing" memories is the point of the report.
  *
  * Counts are session counts, not phrasing counts: `evidence.sessions` is the only
@@ -745,7 +745,7 @@ function shortDate(iso: string): string {
  */
 export function renderReport(report: RecurrenceEnvelope, opts: { today: string; lastMined: string | null }): string {
   const stale = opts.lastMined ? `last mine ${opts.lastMined.slice(0, 10)}` : 'never mined';
-  const lines: string[] = [`memory report — ${opts.today} (${stale})`, ''];
+  const lines: string[] = [`memory report - ${opts.today} (${stale})`, ''];
 
   lines.push('VIOLATIONS (approved memories still being re-corrected)');
   if (report.violations.length === 0) {
@@ -771,7 +771,7 @@ export function renderReport(report: RecurrenceEnvelope, opts: { today: string; 
     );
   }
 
-  lines.push('', 'FUZZY (possible paraphrases — confirm in /memory triage)');
+  lines.push('', 'FUZZY (possible paraphrases - confirm in /memory triage)');
   if (report.fuzzy.length === 0) {
     lines.push('  none');
   }
@@ -780,7 +780,7 @@ export function renderReport(report: RecurrenceEnvelope, opts: { today: string; 
   }
 
   // TREND reads the deltas report.ts computed against the previous snapshot. The
-  // header line stays first — cli.test.ts's locked regex anchors it — and the
+  // header line stays first - cli.test.ts's locked regex anchors it - and the
   // scope/first-run note (trendNote) leads the section rather than a per-row
   // caveat that would repeat on every violation.
   lines.push('', 'TREND (violation counts vs the previous snapshot)');
@@ -804,7 +804,7 @@ export function renderReport(report: RecurrenceEnvelope, opts: { today: string; 
 /**
  * Report what recurs: freshly mined clusters classified against the store.
  *
- * Read-only like `pending`, but unlike `pending` it DOES mine — recurrence is
+ * Read-only like `pending`, but unlike `pending` it DOES mine - recurrence is
  * defined against fresh evidence, so the run pays for an index read. The one
  * write it performs is the trend-snapshot append, skipped under `--no-snapshot`;
  * no upsert, no watermark advance.
@@ -814,7 +814,7 @@ async function runReport(argv: string[]): Promise<void> {
   if (args.help) help();
 
   // The pipeline is shared with the get_memory_recurrence MCP tool
-  // (src/memory/report.ts) — including the absent-store guard, which is checked by
+  // (src/memory/report.ts) - including the absent-store guard, which is checked by
   // path because getMemoryDb() would CREATE the file as a side effect of asking.
   const run = await runRecurrence({
     repo: args.repo,
@@ -823,21 +823,21 @@ async function runReport(argv: string[]): Promise<void> {
     today: todayIso(),
     onScope: (scope) => {
       if (scope.outsideRepo) {
-        process.stderr.write('  not inside a git repository — reporting across every repo in the index\n');
+        process.stderr.write('  not inside a git repository - reporting across every repo in the index\n');
       }
       process.stderr.write(`  mining ${scope.repo ?? 'all repos'}...\n`);
     },
   });
   // An absent store is an empty report, not an error (spec error table).
   if (!run) {
-    process.stderr.write('  no memory store — run pacifico memory mine first\n');
+    process.stderr.write('  no memory store - run pacifico memory mine first\n');
     return;
   }
 
   const { report } = run;
   const counts = `${report.violations.length} violations, ${report.repeats.length} repeats, ${report.fuzzy.length} fuzzy`;
 
-  // The envelope is already the byte-compatible shape — report.ts owns it so the
+  // The envelope is already the byte-compatible shape - report.ts owns it so the
   // MCP tool emits the identical JSON, trend fields included.
   if (args.json) {
     await writeStdoutFully(JSON.stringify(report, null, 2) + '\n');
@@ -848,7 +848,7 @@ async function runReport(argv: string[]): Promise<void> {
 
   // Append AFTER the render, in both branches: the previous-snapshot read inside
   // runRecurrence must see the file BEFORE this run's line, or the deltas would
-  // diff the report against itself. `--no-snapshot` skips the write entirely —
+  // diff the report against itself. `--no-snapshot` skips the write entirely -
   // including creating the file on a first run.
   if (!args.noSnapshot) {
     appendSnapshot(
@@ -863,7 +863,7 @@ async function runReport(argv: string[]): Promise<void> {
  *
  * Separate from `parseTriageArgs` and exported on its own so both stay pure functions a
  * test can drive: the parser has no business knowing which subcommand invoked it, and
- * the alternative — teaching it the action — would make `--always-on` come back as
+ * the alternative - teaching it the action - would make `--always-on` come back as
  * "unknown option" on a reject, which is true of neither the flag nor the mistake.
  *
  * Both flags attach a standing property to a memory the user is KEEPING. On a rejection
@@ -912,7 +912,7 @@ function runMerge(argv: string[]): void {
     `  merged ${result.absorbed.length} into ${result.canonicalId} (${result.distinctPhrasings} distinct phrasings)\n`,
   );
   if (result.resurfaced) {
-    process.stderr.write(`  ${result.canonicalId} resurfaced — snoozed, but you kept saying it in new words\n`);
+    process.stderr.write(`  ${result.canonicalId} resurfaced - snoozed, but you kept saying it in new words\n`);
   }
 }
 
@@ -941,7 +941,7 @@ function runTriage(action: TriageAction, argv: string[]): void {
         scope ? `scope ${scope.type}:${scope.key}` : '',
       ].filter(Boolean);
       process.stderr.write(`  approved ${kept}${notes.length > 0 ? ` (${notes.join(', ')})` : ''}\n`);
-      if (kept !== id) process.stderr.write(`  rephrased — ${id} folded in as evidence\n`);
+      if (kept !== id) process.stderr.write(`  rephrased - ${id} folded in as evidence\n`);
       return;
     }
     case 'reject':
@@ -966,7 +966,7 @@ function errorMessage(cause: unknown): string {
  * stdout by default so it pipes straight into whatever transport the team already
  * has; `--out` mirrors the convention in src/context.ts:100-103,183-188, down to the
  * `wrote <path>` line on stderr. The payload goes through `writeStdoutFully`
- * (src/stdout.ts:14-18) for the same reason the mine batch does — a bare write plus
+ * (src/stdout.ts:14-18) for the same reason the mine batch does - a bare write plus
  * the CLI's process.exit truncates a piped bundle at 64KB.
  *
  * The approved-only filter is a `listMemories` WHERE rather than a post-filter, so an
@@ -999,7 +999,7 @@ async function runExport(argv: string[]): Promise<void> {
  *
  * Every failure on the way in is converted to a `UsageError`. `readFileSync` throws
  * ENOENT, `JSON.parse` throws a SyntaxError, and `fromPortable` throws a
- * `PortableFormatError` — none of them are programmer errors, and `runMemory` rethrows
+ * `PortableFormatError` - none of them are programmer errors, and `runMemory` rethrows
  * everything but `UsageError` into an index.ts that has no handler, so an unwrapped
  * throw reaches the user as a raw stack trace.
  *
@@ -1013,7 +1013,7 @@ async function runExport(argv: string[]): Promise<void> {
  * The same gates as a bundle import, in the same order, for the same reasons: the
  * text band the mine enforces (an oversized entry is a context tax on every future
  * task), the content scan (a store written by another tool is exactly the injection
- * vector the gate exists for), and candidate state on arrival — importing is not
+ * vector the gate exists for), and candidate state on arrival - importing is not
  * consent, and nothing here can reach an agent until the user approves it.
  *
  * Dedupe falls out of the content-addressed id: an entry whose text already lives in
@@ -1031,7 +1031,7 @@ function runImportFrom(source: ImportSource, repo: string | undefined): void {
     // durable: false (src/memory/sources.ts). Saying so beats importing zero rows
     // with no explanation.
     process.stderr.write(
-      '  codex stores hold command permissions and thread goals, not durable facts — nothing to import\n' +
+      '  codex stores hold command permissions and thread goals, not durable facts - nothing to import\n' +
         '  (review them with the review_agent_memories MCP tool)\n',
     );
     return;
@@ -1045,7 +1045,7 @@ function runImportFrom(source: ImportSource, repo: string | undefined): void {
   // Reshape to the band the mine enforces (src/memory/mine.ts): entries within it
   // import whole; longer ones split at their own enumeration and sentence
   // boundaries. Splitting rather than skipping because pi-hermes consolidates many
-  // facts into one ~1,100-char row — a hard skip would import nothing from the
+  // facts into one ~1,100-char row - a hard skip would import nothing from the
   // store this flag exists for. See splitEntryToBand (src/memory/sources.ts).
   interface BandedEntry {
     kind: MemoryKind;
@@ -1101,7 +1101,7 @@ function runImportFrom(source: ImportSource, repo: string | undefined): void {
   if (flagged.length > 0) {
     const plural = flagged.length === 1 ? 'entry' : 'entries';
     process.stderr.write(
-      `  ⚠ ${flagged.length} ${plural} withheld — text matches secret or prompt-injection patterns, not stored:\n`,
+      `  ⚠ ${flagged.length} ${plural} withheld - text matches secret or prompt-injection patterns, not stored:\n`,
     );
     for (const w of flagged) process.stderr.write(`    ${w.text.slice(0, 60)}… (${describeFindings(w.findings)})\n`);
   }
@@ -1114,7 +1114,7 @@ function runImportFrom(source: ImportSource, repo: string | undefined): void {
 
   // A pi-hermes row names its project as a bare repo NAME, which no path resolution
   // can bind honestly (src/memory/sources.ts hermesScope). The record is inert until
-  // the user binds it — same shape and same fix as an imported bundle's repo memory.
+  // the user binds it - same shape and same fix as an imported bundle's repo memory.
   const unbound = records.filter((r) => r.scope.type === 'repo' && !r.scope.key).length;
   if (unbound > 0) {
     const plural = unbound === 1 ? 'memory' : 'memories';
@@ -1158,13 +1158,13 @@ function runImport(argv: string[]): void {
 
   // merge() even for a single bundle: it collapses duplicate ids inside the file,
   // which the store's PRIMARY KEY would otherwise coalesce silently with the last
-  // write winning — and it is the same call a multi-bundle transport would make.
+  // write winning - and it is the same call a multi-bundle transport would make.
   const merged = merge(incoming);
 
   // The scan gate on the one path where another MACHINE's text enters the store
   // (src/memory/scan.ts). A bundle is exactly the prompt-injection vector the serve
   // path worries about, minus even the "the user once said this" provenance a mined
-  // candidate has — so a flagged record is refused entry outright, and LOUDLY: a
+  // candidate has - so a flagged record is refused entry outright, and LOUDLY: a
   // silent drop would leave the sender believing the fact arrived.
   const admitted: MergedMemory[] = [];
   const flagged: { memory: MergedMemory; findings: ScanFinding[] }[] = [];
@@ -1184,12 +1184,12 @@ function runImport(argv: string[]): void {
   if (flagged.length > 0) {
     const plural = flagged.length === 1 ? 'memory' : 'memories';
     process.stderr.write(
-      `  ⚠ ${flagged.length} ${plural} withheld — text matches secret or prompt-injection patterns, not stored:\n`,
+      `  ⚠ ${flagged.length} ${plural} withheld - text matches secret or prompt-injection patterns, not stored:\n`,
     );
     for (const w of flagged) process.stderr.write(`    ${w.memory.id} (${describeFindings(w.findings)})\n`);
   }
 
-  // A repo-scoped memory arrives with no key — export blanks the local path on purpose —
+  // A repo-scoped memory arrives with no key - export blanks the local path on purpose -
   // and retrieval skips a keyless repo memory rather than matching every cwd. Approving one
   // therefore succeeds and changes nothing, which is the worst available outcome: the user
   // believes the memory is active. Say so at the moment the rows land, and name the fix.
@@ -1210,14 +1210,14 @@ export const HUMAN_LIST_LIMIT = 20;
 /**
  * A candidate batch as prose.
  *
- * The JSON batch is the AGENT seam — the /memory skill parses it, clusters it, and drives
+ * The JSON batch is the AGENT seam - the /memory skill parses it, clusters it, and drives
  * the triage commands. It was also the default, so a human running `pacifico memory mine`
  * got several hundred lines of records at a terminal, which is the interface complaint
  * that produced this function: unreadable, and it invites hand-running triage commands
  * that the skill exists to run for you.
  *
  * So this is deliberately NOT a rendering of every field. It is a summary plus enough of
- * each record to recognise it, and it ends by naming `/memory` — because reading the list
+ * each record to recognise it, and it ends by naming `/memory` - because reading the list
  * is a human job and deciding on 470 of them one `approve` at a time is not.
  */
 export function renderBatch(records: MemoryRecord[], opts: { suppressed?: number } = {}): string {
@@ -1253,7 +1253,7 @@ export function renderBatch(records: MemoryRecord[], opts: { suppressed?: number
   if (records.length > HUMAN_LIST_LIMIT) {
     head.push(`  … ${records.length - HUMAN_LIST_LIMIT} more`, '');
   }
-  head.push('Run /memory to triage these — it clusters paraphrases and writes the decisions back.');
+  head.push('Run /memory to triage these - it clusters paraphrases and writes the decisions back.');
   head.push('Add --json for the machine-readable batch.');
   return head.join('\n');
 }
@@ -1286,7 +1286,7 @@ export function parseDocumentedArgs(argv: string[]): DocumentedArgs {
 /**
  * What is already binding on an agent here, so triage can avoid repeating it.
  *
- * Read-only over Claude Code's own surfaces. `sessions` never writes to them — the
+ * Read-only over Claude Code's own surfaces. `sessions` never writes to them - the
  * org rule is that a single-tool memory file is not this tool's to edit, and the
  * whole point of reading them is that they are already injected without us.
  */
@@ -1323,7 +1323,7 @@ async function runDocumented(argv: string[]): Promise<void> {
   lines.push(
     '',
     `Read from: ${sources.join(', ')}`,
-    'These are read, never written — a memory that repeats one is noise.',
+    'These are read, never written - a memory that repeats one is noise.',
   );
   await writeStdoutFully(lines.join('\n') + '\n');
 }
@@ -1364,7 +1364,7 @@ export async function runMemory(argv: string[]): Promise<void> {
     }
   } catch (error) {
     if (error instanceof UsageError) die(error.message);
-    // The triage seam's own refusals — a flagged text or a blown always-on budget.
+    // The triage seam's own refusals - a flagged text or a blown always-on budget.
     // User-caused, so they get the clean line a UsageError gets, not a stack trace;
     // listed explicitly so a programmer error still crashes loudly.
     if (error instanceof ContentScanError || error instanceof AlwaysOnBudgetError) die(error.message);

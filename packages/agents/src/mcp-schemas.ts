@@ -24,7 +24,7 @@ const period = z.object({ start: z.string(), end: z.string() });
 /** Hour-of-day / tool-name → count maps, which serialize as plain objects. */
 const counts = z.record(z.string(), z.number());
 
-// ——— search_sessions ———
+// --- search_sessions ---
 
 const messageHit = z.object({
   index: z.number(),
@@ -62,7 +62,7 @@ export const SearchSessionsOutput = z.object({
   count: z.number(),
 });
 
-// ——— get_memory ———
+// --- get_memory ---
 
 export const GetMemoryOutput = z.object({
   results: z.array(
@@ -73,7 +73,7 @@ export const GetMemoryOutput = z.object({
     }),
   ),
   count: z.number(),
-  // Approved rows the content gate refused to serve — ids and a what-to-do note,
+  // Approved rows the content gate refused to serve - ids and a what-to-do note,
   // never the flagged text (src/mcp.ts runGetMemory). Absent when nothing was withheld,
   // so the common case spends no tokens on it.
   withheld: z
@@ -88,9 +88,9 @@ export const GetMemoryOutput = z.object({
   alwaysOnBudget: z.string().optional(),
 });
 
-// ——— get_memory_recurrence ———
+// --- get_memory_recurrence ---
 
-/** Mirrors MemoryRecord (src/memory/types.ts) — served verbatim, as the CLI emits it. */
+/** Mirrors MemoryRecord (src/memory/types.ts) - served verbatim, as the CLI emits it. */
 const memoryRecord = z.object({
   v: z.number(),
   id: z.string(),
@@ -110,7 +110,7 @@ const memoryRecord = z.object({
   mergedInto: z.string().nullable(),
 });
 
-/** Mirrors RecurrenceMatch (src/memory/recurrence.ts) — the shape violations and fuzzy share. */
+/** Mirrors RecurrenceMatch (src/memory/recurrence.ts) - the shape violations and fuzzy share. */
 const recurrenceMatch = z.object({
   memory: memoryRecord,
   cluster: memoryRecord,
@@ -119,7 +119,7 @@ const recurrenceMatch = z.object({
   latestDate: z.string(),
 });
 
-/** Mirrors RecurrenceTrend (src/memory/recurrence.ts) — one violation row's delta. */
+/** Mirrors RecurrenceTrend (src/memory/recurrence.ts) - one violation row's delta. */
 const recurrenceTrend = z.object({
   id: z.string(),
   violations: z.number(),
@@ -149,14 +149,14 @@ export const GetMemoryRecurrenceOutput = z.object({
     }),
   ),
   fuzzy: z.array(recurrenceMatch),
-  // Trend deltas against the previous snapshot — the report READS the file here
+  // Trend deltas against the previous snapshot - the report READS the file here
   // (the append stays CLI-side, so the tool keeps its read-only annotation).
   trend: z.array(recurrenceTrend),
   trendSince: z.string().optional(),
   trendNote: z.string().optional(),
 });
 
-// ——— get_memory_sources ———
+// --- get_memory_sources ---
 
 const sourceAgent = z.enum(['pi', 'claude', 'codex']);
 
@@ -176,7 +176,7 @@ export const GetMemorySourcesOutput = z.object({
   count: z.number(),
 });
 
-// ——— review_agent_memories ———
+// --- review_agent_memories ---
 
 /** Mirrors the review projection of AgentMemoryEntry (src/mcp.ts runReviewAgentMemories). */
 export const ReviewAgentMemoriesOutput = z.object({
@@ -189,7 +189,7 @@ export const ReviewAgentMemoriesOutput = z.object({
       kind: z.enum(['instruction', 'information']),
       durable: z.boolean(),
       text: z.string(),
-      // Present only when a stored pacifico memory substantially overlaps — redundancy
+      // Present only when a stored pacifico memory substantially overlaps - redundancy
       // the user may want to resolve. Absent rather than empty so the common case
       // spends no tokens on it.
       similarTo: z.array(z.string()).optional(),
@@ -200,7 +200,7 @@ export const ReviewAgentMemoriesOutput = z.object({
   // it left out. Same contract as the primer's memoryTotal.
   total: z.number(),
   truncated: z.boolean(),
-  // Entries the content gate refused to serve — ids and a note, never the text.
+  // Entries the content gate refused to serve - ids and a note, never the text.
   withheld: z
     .object({
       count: z.number(),
@@ -209,7 +209,7 @@ export const ReviewAgentMemoriesOutput = z.object({
     .optional(),
 });
 
-// ——— grep_sessions ———
+// --- grep_sessions ---
 
 export const GrepSessionsOutput = z.object({
   totalHits: z.number(),
@@ -231,7 +231,7 @@ export const GrepSessionsOutput = z.object({
   ),
 });
 
-// ——— get_session_messages ———
+// --- get_session_messages ---
 
 export const GetSessionMessagesOutput = z.object({
   total: z.number(),
@@ -243,7 +243,7 @@ export const GetSessionMessagesOutput = z.object({
       text: z.string(),
       // Only present when include_tools was set.
       tools: z.array(z.string()).optional(),
-      // Pi branch labels — only ever 'abandoned' in practice, and absent on
+      // Pi branch labels - only ever 'abandoned' in practice, and absent on
       // unbranched sessions (conditional-spread purity in runGetSessionMessages).
       branch: z.enum(['active', 'abandoned']).optional(),
       // A FIELD on the branch's first message, never a synthetic row: inserting a
@@ -263,7 +263,7 @@ export const GetSessionMessagesOutput = z.object({
   ),
 });
 
-// ——— get_session_digest ———
+// --- get_session_digest ---
 
 export const GetSessionDigestOutput = z.object({
   messageCount: z.number(),
@@ -273,7 +273,7 @@ export const GetSessionDigestOutput = z.object({
   exchanges: z.array(z.object({ index: z.number(), user: z.string(), assistant: z.string() })),
 });
 
-// ——— get_activity_digest ———
+// --- get_activity_digest ---
 
 const digestSessionDetail = z.object({
   sessionId: z.string(),
@@ -304,7 +304,7 @@ export const GetActivityDigestOutput = z.object({
   days: z.array(z.object({ date: z.string(), sessions: z.number(), projects: z.array(digestProjectGroup) })),
 });
 
-// ——— get_session_metrics ———
+// --- get_session_metrics ---
 
 export const GetSessionMetricsOutput = z.object({
   period,
@@ -316,7 +316,7 @@ export const GetSessionMetricsOutput = z.object({
   activeHours: counts,
 });
 
-// ——— get_context_primer ———
+// --- get_context_primer ---
 
 export const GetContextPrimerOutput = z.object({
   // '' on the not-a-git-repo sentinel, where there is no repo to label.
@@ -346,12 +346,12 @@ export const GetContextPrimerOutput = z.object({
   isEmpty: z.boolean(),
 });
 
-// ——— why_did_this_change ———
+// --- why_did_this_change ---
 
 /** Mirrors WhyEvidence (src/why/correlate.ts). A JSON object, never a top-level array;
  *  `commit` is null on the query form and `sessions` admits the empty case. */
 /** One correlated session. Shared by `sessions` (produced the commit) and
- *  `unlandedAttempts` (touched the file, no commit in its history — file form only). */
+ *  `unlandedAttempts` (touched the file, no commit in its history - file form only). */
 const WhySession = z.object({
   filePath: z.string(),
   tool: z.string(),

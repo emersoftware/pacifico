@@ -5,8 +5,8 @@ import { getArchiveDir, getManifestPath, loadManifest, type Manifest, type Vault
 
 // Generic session IO: every consumer (indexer, scanner, digest, MCP) reads a
 // session as JSONL-style `lines[]` through here. JSONL tools read their file
-// directly; OpenCode sessions — synthetic dbPath/sessionId paths with no real
-// file — are reconstructed from the SQLite DB by src/opencode.ts.
+// directly; OpenCode sessions - synthetic dbPath/sessionId paths with no real
+// file - are reconstructed from the SQLite DB by src/opencode.ts.
 //
 // When a session's live source is gone (vendor GC, a deleted DB row), the read
 // falls back to the transcript vault (src/vault/archive.ts): every parseable
@@ -45,12 +45,12 @@ export function readSessionLines(filePath: string, tool?: Tool): string[] {
   if (tool === 'opencode' || (tool === undefined && isOpencodePath(filePath))) {
     const lines = readOpencodeSession(filePath);
     if (lines.length > 0) return lines;
-    // DB row (or the whole DB) is gone — fall back to the vault export below.
+    // DB row (or the whole DB) is gone - fall back to the vault export below.
   } else {
     try {
       return readFileSync(filePath, 'utf-8').trimEnd().split('\n');
     } catch {
-      // Live source missing — fall back to the vault copy below.
+      // Live source missing - fall back to the vault copy below.
     }
   }
   const entry = vaultEntry(filePath);
@@ -72,7 +72,7 @@ export function statSession(filePath: string, tool: Tool): { mtimeMs: number; si
       const s = statSync(filePath);
       return { mtimeMs: s.mtimeMs, size: s.size };
     } catch {
-      // Live source missing — fall back to the vault copy below.
+      // Live source missing - fall back to the vault copy below.
     }
   }
   const entry = vaultEntry(filePath);

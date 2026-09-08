@@ -91,12 +91,12 @@ function buildFixtureDb(path: string): void {
     j({ type: 'tool', tool: 'bash', state: { status: 'error', input: { command: 'x' }, error: 'boom quux' } }),
   );
 
-  // Subagent (child) session — folds into the parent for recall, never listed on its own.
+  // Subagent (child) session - folds into the parent for recall, never listed on its own.
   session.run('ses_child', 'p1', 'ses_parent', '/repo/app', 'Explore (@explore subagent)', 1200, 1400);
   message.run('msg_u2', 'ses_child', 1200, j({ role: 'user', time: { created: 1200 } }));
   part.run('prt_u2', 'msg_u2', 'ses_child', 1200, j({ type: 'text', text: 'subagent secret term wibbleflorp' }));
 
-  // Placeholder-title session — the auto "New session -" title must be dropped.
+  // Placeholder-title session - the auto "New session -" title must be dropped.
   session.run('ses_plain', 'p2', null, '/repo/other', 'New session - 2026-07-11T00:00:00.000Z', 3000, 3500);
   message.run('msg_u3', 'ses_plain', 3000, j({ role: 'user', time: { created: 3000 } }));
   part.run('prt_u3', 'msg_u3', 'ses_plain', 3000, j({ type: 'text', text: 'hello there' }));
@@ -169,7 +169,7 @@ describe('opencode module', () => {
 
   test('a deleted DB stops being discoverable despite a cached handle', () => {
     // Long-running-process scenario (e.g. the MCP server): the handle is opened,
-    // then the DB file is deleted out from under it — sessions must vanish, not
+    // then the DB file is deleted out from under it - sessions must vanish, not
     // keep being served off the open inode.
     const copyPath = join(tmp, 'opencode-copy.db');
     copyFileSync(dbPath, copyPath);

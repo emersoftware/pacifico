@@ -4,7 +4,7 @@ import type { MergedMemory } from './portable';
 
 // The one distinction the metric exists to make: authors, not occurrences.
 //
-// Counting occurrences is what made raw volume unusable — one eval fixture prompt
+// Counting occurrences is what made raw volume unusable - one eval fixture prompt
 // appeared 14 times byte-identical in the real corpus. These tests are built so the
 // "obvious" implementation (`return memory.totalPhrasings`) fails loudly: every fixture
 // below sets `totalPhrasings` to a value that disagrees with the author count.
@@ -40,7 +40,7 @@ describe('quorum', () => {
   });
 
   test('is 1 under the current single-author scope, which is expected', () => {
-    // Constant until a second author's export is imported — the reason the metric
+    // Constant until a second author's export is imported - the reason the metric
     // ships with the merge rather than earlier.
     expect(quorum(merged(['dev@example.com'], 1))).toBe(1);
   });

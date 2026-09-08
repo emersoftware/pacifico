@@ -1,6 +1,6 @@
 // The transcript vault: an append-only, user-owned archive of session transcripts.
 //
-// The index (src/cache.ts) is a disposable cache over mortal files — it prunes rows
+// The index (src/cache.ts) is a disposable cache over mortal files - it prunes rows
 // when source files vanish and drops every table on a SCHEMA_VERSION bump. Vendors
 // garbage-collect transcripts on a rolling schedule (Claude Code after 30 days), so
 // history is lost regardless of the index. The vault is the durable copy: during
@@ -52,7 +52,7 @@ export function getManifestPath(dir: string): string {
 /**
  * Encode an original file_path into a single vault filename: `/` → `-`, same lossy
  * trick Claude Code uses for its project dirs. The manifest stores the absolute
- * vaultPath, so nothing ever decodes this back — it only needs to be stable.
+ * vaultPath, so nothing ever decodes this back - it only needs to be stable.
  */
 function encodePath(originalPath: string): string {
   const base = originalPath.replace(/\//g, '-').replace(/^-+/, '');
@@ -60,7 +60,7 @@ function encodePath(originalPath: string): string {
 }
 
 /**
- * Read the manifest. Missing file → {}, malformed/wrong-shape → {} — never throws,
+ * Read the manifest. Missing file → {}, malformed/wrong-shape → {} - never throws,
  * same read discipline as src/memory/groups.ts. A corrupt manifest is treated as
  * empty and rebuilt by the refresh backfill pass; the vault copies themselves are
  * untouched by the manifest being unreadable.
@@ -115,7 +115,7 @@ export function saveManifest(dir: string, manifest: Manifest): void {
  * it wrote (or overwrote) a copy, false when it skipped an unchanged one.
  *
  * Latest-snapshot: overwrite when the stored mtime/size differ from the source's,
- * skip when identical — mirroring the index's own change detection. The manifest is
+ * skip when identical - mirroring the index's own change detection. The manifest is
  * saved once per refresh by the caller (never per file), so this only mutates the
  * in-memory map.
  *
