@@ -89,12 +89,12 @@ export const content = {
     filesBody:
       'Pacifico stores and searches sessions on your computer. Your agent may send retrieved text to its model provider. Usage reports may look up prices online.',
     files: [
-      ['Archive & memory', '~/.local/share/pacifico'],
+      ['Archive', '~/.local/share/pacifico'],
       ['Rebuildable search index', '~/.cache/pacifico'],
       ['macOS background service', '~/Library/LaunchAgents/com.emersoftware.pacifico.plist'],
     ],
     retention:
-      'Uninstalling removes the integrations and stops the daemon. It keeps archived sessions and memory. Pacifico cannot recover a session deleted before its first import.',
+      'Uninstalling removes the integrations and stops the daemon. It keeps archived sessions. Pacifico cannot recover a session deleted before its first import.',
     uninstall: 'Uninstall Pacifico',
     commandsTitle: 'Commands',
     commands: [
@@ -208,12 +208,12 @@ export const content = {
     filesBody:
       'Pacifico guarda y busca sesiones en tu equipo. Tu agente puede enviar el texto recuperado a su proveedor de modelos. Los reportes pueden consultar precios por internet.',
     files: [
-      ['Archivo y memoria', '~/.local/share/pacifico'],
+      ['Archivo', '~/.local/share/pacifico'],
       ['Índice de búsqueda reconstruible', '~/.cache/pacifico'],
       ['Servicio de macOS', '~/Library/LaunchAgents/com.emersoftware.pacifico.plist'],
     ],
     retention:
-      'Desinstalar elimina las integraciones y detiene el daemon. Conserva las sesiones archivadas y la memoria. Pacifico no puede recuperar una sesión eliminada antes de su primera importación.',
+      'Desinstalar elimina las integraciones y detiene el daemon. Conserva las sesiones archivadas. Pacifico no puede recuperar una sesión eliminada antes de su primera importación.',
     uninstall: 'Desinstalar Pacifico',
     commandsTitle: 'Comandos',
     commands: [

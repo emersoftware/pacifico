@@ -1,16 +1,13 @@
 import { test, expect, beforeAll, beforeEach, afterAll } from 'bun:test';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, realpathSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, realpathSync, existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import { Database } from 'bun:sqlite';
 import { version as pkgVersion } from '../../../package.json';
 import { asJsonObject, asJsonString, type JsonObject, type JsonValue } from '@pacifico/core/extract-util';
-import { buildRecord } from '@pacifico/core/memory/record';
-import { closeMemoryDb, setState, upsertCandidates } from '@pacifico/core/memory/store';
-import { SearchOutput, ReadSessionOutput, ContextOutput, ReviewMemoryOutput, GetMemoryOutput } from './mcp-schemas';
+import { SearchOutput, ReadSessionOutput, ContextOutput } from './mcp-schemas';
 
 const j = (o: JsonValue): string => JSON.stringify(o);
 
@@ -61,8 +58,7 @@ function setEnv(): void {
   process.env.SESSIONS_PI_DIR = join(tmp, 'pi');
   process.env.SESSIONS_CODEX_DIR = join(tmp, 'codex');
   process.env.SESSIONS_OPENCODE_DB = join(tmp, 'opencode.db'); // absent → no OpenCode sessions leak in
-  // Required now that tools/call reaches get_memory from this file: without it the memory
-  // store would open (and create) the developer's real ~/.local/share/pacifico/memory.db.
+  // Keep durable session archives inside the fixture.
   process.env.SESSIONS_DATA_DIR = join(tmp, 'data');
   // Shadow any leaked SESSIONS_ARCHIVE_DIR (it overrides the DATA_DIR default).
   process.env.SESSIONS_ARCHIVE_DIR = join(tmp, 'data', 'archive');
@@ -71,8 +67,6 @@ function setEnv(): void {
 beforeAll(async () => {
   tmp = mkdtempSync(join(tmpdir(), 'sessions-mcp-'));
   setEnv();
-  // Seed this fixture's store rather than a cached connection from another file.
-  closeMemoryDb();
   const dir = join(tmp, 'claude', 'proj');
   mkdirSync(dir, { recursive: true });
   mkdirSync(join(tmp, 'pi'), { recursive: true });
@@ -235,56 +229,16 @@ beforeAll(async () => {
   cache.closeDb(); // drop any connection a prior test file opened on the shared module
   await cache.refreshIndex();
 
-  // One approved memory scoped to /repoA. Without it get_memory's conformance call hits
-  // the empty-store sentinel, and its populated projection (text / kind / scope) is never
-  // validated through tools/call - the empty payload has the same shape either way.
-  // Repo-scoped, not workflow-scoped, so it cannot leak into the empty-index block below
-  // (which uses its own SESSIONS_DATA_DIR and a cwd of /nowhere).
-  const memory = buildRecord({
-    text: 'Always run bun run typecheck before opening a pull request',
-    scope: { type: 'repo', key: '/repoA' },
-    author: 'dev@example.com',
-    sessions: ['/s/a.jsonl'],
-    dates: ['2026-06-01'],
-    distinctPhrasings: 1,
-  });
-  upsertCandidates([memory]);
-  setState(memory.id, 'approved');
-  closeMemoryDb();
-
-  // Agent memory stores, so get_memory_sources and review_agent_memories have a
-  // populated fixture. The paths derive from the same env the session fixtures use:
-  // piHermesDir <- SESSIONS_PI_DIR, codexHome <- dirname(SESSIONS_CODEX_DIR),
-  // claudeHome <- dirname(SESSIONS_CLAUDE_DIR) (src/memory/sources.ts).
-  const hermesDir = join(tmp, 'pi-hermes-memory');
-  mkdirSync(hermesDir, { recursive: true });
-  const hermesDb = new Database(join(hermesDir, 'sessions.db'));
-  hermesDb.run(`CREATE TABLE memories (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    project TEXT, target TEXT NOT NULL, category TEXT, content TEXT NOT NULL,
-    failure_reason TEXT, tool_state TEXT, corrected_to TEXT,
-    created DATE NOT NULL, last_referenced DATE NOT NULL
-  )`);
-  hermesDb.run(
-    "INSERT INTO memories (project, target, category, content, created, last_referenced) VALUES (NULL, 'memory', 'correction', 'Never rewrite the lockfile by hand, run the installer', '2026-08-01', '2026-08-05')",
-  );
-  hermesDb.close();
-  mkdirSync(join(tmp, 'rules'), { recursive: true });
-  writeFileSync(join(tmp, 'rules', 'default.rules'), 'prefix_rule(pattern=["gh", "run", "view"], decision="allow")\n');
-  writeFileSync(join(tmp, 'CLAUDE.md'), '- A global instruction of sufficient length to be a fact.\n');
-
   mcp = await import('./mcp');
 });
 
 beforeEach(() => {
   setEnv();
   cache.closeDb(); // next query reopens against our getDbPath()
-  closeMemoryDb();
 });
 
 afterAll(() => {
   cache.closeDb(); // release the handle before deleting the temp dir
-  closeMemoryDb();
   rmSync(tmp, { recursive: true, force: true });
 });
 
@@ -623,9 +577,9 @@ async function connect(): Promise<Client> {
   return client;
 }
 
-const TOOL_NAMES = ['get_context', 'get_memory', 'read_session', 'review_memory', 'search_sessions'];
+const TOOL_NAMES = ['get_context', 'read_session', 'search_sessions'];
 
-test('MCP advertises exactly five tools, their object schemas, and no prompts', async () => {
+test('MCP advertises exactly three tools, their object schemas, and no prompts', async () => {
   const client = await connect();
   try {
     expect(client.getServerVersion()?.version).toBe(pkgVersion);
@@ -657,10 +611,6 @@ test('every merged mode returns a populated schema-conforming response over MCP'
       args: { mode: 'activity', startDate: '2026-06-01', endDate: '2026-06-30', detail: 'highlights' },
       schema: ContextOutput,
     },
-    { name: 'get_memory', args: { cwd: '/repoA' }, schema: GetMemoryOutput },
-    { name: 'review_memory', args: { cwd: '/repoA' }, schema: ReviewMemoryOutput },
-    { name: 'review_memory', args: { mode: 'entries', cwd: '/repoA' }, schema: ReviewMemoryOutput },
-    { name: 'review_memory', args: { mode: 'recurrence', all: true }, schema: ReviewMemoryOutput },
   ];
   try {
     const outputs = [];
@@ -669,7 +619,7 @@ test('every merged mode returns a populated schema-conforming response over MCP'
       expect(result.isError, `${entry.name}: ${firstText(result)}`).not.toBe(true);
       outputs.push(entry.schema.parse(result.structuredContent));
     }
-    expect(outputs.map((output) => ('result' in output ? output.result.mode : 'memory'))).toEqual([
+    expect(outputs.map((output) => output.result.mode)).toEqual([
       'ranked',
       'literal',
       'regex',
@@ -677,10 +627,6 @@ test('every merged mode returns a populated schema-conforming response over MCP'
       'messages',
       'project',
       'activity',
-      'memory',
-      'sources',
-      'entries',
-      'recurrence',
     ]);
     expect(SearchOutput.parse(outputs[0]).result.data).toHaveProperty('count');
     const literal = SearchOutput.parse(outputs[1]).result;
@@ -697,13 +643,6 @@ test('every merged mode returns a populated schema-conforming response over MCP'
     }
     const activity = ContextOutput.parse(outputs[6]).result;
     if (activity.mode === 'activity') expect(activity.data.totalSessions).toBeGreaterThan(0);
-    expect(GetMemoryOutput.parse(outputs[7]).results.length).toBeGreaterThan(0);
-    const sources = ReviewMemoryOutput.parse(outputs[8]).result;
-    if (sources.mode === 'sources') expect(sources.data.sources.length).toBeGreaterThan(0);
-    const entries = ReviewMemoryOutput.parse(outputs[9]).result;
-    if (entries.mode === 'entries') expect(entries.data.memories.length).toBeGreaterThan(0);
-    const memoryAfter = await client.callTool({ name: 'get_memory', arguments: { cwd: '/repoA' } });
-    expect(GetMemoryOutput.parse(memoryAfter.structuredContent)).toEqual(GetMemoryOutput.parse(outputs[7]));
   } finally {
     await client.close();
   }
@@ -758,8 +697,6 @@ test('merged modes reject invalid ranges, unsafe page sizes, and irrelevant para
     { name: 'get_context', arguments: { mode: 'activity', startDate: '2026-07-01', endDate: '2026-06-01' } },
     { name: 'get_context', arguments: { limit: 26 } },
     { name: 'get_context', arguments: { startDate: '2026-06-01' } },
-    { name: 'review_memory', arguments: { mode: 'sources', topic: 'build' } },
-    { name: 'review_memory', arguments: { mode: 'entries', all: true } },
   ];
   try {
     for (const entry of cases) expect((await client.callTool(entry)).isError, JSON.stringify(entry)).toBe(true);
@@ -770,6 +707,8 @@ test('merged modes reject invalid ranges, unsafe page sizes, and irrelevant para
       'get_activity_digest',
       'get_context_primer',
       'get_session_metrics',
+      'get_memory',
+      'review_memory',
       'get_memory_sources',
       'review_agent_memories',
       'get_memory_recurrence',
@@ -809,11 +748,6 @@ test('empty results are valid results and ranked date filters apply before limit
     const response = await client.callTool({ name: 'get_context', arguments: { cwd: join(tmp, 'no-repository') } });
     const project = ContextOutput.parse(response.structuredContent).result;
     if (project.mode === 'project') expect(project.data.isEmpty).toBe(true);
-    const memory = await client.callTool({
-      name: 'get_memory',
-      arguments: { cwd: '/nowhere', topic: 'unmatchedquartz' },
-    });
-    expect(GetMemoryOutput.parse(memory.structuredContent).results).toEqual([]);
     const missing = await client.callTool({
       name: 'read_session',
       arguments: { filePath: join(tmp, 'missing.jsonl') },
@@ -821,5 +755,25 @@ test('empty results are valid results and ranked date filters apply before limit
     expect(missing.isError).toBe(true);
   } finally {
     await client.close();
+  }
+});
+
+test('project context neither creates nor reads a legacy memory database', async () => {
+  const client = await connect();
+  const legacy = join(tmp, 'data', 'memory.db');
+  try {
+    const first = await client.callTool({ name: 'get_context', arguments: { cwd: REPO_ROOT } });
+    expect(first.isError).not.toBe(true);
+    expect(first.structuredContent).not.toHaveProperty('result.data.memory');
+    expect(existsSync(legacy)).toBe(false);
+    mkdirSync(join(tmp, 'data'), { recursive: true });
+    writeFileSync(legacy, 'legacy database sentinel');
+    const second = await client.callTool({ name: 'get_context', arguments: { cwd: REPO_ROOT } });
+    expect(second.isError).not.toBe(true);
+    expect(second.structuredContent).toEqual(first.structuredContent);
+    expect(readFileSync(legacy, 'utf8')).toBe('legacy database sentinel');
+  } finally {
+    await client.close();
+    rmSync(legacy, { force: true });
   }
 });

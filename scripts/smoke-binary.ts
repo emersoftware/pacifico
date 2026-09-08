@@ -45,7 +45,6 @@ try {
   const config = join(dir, '.codex/config.toml');
   const foreign = '[mcp_servers.sessions]\ncommand = "/original/sessions"\n\n[mcp_servers.other]\ncommand = "/other"\n';
   writeFileSync(config, foreign);
-  writeFileSync(join(data, 'memory.db'), 'durable-sentinel');
   const native = join(claude, 'project', 'pacifico-smoke.jsonl');
   const rows = [
     {
@@ -100,8 +99,6 @@ try {
   assert.ok(installed.includes(foreign.trim()));
   run('install');
   assert.equal(readFileSync(config, 'utf8'), installed);
-  // SQLite must be allowed to create the real memory DB during MCP operations.
-  rmSync(join(data, 'memory.db'));
   // A daemon and MCP caller can refresh simultaneously. Both processes must
   // complete and preserve the same archive; the lock is shared across them.
   const workers = [0, 1].map(() => Bun.spawn([binary, 'daemon', 'run'], { env, stdout: 'pipe', stderr: 'pipe' }));
@@ -120,13 +117,7 @@ try {
   assert.equal(client.getServerVersion()?.name, 'pacifico');
   assert.equal(client.getServerCapabilities()?.prompts, undefined);
   const tools = await client.listTools();
-  assert.deepEqual(tools.tools.map((tool) => tool.name).sort(), [
-    'get_context',
-    'get_memory',
-    'read_session',
-    'review_memory',
-    'search_sessions',
-  ]);
+  assert.deepEqual(tools.tools.map((tool) => tool.name).sort(), ['get_context', 'read_session', 'search_sessions']);
   const found = await client.callTool({ name: 'search_sessions', arguments: { query: 'pacificoquartz' } });
   assert.ok(!found.isError);
   const searchResult = SearchOutput.parse(found.structuredContent).result;
@@ -142,19 +133,25 @@ try {
   assert.ok(!read.isError);
   assert.ok(JSON.stringify(ReadSessionOutput.parse(read.structuredContent)).includes('durable transcript vault'));
   assert.ok(!existsSync(native));
+  const context = await client.callTool({ name: 'get_context', arguments: { cwd: dir } });
+  assert.ok(!context.isError);
+  assert.ok(!JSON.stringify(context.structuredContent).includes('memory'));
+  assert.ok(!existsSync(join(data, 'memory.db')));
+  const retired = Bun.spawnSync([binary, 'memory', 'mine'], { env, stdin: 'ignore' });
+  assert.equal(retired.exitCode, 1);
+  assert.ok(new TextDecoder().decode(retired.stderr).includes('removed'));
   await client.close();
   connected = false;
   assert.ok(existsSync(join(data, 'archive')));
   const archiveBefore = run('vault');
-  writeFileSync(join(data, 'memory.db'), 'durable-sentinel');
   run('uninstall');
-  assert.equal(readFileSync(join(data, 'memory.db'), 'utf8'), 'durable-sentinel');
+  assert.ok(!existsSync(join(data, 'memory.db')));
   assert.ok(existsSync(join(data, 'archive')));
   assert.ok(readFileSync(config, 'utf8').includes(foreign.trim()));
   assert.ok(!readFileSync(config, 'utf8').includes('[mcp_servers.pacifico]'));
   assert.equal(run('vault'), archiveBefore);
   process.stdout.write(
-    'Binary smoke: retired hook/skill upgrade cleanup, no prompts, install twice, foreign config preservation, MCP handshake, 5 tools, search/read, native source unchanged, durable uninstall passed.\n',
+    'Binary smoke: retired hook/skill upgrade cleanup, no prompts, install twice, foreign config preservation, MCP handshake, 3 tools, search/read, native source unchanged, durable uninstall passed.\n',
   );
 } finally {
   if (connected) await client.close();

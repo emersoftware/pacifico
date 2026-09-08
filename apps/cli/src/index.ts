@@ -114,9 +114,8 @@ if (command === 'digest') {
 }
 
 if (command === 'memory') {
-  const { runMemory } = await import('@pacifico/core/memory/cli');
-  await runMemory(Bun.argv.slice(3));
-  process.exit(0);
+  process.stderr.write('The memory command has been removed. Use search or context to read session history.\n');
+  process.exit(1);
 }
 
 if (command === 'vault') {

@@ -7,10 +7,10 @@ import {
   assistantTurn,
   closeDatabases,
   makeTmp,
-  setMemoryEnv,
+  setSessionEnv,
   userTurn,
   writeSession,
-} from '@pacifico/core/memory/fixtures';
+} from '@pacifico/core/session-fixtures';
 import { resolveRepo } from '@pacifico/core/repo';
 import { getArchiveDir, loadManifest } from '@pacifico/core/vault/archive';
 
@@ -155,7 +155,7 @@ async function withCwd<T>(dir: string, fn: () => Promise<T>): Promise<T> {
 
 beforeAll(async () => {
   tmp = makeTmp('mcp-resources');
-  setMemoryEnv(tmp);
+  setSessionEnv(tmp);
 
   const repos = join(tmp, 'repos');
   mkdirSync(repos, { recursive: true });
@@ -206,7 +206,7 @@ beforeEach(() => {
   // cache.ts is one shared module instance across a `bun test` run: re-assert this fixture's
   // env and drop the handle another file opened, so the first query below reindexes against
   // this temp tree regardless of file order.
-  setMemoryEnv(tmp);
+  setSessionEnv(tmp);
   closeDatabases();
 });
 

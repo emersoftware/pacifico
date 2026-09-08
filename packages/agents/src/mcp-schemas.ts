@@ -1,4 +1,4 @@
-// The 12 tools' `outputSchema` shapes, kept out of src/mcp.ts so that file stays readable.
+// The MCP tools' `outputSchema` shapes, kept out of src/mcp.ts so that file stays readable.
 //
 // Two invariants govern everything here:
 //
@@ -60,153 +60,6 @@ const formattedResult = z.object({
 export const SearchSessionsOutput = z.object({
   results: z.array(formattedResult),
   count: z.number(),
-});
-
-// --- get_memory ---
-
-export const GetMemoryOutput = z.object({
-  results: z.array(
-    z.object({
-      text: z.string(),
-      kind: z.enum(['instruction', 'information']),
-      scope: z.enum(['repo', 'group', 'workflow']),
-    }),
-  ),
-  count: z.number(),
-  // Approved rows the content gate refused to serve - ids and a what-to-do note,
-  // never the flagged text (src/mcp.ts runGetMemory). Absent when nothing was withheld,
-  // so the common case spends no tokens on it.
-  withheld: z
-    .object({
-      count: z.number(),
-      ids: z.array(z.string()),
-      note: z.string(),
-    })
-    .optional(),
-  // Present only when the served always-on set exceeds its budget; the set is still
-  // served in full. See src/memory/triage.ts for the cap and src/mcp.ts for the wording.
-  alwaysOnBudget: z.string().optional(),
-});
-
-// --- get_memory_recurrence ---
-
-/** Mirrors MemoryRecord (src/memory/types.ts) - served verbatim, as the CLI emits it. */
-const memoryRecord = z.object({
-  v: z.number(),
-  id: z.string(),
-  text: z.string(),
-  kind: z.enum(['instruction', 'information']),
-  scope: z.object({ type: z.enum(['repo', 'group', 'workflow']), key: z.string() }),
-  author: z.string(),
-  evidence: z.object({
-    distinctPhrasings: z.number(),
-    sessions: z.array(z.string()),
-    firstSeen: z.string(),
-    lastSeen: z.string(),
-  }),
-  state: z.enum(['candidate', 'approved', 'rejected', 'snoozed', 'merged']),
-  snoozedUntil: z.string().nullable(),
-  alwaysOn: z.boolean(),
-  mergedInto: z.string().nullable(),
-});
-
-/** Mirrors RecurrenceMatch (src/memory/recurrence.ts) - the shape violations and fuzzy share. */
-const recurrenceMatch = z.object({
-  memory: memoryRecord,
-  cluster: memoryRecord,
-  similarity: z.number(),
-  sessions: z.array(z.string()),
-  latestDate: z.string(),
-});
-
-/** Mirrors RecurrenceTrend (src/memory/recurrence.ts) - one violation row's delta. */
-const recurrenceTrend = z.object({
-  id: z.string(),
-  violations: z.number(),
-  previous: z.number().nullable(),
-  delta: z.number().nullable(),
-});
-
-/**
- * Mirrors RecurrenceEnvelope (src/memory/report.ts): the exact JSON
- * `pacifico memory report --json` emits, envelope fields included, per the phase-3
- * spec's "the same JSON the CLI emits". One shape means the /memory skill and this
- * tool never disagree about the report's contents.
- */
-export const GetMemoryRecurrenceOutput = z.object({
-  generatedAt: z.string(),
-  // null until the first watermark-advancing mine; the report still runs.
-  lastMinedAt: z.string().nullable(),
-  violations: z.array(recurrenceMatch),
-  repeats: z.array(
-    z.object({
-      cluster: memoryRecord,
-      sessions: z.array(z.string()),
-      firstDate: z.string(),
-      latestDate: z.string(),
-      // Present only when the repeat matches an untriaged candidate (recurrence.ts).
-      candidateId: z.string().optional(),
-    }),
-  ),
-  fuzzy: z.array(recurrenceMatch),
-  // Trend deltas against the previous snapshot - the report READS the file here
-  // (the append stays CLI-side, so the tool keeps its read-only annotation).
-  trend: z.array(recurrenceTrend),
-  trendSince: z.string().optional(),
-  trendNote: z.string().optional(),
-});
-
-// --- get_memory_sources ---
-
-const sourceAgent = z.enum(['pi', 'claude', 'codex']);
-
-/** Mirrors AgentStore (src/memory/sources.ts). */
-export const GetMemorySourcesOutput = z.object({
-  sources: z.array(
-    z.object({
-      id: z.string(),
-      agent: sourceAgent,
-      path: z.string(),
-      entries: z.number(),
-      durable: z.number(),
-      lastUpdated: z.string().nullable(),
-      description: z.string(),
-    }),
-  ),
-  count: z.number(),
-});
-
-// --- review_agent_memories ---
-
-/** Mirrors the review projection of AgentMemoryEntry (src/mcp.ts runReviewAgentMemories). */
-export const ReviewAgentMemoriesOutput = z.object({
-  memories: z.array(
-    z.object({
-      id: z.string(),
-      agent: sourceAgent,
-      store: z.string(),
-      scope: z.object({ type: z.enum(['repo', 'group', 'workflow']), key: z.string() }),
-      kind: z.enum(['instruction', 'information']),
-      durable: z.boolean(),
-      text: z.string(),
-      // Present only when a stored pacifico memory substantially overlaps - redundancy
-      // the user may want to resolve. Absent rather than empty so the common case
-      // spends no tokens on it.
-      similarTo: z.array(z.string()).optional(),
-    }),
-  ),
-  count: z.number(),
-  // The true number of clean entries after filtering, so a capped list can say what
-  // it left out. Same contract as the primer's memoryTotal.
-  total: z.number(),
-  truncated: z.boolean(),
-  // Entries the content gate refused to serve - ids and a note, never the text.
-  withheld: z
-    .object({
-      count: z.number(),
-      note: z.string(),
-    })
-    .optional(),
 });
 
 // --- grep_sessions ---
@@ -337,12 +190,6 @@ export const GetContextPrimerOutput = z.object({
     }),
   ),
   headlines: z.array(z.object({ date: z.string(), tool: toolName, branch: z.string(), intent: z.string() })),
-  // Approved memory for this repo, carried unconditionally: `get_memory` is
-  // topic-conditional and an agent has to choose to call it, so the primer is the only
-  // guaranteed delivery. `memoryTotal` is the true in-scope count, so a capped list can
-  // say what it left out instead of reading as the whole set.
-  memory: z.array(z.object({ text: z.string(), kind: z.string(), scope: z.string(), alwaysOn: z.boolean() })),
-  memoryTotal: z.number(),
   isEmpty: z.boolean(),
 });
 
@@ -398,12 +245,5 @@ export const ContextOutput = z.object({
   result: z.discriminatedUnion('mode', [
     z.object({ mode: z.literal('project'), data: GetContextPrimerOutput }),
     z.object({ mode: z.literal('activity'), data: GetActivityDigestOutput }),
-  ]),
-});
-export const ReviewMemoryOutput = z.object({
-  result: z.discriminatedUnion('mode', [
-    z.object({ mode: z.literal('sources'), data: GetMemorySourcesOutput }),
-    z.object({ mode: z.literal('entries'), data: ReviewAgentMemoriesOutput }),
-    z.object({ mode: z.literal('recurrence'), data: GetMemoryRecurrenceOutput }),
   ]),
 });

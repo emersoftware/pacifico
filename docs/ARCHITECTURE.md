@@ -7,7 +7,7 @@ apps/
   cli/src/          Executable entry point, arguments, selection, and terminal output
   site/             Bilingual Astro website with React and Tailwind CSS
 packages/
-  core/src/         Parsers, sources, SQLite search, archive, memory, and reports
+  core/src/         Parsers, sources, SQLite search, archive, and reports
   agents/src/       MCP server, client configuration, installer, and background service
   agents/plugin/    MCP integration manifests embedded in the executable
 scripts/            Code generation and integration checks

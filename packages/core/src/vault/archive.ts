@@ -61,7 +61,7 @@ function encodePath(originalPath: string): string {
 
 /**
  * Read the manifest. Missing file → {}, malformed/wrong-shape → {} - never throws,
- * same read discipline as src/memory/groups.ts. A corrupt manifest is treated as
+ * manifest validation. A corrupt manifest is treated as
  * empty and rebuilt by the refresh backfill pass; the vault copies themselves are
  * untouched by the manifest being unreadable.
  */

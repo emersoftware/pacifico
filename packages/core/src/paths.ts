@@ -1,12 +1,3 @@
-// Where sessions keeps durable, non-cache state on disk.
-//
-// This is deliberately a neutral module rather than part of src/memory/store.ts:
-// the installer (src/setup.ts) and the memory store both own things inside the data
-// dir, and having the installer import a path from a feature module inverts the
-// dependency and drags bun:sqlite into the setup/uninstall path. Path resolution
-// living beside its consumers is the same shape as getCacheDir/getDbPath in
-// src/cache.ts - this file is that, for the durable directory.
-
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 
@@ -27,11 +18,6 @@ export function getHome(): string {
  */
 export function getDataDir(): string {
   return process.env.SESSIONS_DATA_DIR || join(getHome(), '.local', 'share', 'pacifico');
-}
-
-/** The memory store. Deliberately outside the cache dir - see src/memory/store.ts. */
-export function getMemoryDbPath(): string {
-  return join(getDataDir(), 'memory.db');
 }
 
 /**

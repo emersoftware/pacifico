@@ -30,7 +30,7 @@ MCP and background workers share a SQLite refresh lock stored separately from th
 
 Transcripts are copied to temporary files and published by rename. An interrupted write preserves the previous complete copy. The archive retains the latest snapshot, not an unlimited version history.
 
-`stop` removes the scheduled job and its plist. `uninstall` also stops it. Both preserve the archive and human memory decisions. Managed-service operations refuse to replace or delete an unrelated plist without Pacifico's ownership marker.
+`stop` removes the scheduled job and its plist. `uninstall` also stops it. Both preserve the archive. Managed-service operations refuse to replace or delete an unrelated plist without Pacifico's ownership marker.
 
 ## Checks
 

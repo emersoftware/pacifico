@@ -1,7 +1,7 @@
 // Arg parsing and dispatch for the `vault` command group: `status` and `inspect`.
 //
 // Prose on stdout, progress/errors on stderr, non-zero exit on a bad invocation or an
-// unknown inspect target - the same CLI contract as src/memory/cli.ts. The report
+// unknown inspect target. The report
 // builders (`statusReport`, `inspectReport`) are pure over an archive dir so they are
 // testable without driving process.exit.
 

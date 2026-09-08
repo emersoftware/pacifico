@@ -30,7 +30,7 @@ For optional background indexing on macOS:
 pacifico daemon start
 ```
 
-Your archive stays in `~/.local/share/pacifico`. Uninstalling the integrations preserves your archived sessions and memory.
+Your archive stays in `~/.local/share/pacifico`. Uninstalling the integrations preserves your archived sessions.
 
 ## Credits
 

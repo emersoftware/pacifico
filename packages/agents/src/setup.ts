@@ -18,28 +18,17 @@ import {
   type WireResult,
 } from './mcp-config';
 
-/** The pacifico data dir. Single source of truth is getDataDir() - the memory store
- *  lives in the same directory, and the two must never disagree about where it is. */
 function sessionsDir(): string {
   return getDataDir();
 }
 function pluginDest(): string {
   return join(sessionsDir(), 'plugin');
 }
-/**
- * The only paths the installer creates inside the data dir. Uninstall removes
- * exactly these - NOT the directory itself.
- *
- * The data dir also holds memory.db, whose approve/reject/snooze rows are human
- * judgments no re-mine can reconstruct. `pacifico cleanup` routes through
- * runUninstall() (index.ts:28-34), so an `rm -rf` of the whole directory would
- * silently destroy every triage decision the user ever made - the same disposability
- * assumption that is correct for index.db and wrong here.
- */
+/** Uninstall removes integrations while preserving archived transcripts. */
 function ownedInstallPaths(): string[] {
   return [pluginDest(), join(sessionsDir(), '.claude-plugin')];
 }
-const PLUGIN_VERSION = '0.2.0';
+const PLUGIN_VERSION = '0.3.0';
 const MARKETPLACE_NAME = 'pacifico';
 const PLUGIN_NAME = 'pacifico';
 

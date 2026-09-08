@@ -2,7 +2,7 @@
 
 - Preserve the MIT license and upstream credit in README.
 - Keep production imports flowing CLI to agents/core, and agents to core. See docs/ARCHITECTURE.md.
-- Use isolated fixtures for native sources and client configuration. Uninstall preserves archives and memory.
+- Use isolated fixtures for native sources and client configuration. Uninstall preserves archives.
 - Run the checks in docs/TESTING.md for affected code. Installer, MCP, and packaging changes require build and test:binary.
 - Use Prettier for formatting and Oxlint for linting.
 - Keep website English and Spanish content equivalent.
