@@ -10,7 +10,7 @@ packages/
   core/src/         Parsers, sources, SQLite search, archive, memory, and reports
   agents/src/       MCP server, client configuration, installer, and background service
   agents/plugin/    MCP integration manifests embedded in the executable
-scripts/            Generation, validation, and packaging
+scripts/            Code generation and integration checks
 docs/              Architecture, MCP, daemon, testing, and releases
 ```
 
@@ -32,6 +32,8 @@ The private Bun workspaces declare their dependencies and use package-name impor
 
 Agent integrations own client-specific configuration, plugin registration, MCP schemas, and launchd details. Core owns native formats, archive retention, indexing, and retrieval. The CLI owns arguments and terminal interaction. Interfaces should hide a meaningful implementation decision; avoid adding layers that only forward calls.
 
-The daemon reuses the same import operation as MCP. A separate SQLite lock in `core/refresh-lock.ts` protects the full refresh across processes. Archive files are written through temporary files and atomic renames.
+The daemon reuses the same import operation as MCP. A separate SQLite lock in [`refresh-lock.ts`](../packages/core/src/refresh-lock.ts) protects the full refresh across processes. Archive files are written through temporary files and atomic renames.
 
 Homebrew installs use a verified stable `opt/pacifico/bin/pacifico` alias for MCP configuration and launchd, so removing an old keg does not invalidate either integration. Standalone installations retain their absolute executable path.
+
+See [MCP](MCP.md), [background indexing](DAEMON.md), [testing](TESTING.md), and [releases](RELEASING.md).

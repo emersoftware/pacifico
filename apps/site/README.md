@@ -29,7 +29,7 @@ Instrument Serif is self-hosted through Fontsource under SIL OFL. Other text use
 
 ## Hosting
 
-The website is hosted on Cloudflare Workers Static Assets at https://pacifico.emersoftware.cl. The custom domain, static assets, and 404 handling are declared in `wrangler.jsonc`. Public workers.dev and preview URLs are disabled.
+The website is hosted on Cloudflare Workers Static Assets at [pacifico.emersoftware.cl](https://pacifico.emersoftware.cl/). The custom domain, static assets, and 404 handling are declared in `wrangler.jsonc`. Public workers.dev and preview URLs are disabled.
 
 To deploy from this directory with an authorized Cloudflare account:
 

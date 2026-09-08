@@ -1,8 +1,10 @@
 <p align="center">
-  <img src="docs/assets/pacifico.svg" alt="pacifico" width="640" height="640">
+  <img src="apps/site/public/media/pacifico-light-poster.png" alt="Blue and pink Pacifico waves on a white background" width="768" height="576">
 </p>
 
-Your coding sessions, remembered. Pacifico keeps a searchable local archive of Claude Code, Codex, Pi, and OpenCode conversations, and lets your agents recall them through MCP.
+<h1 align="center">pacifico</h1>
+
+Pacifico keeps a searchable local archive of Claude Code, Codex, Pi, and OpenCode conversations, and lets your agents recall them through MCP.
 
 [Website](https://pacifico.emersoftware.cl/) · [Español](https://pacifico.emersoftware.cl/es/)
 
