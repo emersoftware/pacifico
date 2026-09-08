@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/pacifico-readme.png" alt="pacifico — blue and pink waves above the blue serif wordmark" width="380">
+  <img src="docs/assets/pacifico-readme.png" alt="pacifico. Save and search your coding sessions." width="380">
 </p>
 
 Pacifico keeps a searchable local archive of Claude Code, Codex, Pi, and OpenCode conversations, and lets your agents recall them through MCP.

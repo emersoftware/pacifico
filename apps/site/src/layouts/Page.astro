@@ -12,6 +12,8 @@ const { locale, title = content[Astro.props.locale].title } = Astro.props;
 const text = content[locale];
 const section = Astro.props.section || '';
 const canonical = new URL(Astro.url.pathname, Astro.site);
+const socialImage = new URL(localPath(`pacifico-og-${locale}.png`), Astro.site);
+const socialAlt = `pacifico. ${text.intro}`;
 ---
 
 <!doctype html>
@@ -23,16 +25,27 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <meta name="theme-color" content="#ffffff" />
     <meta property="og:type" content="website" />
     <meta property="og:title" content={title} />
-    <meta property="og:description" content={text.description} />
+    <meta property="og:description" content={text.intro} />
+    <meta property="og:site_name" content="pacifico" />
     <meta property="og:url" content={canonical} />
     <meta property="og:locale" content={locale === 'es' ? 'es_ES' : 'en_US'} />
-    <meta property="og:image" content={new URL(localPath('pacifico.png'), Astro.site)} />
-    <meta name="twitter:card" content="summary" />
+    <meta property="og:image" content={socialImage} />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={socialAlt} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={text.intro} />
+    <meta name="twitter:image" content={socialImage} />
+    <meta name="twitter:image:alt" content={socialAlt} />
     <link rel="canonical" href={canonical} />
     <link rel="alternate" hreflang="en" href={new URL(localPath(section), Astro.site)} />
     <link rel="alternate" hreflang="es" href={new URL(localPath(`es/${section}`), Astro.site)} />
     <link rel="alternate" hreflang="x-default" href={new URL(localPath(section), Astro.site)} />
-    <link rel="icon" type="image/svg+xml" href={localPath('favicon.svg')} />
+    <link rel="icon" type="image/x-icon" sizes="16x16 32x32 48x48" href={localPath('favicon.ico?v=waves')} />
+    <link rel="icon" type="image/svg+xml" sizes="any" href={localPath('favicon.svg?v=waves')} />
+    <link rel="apple-touch-icon" sizes="180x180" href={localPath('apple-touch-icon.png')} />
     <link rel="preload" as="font" type="font/woff2" href={serifFont} crossorigin />
     <script is:inline>
       (() => {
