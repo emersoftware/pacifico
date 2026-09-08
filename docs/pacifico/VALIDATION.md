@@ -1,12 +1,12 @@
 # Validation
 
-## Unreleased five-tool MCP
+## Released executable: 0.2.0
 
 The suite passes 1,145 tests, with eight optional corpus skips and no failures (3,345 assertions across 82 files). Type checking, lint, formatting, architecture checks, compilation, and native binary smoke passed.
 
 Protocol tests check the exact five-tool inventory, every merged mode, populated and empty payloads, date filtering before result limits, pagination, invalid parameters, retired tool rejection, and unchanged memory records. The native executable smoke confirms the same inventory, installation cleanup, search/read, archive recovery, and durable uninstall behavior.
 
-These changes are committed source and a locally compiled executable; the public Homebrew release remains 0.1.1. The accepted API migration is documented in MCP-CURATION.md.
+The release workflow passed native executable smoke tests on macOS ARM64, macOS x86-64, Linux ARM64, and Linux x86-64. All four downloaded archives matched SHA256SUMS and contained the executable, LICENSE, and NOTICE. Homebrew upgrade from 0.1.1 to 0.2.0 and formula tests passed on macOS ARM64. The installed executable reported version 0.2.0 and exactly five MCP tools through a real stdio handshake. Client installation completed, and the existing daemon remained scheduled with a successful import. The accepted API migration is documented in MCP-CURATION.md.
 
 ## Earlier removal pass
 

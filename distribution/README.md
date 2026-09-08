@@ -10,7 +10,7 @@ The formula lives in [emersoftware/homebrew-tap](https://github.com/emersoftware
 
 ## Release process
 
-1. Update the version in package.json, plugin manifests, and the marked setup version. Regenerate embedded plugin files and run the checks documented in docs/pacifico/VALIDATION.md.
+1. Update the version in the root and workspace package.json files, plugin manifests, .release-please-manifest.json, and the marked setup version. Regenerate embedded plugin files and run the checks documented in docs/pacifico/VALIDATION.md.
 2. Commit the version and push a matching `vX.Y.Z` tag. The Release workflow builds and runs the executable smoke test on native macOS and Linux runners for both architectures.
 3. The workflow publishes the release and checksums only after all four executable smoke tests pass.
 4. Update the tap formula version and all four checksums from the release assets, commit, and push. Test installation with Homebrew.

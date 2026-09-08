@@ -13,6 +13,7 @@ Read README.md and docs/pacifico/ARCHITECTURE.md before changing package boundar
 - Uninstall preserves the durable archive and human memory decisions.
 - Run typecheck, lint, format:check, check:architecture and the relevant tests.
   Installer, MCP or packaging changes also require build and test:binary.
+- Use the configured owner identity for commits; do not add agent coauthor trailers.
 - Public owner: emersoftware. Release binaries through GitHub Releases and
   distribute the formula through emersoftware/homebrew-tap.
 - Write all code comments in English. Preserve upstream attribution when editing.
