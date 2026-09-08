@@ -491,7 +491,7 @@ bun run dev                  # Run directly without compiling
 bun run build                # Compile to dist/sessions
 bun run typecheck            # Type-check with tsc
 bun run lint                 # Lint with oxlint
-bun run format               # Format with oxfmt
+bun run format               # Format with Prettier
 bun run format:check         # Check formatting without writing
 bun run eval                 # Search ranking eval against the golden fixture
 ```

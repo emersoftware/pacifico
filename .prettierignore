@@ -1,0 +1,7 @@
+**/node_modules/
+**/dist/
+**/.astro/
+**/.wrangler/
+tools/oxlint/anti-slop/
+bun.lock
+apps/site/bun.lock

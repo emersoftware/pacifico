@@ -36,15 +36,33 @@ export default function CopyCommand({ command, label, copyLabel, copiedLabel, fa
 
   return (
     <div className={`command-block command-block--${theme}`}>
-      <pre tabIndex={0} aria-label={label}><code ref={code}>{command}</code></pre>
-        <button type="button" onClick={copy} aria-label={`${copyLabel}: ${label}`} className="copy-button">
-          {status === 'copied' ? (
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 12 4 4L19 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" /></svg>
-          ) : (
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.6" /><path d="M15 5V4a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>
-          )}
-          <span>{status === 'copied' ? copiedLabel : copyLabel}</span>
-        </button>
+      <pre tabIndex={0} aria-label={label}>
+        <code ref={code}>{command}</code>
+      </pre>
+      <button type="button" onClick={copy} aria-label={`${copyLabel}: ${label}`} className="copy-button">
+        {status === 'copied' ? (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="m5 12 4 4L19 6"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        ) : (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <rect x="8" y="8" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.6" />
+            <path
+              d="M15 5V4a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h1"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+            />
+          </svg>
+        )}
+        <span>{status === 'copied' ? copiedLabel : copyLabel}</span>
+      </button>
 
       <span role="status" className={status === 'failed' ? 'copy-error' : 'sr-only'}>
         {status === 'failed' ? failedLabel : status === 'copied' ? copiedLabel : ''}

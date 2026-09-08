@@ -3,12 +3,17 @@ import '../styles/global.css';
 import { content, type Locale } from '../data/content';
 import { localPath } from '../lib/paths';
 import serifFont from '@fontsource/instrument-serif/files/instrument-serif-latin-400-normal.woff2?url';
-interface Props { locale: Locale; title?: string; section?: string; }
+interface Props {
+  locale: Locale;
+  title?: string;
+  section?: string;
+}
 const { locale, title = content[Astro.props.locale].title } = Astro.props;
 const text = content[locale];
 const section = Astro.props.section || '';
 const canonical = new URL(Astro.url.pathname, Astro.site);
 ---
+
 <!doctype html>
 <html lang={locale}>
   <head>
@@ -32,9 +37,15 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <script is:inline>
       (() => {
         let theme;
-        try { theme = localStorage.getItem('pacifico-theme'); } catch {}
-        document.documentElement.dataset.theme = theme === 'dark' || theme === 'light'
-          ? theme : matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        try {
+          theme = localStorage.getItem('pacifico-theme');
+        } catch {}
+        document.documentElement.dataset.theme =
+          theme === 'dark' || theme === 'light'
+            ? theme
+            : matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light';
       })();
     </script>
     <title>{title}</title>

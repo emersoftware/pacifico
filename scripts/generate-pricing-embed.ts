@@ -82,13 +82,13 @@ function compact(json: string): PricingMap {
   return parseLiteLLMPricing(JSON.stringify(filtered));
 }
 
-// Single-quoted string literal matching the project formatter (oxfmt) style.
+// Single-quoted string literal matching the project formatter (prettier) style.
 const sq = (s: string): string => `'${s.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
 
 // Emit a ModelPricing as a spaced object literal: `{ inputPerToken: 3e-7, ... }`.
 // Numbers keep JSON.stringify's rendering; field order follows the interface.
-// oxfmt may re-wrap long literals onto multiple lines - the file is run through
-// oxfmt after writing (see formatFile) so the committed form is canonical.
+// prettier may re-wrap long literals onto multiple lines - the file is run through
+// prettier after writing (see formatFile) so the committed form is canonical.
 const FIELD_ORDER: (keyof ModelPricing)[] = [
   'inputPerToken',
   'outputPerToken',
@@ -128,12 +128,12 @@ function serialize(pricing: PricingMap, generatedAt: string, sourceCommit: strin
   );
 }
 
-// Run the project formatter (oxfmt) over a single file so the committed snapshot
+// Run the project formatter (prettier) over a single file so the committed snapshot
 // is byte-identical to what `bun run format` produces - this makes
 // `generate-pricing-embed && format:check` (and the regeneration proof) a fixed
-// point regardless of oxfmt's internal line-wrapping heuristics.
+// point regardless of prettier's internal line-wrapping heuristics.
 async function formatFile(path: string): Promise<void> {
-  const proc = Bun.spawn(['bunx', 'oxfmt', path], { stdout: 'ignore', stderr: 'ignore' });
+  const proc = Bun.spawn(['bunx', 'prettier', '--write', path], { stdout: 'ignore', stderr: 'ignore' });
   await proc.exited;
 }
 
@@ -143,12 +143,12 @@ function withoutTimestamp(source: string): string {
   return source.replace(/export const GENERATED_AT = '[^']*';\n/, '');
 }
 
-// Read GENERATED_AT out of the existing file (single-quoted, oxfmt style).
+// Read GENERATED_AT out of the existing file (single-quoted, prettier style).
 function existingGeneratedAt(prior: string): string {
   return prior.match(/export const GENERATED_AT = '([^']*)'/)?.[1] ?? new Date().toISOString();
 }
 
-// Serialize → write → format-in-place → read back the canonical (oxfmt) form.
+// Serialize → write → format-in-place → read back the canonical (prettier) form.
 async function emitFormatted(path: string, pricing: PricingMap, generatedAt: string): Promise<string> {
   writeFileSync(path, serialize(pricing, generatedAt, 'litellm-main'));
   await formatFile(path);
@@ -174,7 +174,7 @@ async function main(): Promise<void> {
   }
 
   const prior = existsSync(outPath) ? readFileSync(outPath, 'utf8') : '';
-  // Write the canonical (oxfmt-formatted) snapshot reusing the prior timestamp,
+  // Write the canonical (prettier-formatted) snapshot reusing the prior timestamp,
   // then compare on priced content only. If unchanged, we're done - the file is
   // byte-identical to prior (regeneration proof holds). Only when prices changed
   // do we bump GENERATED_AT and re-emit.

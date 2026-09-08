@@ -6,10 +6,5 @@
     "name": "emersoftware"
   },
   "license": "MIT",
-  "keywords": [
-    "pacifico",
-    "sessions",
-    "search",
-    "mcp"
-  ]
+  "keywords": ["pacifico", "sessions", "search", "mcp"]
 }

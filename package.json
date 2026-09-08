@@ -13,8 +13,8 @@
     "generate-pricing-embed": "bun scripts/generate-pricing-embed.ts",
     "build": "bun run generate-plugin-embed && bun build --compile --minify apps/cli/src/index.ts --outfile dist/pacifico",
     "lint": "oxlint",
-    "format": "oxfmt . '!packages/agents/plugin/**/plugin.json'",
-    "format:check": "oxfmt --check . '!packages/agents/plugin/**/plugin.json'",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
     "eval": "bun test packages/core/src/eval/",
@@ -29,8 +29,9 @@
   "devDependencies": {
     "@oxlint/plugins": "1.79.0",
     "@types/bun": "latest",
-    "oxfmt": "^0.47.0",
-    "oxlint": "1.79.0"
+    "oxlint": "1.79.0",
+    "prettier": "3.9.6",
+    "prettier-plugin-astro": "0.14.1"
   },
   "peerDependencies": {
     "typescript": "^5"

@@ -7,9 +7,13 @@ export default function VideoArt({ mediaPath, locale }: Props) {
   const frame = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
-  const text = locale === 'es'
-    ? { label: 'Olas rosadas con dithering, azules sobre blanco o blancas sobre negro', error: 'El video no pudo cargar.' }
-    : { label: 'Dithered pink waves, blue on white or white on black', error: 'The video could not load.' };
+  const text =
+    locale === 'es'
+      ? {
+          label: 'Olas rosadas con dithering, azules sobre blanco o blancas sobre negro',
+          error: 'El video no pudo cargar.',
+        }
+      : { label: 'Dithered pink waves, blue on white or white on black', error: 'The video could not load.' };
 
   useEffect(() => {
     const media = video.current;
@@ -35,16 +39,29 @@ export default function VideoArt({ mediaPath, locale }: Props) {
         media.src = next;
         media.load();
       }
-      void media.play().catch(() => { /* The themed poster remains if autoplay is blocked. */ });
+      void media.play().catch(() => {
+        /* The themed poster remains if autoplay is blocked. */
+      });
     }
-    const onLoaded = () => { media.currentTime = position % media.duration; };
+    const onLoaded = () => {
+      media.currentTime = position % media.duration;
+    };
     const onPlaying = () => setReady(true);
-    const onError = () => { setReady(false); setFailed(true); };
-    const intersection = new IntersectionObserver(([entry]) => {
-      visible = entry.isIntersecting;
+    const onError = () => {
+      setReady(false);
+      setFailed(true);
+    };
+    const intersection = new IntersectionObserver(
+      ([entry]) => {
+        visible = entry.isIntersecting;
+        syncPlayback();
+      },
+      { threshold: 0.05 },
+    );
+    const theme = new MutationObserver(() => {
+      setReady(false);
       syncPlayback();
-    }, { threshold: 0.05 });
-    const theme = new MutationObserver(() => { setReady(false); syncPlayback(); });
+    });
     intersection.observe(container);
     theme.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
     media.addEventListener('loadedmetadata', onLoaded);
@@ -67,11 +84,37 @@ export default function VideoArt({ mediaPath, locale }: Props) {
   return (
     <div className="video-art">
       <div className="video-frame" ref={frame} role="img" aria-label={text.label}>
-        <img className="video-poster poster-light" src={`${mediaPath}pacifico-light-poster.png`} width="768" height="576" alt="" aria-hidden="true" />
-        <img className="video-poster poster-dark" src={`${mediaPath}pacifico-dark-poster.png`} width="768" height="576" alt="" aria-hidden="true" />
-        <video className={ready ? 'is-ready' : ''} ref={video} muted loop playsInline preload="none" aria-hidden="true" />
+        <img
+          className="video-poster poster-light"
+          src={`${mediaPath}pacifico-light-poster.png`}
+          width="768"
+          height="576"
+          alt=""
+          aria-hidden="true"
+        />
+        <img
+          className="video-poster poster-dark"
+          src={`${mediaPath}pacifico-dark-poster.png`}
+          width="768"
+          height="576"
+          alt=""
+          aria-hidden="true"
+        />
+        <video
+          className={ready ? 'is-ready' : ''}
+          ref={video}
+          muted
+          loop
+          playsInline
+          preload="none"
+          aria-hidden="true"
+        />
       </div>
-      {failed && <p role="status" className="quiet-text">{text.error}</p>}
+      {failed && (
+        <p role="status" className="quiet-text">
+          {text.error}
+        </p>
+      )}
     </div>
   );
 }

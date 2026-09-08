@@ -6,12 +6,7 @@
     "name": "emersoftware"
   },
   "license": "MIT",
-  "keywords": [
-    "pacifico",
-    "sessions",
-    "search",
-    "mcp"
-  ],
+  "keywords": ["pacifico", "sessions", "search", "mcp"],
   "interface": {
     "displayName": "Pacifico",
     "shortDescription": "Search and read local coding sessions",

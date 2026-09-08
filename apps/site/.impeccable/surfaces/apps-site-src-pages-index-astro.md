@@ -1,8 +1,8 @@
 ---
 version: 1
-slug: "apps-site-src-pages-index-astro"
-primary_target: "apps/site/src/pages/index.astro"
-related_targets: ["apps/site/src/pages/es/index.astro"]
+slug: 'apps-site-src-pages-index-astro'
+primary_target: 'apps/site/src/pages/index.astro'
+related_targets: ['apps/site/src/pages/es/index.astro']
 ---
 
 # Pacifico landing

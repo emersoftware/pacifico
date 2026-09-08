@@ -877,10 +877,12 @@ export async function searchSessions(query: string, opts: SearchOptions = {}): P
       ssnippet: string | null;
     }
     const sessionHits = db
-      .query<SessionHitRow, [string]>(`
+      .query<SessionHitRow, [string]>(
+        `
       SELECT file_path, ${SESSION_RANK} AS srank, snippet(session_fts, -1, '', '', '…', 32) AS ssnippet
       FROM session_fts WHERE session_fts MATCH ?
-    `)
+    `,
+      )
       .all(ftsQuery);
 
     interface MessageHitRow {
@@ -891,12 +893,14 @@ export async function searchSessions(query: string, opts: SearchOptions = {}): P
       msnippet: string;
     }
     const messageRows = db
-      .query<MessageHitRow, [string]>(`
+      .query<MessageHitRow, [string]>(
+        `
       SELECT file_path, msg_index, role,
              bm25(message_fts, ${MESSAGE_FTS_COLUMN_WEIGHTS.join(', ')}) AS mrank,
              snippet(message_fts, 3, '', '', '…', 32) AS msnippet
       FROM message_fts WHERE message_fts MATCH ?
-    `)
+    `,
+      )
       .all(ftsQuery);
 
     // Role weighting replaces the old user_content 3.0 / assistant_content 2.0
@@ -934,12 +938,14 @@ export async function searchSessions(query: string, opts: SearchOptions = {}): P
       const chunk = candidatePaths.slice(i, i + CHUNK);
       const placeholders = chunk.map(() => '?').join(', ');
       const metaRows = db
-        .query<SessionRow, any[]>(`
+        .query<SessionRow, any[]>(
+          `
         SELECT file_path, cwd, tool, session_id, date, created_at, first_prompt,
                custom_title, message_count, files_touched, files_read, commands, errored,
                branches, forked_from, NULL as snippet
         FROM sessions WHERE file_path IN (${placeholders}) ${extra}
-      `)
+      `,
+        )
         .all(...chunk, ...condParams);
       for (const r of metaRows) metaByPath.set(r.file_path, r);
     }
@@ -974,13 +980,15 @@ export async function searchSessions(query: string, opts: SearchOptions = {}): P
     // shape: newest-first by creation time, not last-activity date.
     const orderBy = files.length > 0 ? 'created_at DESC' : 'date DESC';
     rows = db
-      .query<SessionRow, any[]>(`
+      .query<SessionRow, any[]>(
+        `
       SELECT file_path, cwd, tool, session_id, date, created_at, first_prompt,
              custom_title, message_count, files_touched, files_read, commands, errored,
              branches, forked_from, NULL as snippet
       FROM sessions ${where}
       ORDER BY ${orderBy} LIMIT ?
-    `)
+    `,
+      )
       .all(...params);
   }
 
@@ -1356,16 +1364,14 @@ export async function getActivityDigest(
         const sorted = [...sessionRows].sort((a, b) => b.message_count - a.message_count);
         const minMessages = detail === 'highlights' ? 3 : 0;
         const candidates = sorted.filter((r) => r.message_count > minMessages);
-        result.sessionDetails = candidates.slice(0, MAX_SESSIONS_DETAIL).map(
-          (r): DigestSessionDetail => ({
-            sessionId: r.session_id,
-            tool: r.tool,
-            title: r.custom_title || r.first_prompt,
-            messageCount: r.message_count,
-            filePath: r.file_path,
-            userMessages: readUserMessages(r.file_path, detail),
-          }),
-        );
+        result.sessionDetails = candidates.slice(0, MAX_SESSIONS_DETAIL).map((r): DigestSessionDetail => ({
+          sessionId: r.session_id,
+          tool: r.tool,
+          title: r.custom_title || r.first_prompt,
+          messageCount: r.message_count,
+          filePath: r.file_path,
+          userMessages: readUserMessages(r.file_path, detail),
+        }));
       }
 
       return result;
