@@ -1,0 +1,2014 @@
+import { Database } from 'bun:sqlite';
+import { acquireRefreshLock } from './refresh-lock';
+import { existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
+import { join, basename } from 'node:path';
+import { homedir } from 'node:os';
+import { readdir } from 'node:fs/promises';
+import {
+  type Tool,
+  type SessionResult,
+  type ActivityDigest,
+  type DigestProjectGroup,
+  type DigestDay,
+  type DigestSessionDetail,
+  type SessionMetrics,
+  type ContextPrimer,
+  type ContextSession,
+  type ContextHeadline,
+  type MessageHit,
+  type PrimerMemory,
+} from './types';
+import { activeMemoryFor } from './memory/retrieve';
+import { getPiSessionsDir, getArchiveDir } from './paths';
+import type { MemoryRecord } from './memory/types';
+import {
+  extractMessages,
+  getSessionMessages,
+  extractSessionMetadata,
+  summarizeMessages,
+  sessionParentSession,
+} from './parser';
+import { buildPiTree } from './pi-tree';
+import { extractFiles, extractFilesRead } from './extract-files';
+import { jsonStrings } from './extract-util';
+import { extractCommands } from './extract-commands';
+import { extractErrors } from './extract-errors';
+import { extractThinking } from './extract-thinking';
+import { extractCustomContext } from './extract-custom';
+import { discoverOpencodeSessions, collectOpencodeSubagentText, closeOpencodeDb, opencodeStat } from './opencode';
+import { readSessionLines, statSession } from './session-io';
+import { archiveFile, listArchived, loadManifest, saveManifest, type Manifest } from './vault/archive';
+// The same cap the search projection uses. Aliased at the import so the name reads as the
+// primer's projection cap rather than being confused with extract-files.ts's own MAX_FILES
+// (50 — the bound on the indexed files_touched column, a different number for a different job).
+import { MAX_FILES as MAX_PRIMER_FILES } from './search-format';
+import { type RepoInfo, globPrefix, branchLabel, cwdUnder } from './repo';
+import { isTrivia, blendedScore, type ScorableSession } from './significance';
+import { detectEmbedder, embedQuery } from './semantic/embed';
+import { topKSimilar, fuseRRF, ABSTENTION_THRESHOLD, type VectorRow } from './semantic/fuse';
+
+// Source/cache locations default to the real home dirs but honor env overrides so
+// tests can point the index at hermetic temp fixtures (SESSIONS_* env vars).
+const home = homedir();
+
+// Resolve the sessions cache directory, honoring SESSIONS_CACHE_DIR so tests (and
+// the runtime pricing cache) stay hermetic under the same env override. Exported
+// so the pricing cache lives alongside index.db without hardcoding ~/.cache/pacifico.
+export function getCacheDir(): string {
+  return process.env.SESSIONS_CACHE_DIR || join(home, '.cache', 'pacifico');
+}
+
+// The index.db path under the cache dir. Exported because the test harness (and
+// Task 10) reference it directly. Resolved lazily — not frozen at import — so a
+// test that mutates SESSIONS_* on the shared module instance is honored.
+export function getDbPath(): string {
+  return join(getCacheDir(), 'index.db');
+}
+
+// Source-session roots, resolved lazily for the same hermetic-test reason. Real
+// runs have a stable env, so production behavior is unchanged by the laziness.
+function getClaudeDir(): string {
+  return process.env.SESSIONS_CLAUDE_DIR || join(home, '.claude/projects');
+}
+function getPiDir(): string {
+  // Shared resolver (src/paths.ts): honors SESSIONS_PI_DIR and Pi's own
+  // PI_CODING_AGENT_SESSION_DIR / PI_CODING_AGENT_DIR overrides, and keeps the
+  // index, scanner, and report pointed at the same tree.
+  return getPiSessionsDir();
+}
+function getCodexDir(): string {
+  return process.env.SESSIONS_CODEX_DIR || join(home, '.codex/sessions');
+}
+
+// Bump 6 -> 7: search becomes message-granular. A new message_fts table holds one
+// row per message (genuine user turns + assistant turns) carrying the parser's
+// message index, and session_fts slims to its genuinely session-level columns
+// (user_content/assistant_content move out — message text is stored exactly once).
+// The virtual-table shapes change, so getDb drops + rebuilds on a user_version mismatch.
+// v8: message_fts no longer stores compaction summaries or tag-wrapped agent/
+// harness injections (task-notifications, `!`-mode shell echoes, teammate relays)
+// as genuine user turns — see isGenuineUserTurn/stripInjected in parser.ts.
+// v9: adds sessions.started_at (the full first timestamp, for the active-hours
+// histogram), and Codex transcripts index their messages for the first time —
+// every Codex row held metadata only until parser.ts learned the response_item
+// envelope, so a rebuild is what actually populates them.
+// v10: pi lineage columns — sessions.branches / fork_points / forked_from (in-file
+// /tree fork count, the PiFork[] JSON, and the /fork parent path) — and pi
+// custom/custom_message content joins session_fts.context_text. Both need a
+// re-parse of every transcript, which the user_version drop+rebuild below provides.
+// v11: adds sessions.ended_at (the full last timestamp), so correlation (pacifico why)
+// can test a commit's authored time against each session's window without re-parsing.
+// v12: adds session_vectors — optional per-session embeddings for the semantic
+// search lane. Embeddings are derived data (a rebuild re-embeds at the next
+// refresh when an embedder is present), so the drop/rebuild below is lossless.
+const SCHEMA_VERSION = 12;
+let _db: Database | null = null;
+let _refreshPromise: Promise<RefreshResult> | null = null;
+let _lastRefreshAt = 0;
+let _lastRefreshResult: RefreshResult = { total: 0, updated: 0 };
+
+interface RefreshResult {
+  total: number;
+  updated: number;
+  archiveWarning?: true;
+}
+
+export function clearCache(): void {
+  const dbPath = getDbPath();
+  const files = [dbPath, dbPath + '-wal', dbPath + '-shm'];
+  let cleared = false;
+  for (const f of files) {
+    try {
+      require('node:fs').unlinkSync(f);
+      cleared = true;
+    } catch {}
+  }
+  process.stderr.write(cleared ? 'Cache cleared. It will rebuild on next use.\n' : 'No cache to clear.\n');
+}
+
+// Close and drop the cached connection so the next getDb() reopens against the
+// current getDbPath(). Lets hermetic tests reset shared-module state between files
+// (and release the handle before deleting a temp dir). Idempotent and never throws.
+export function closeDb(): void {
+  try {
+    _db?.close();
+  } catch {}
+  _db = null;
+  // Drop the in-flight refresh too: it targets the handle we just closed, so a
+  // later ensureIndexFresh must start a new scan rather than join a doomed one.
+  _refreshPromise = null;
+  _lastRefreshAt = 0;
+  _lastRefreshResult = { total: 0, updated: 0 };
+  closeOpencodeDb();
+}
+
+// Open (or create) the index DB and bring it to the v6 schema, resolving the path
+// lazily so hermetic tests honoring SESSIONS_CACHE_DIR get their own file. busy_timeout
+// makes a statement wait for a contended write lock (e.g. a concurrent refreshIndex)
+// instead of erroring with SQLITE_BUSY immediately. This does NOT assign the `_db`
+// singleton — getDb owns that, so it can retry openDb after discarding a corrupt file.
+function openDb(): Database {
+  const db = new Database(getDbPath());
+  db.run('PRAGMA busy_timeout=5000');
+  db.run('PRAGMA journal_mode=WAL');
+  db.run('PRAGMA synchronous=NORMAL');
+
+  const row = db.query<{ user_version: number }, []>('PRAGMA user_version').get();
+  if (!row || row.user_version !== SCHEMA_VERSION) {
+    db.run('DROP TABLE IF EXISTS sessions');
+    db.run('DROP TABLE IF EXISTS session_fts');
+    db.run('DROP TABLE IF EXISTS message_fts');
+    db.run('DROP TABLE IF EXISTS ignored_files');
+    db.run('DROP TABLE IF EXISTS session_vectors');
+    db.run(`PRAGMA user_version = ${SCHEMA_VERSION}`);
+  }
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS sessions (
+      file_path TEXT PRIMARY KEY,
+      mtime REAL NOT NULL,
+      size INTEGER NOT NULL,
+      cwd TEXT NOT NULL,
+      tool TEXT NOT NULL,
+      session_id TEXT NOT NULL,
+      date TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT '?',
+      -- The full first timestamp. created_at is the same instant truncated to a day;
+      -- the active-hours histogram needs the clock, and reading it from here is what
+      -- lets getSessionMetrics skip a second pass over every transcript on disk.
+      started_at TEXT NOT NULL DEFAULT '',
+      -- The full last timestamp (v11). started_at's end-of-session counterpart: the
+      -- session window started_at..ended_at is what pacifico why overlaps commit times
+      -- against. '' when the transcript carries no full ISO timestamp.
+      ended_at TEXT NOT NULL DEFAULT '',
+      first_prompt TEXT NOT NULL,
+      custom_title TEXT NOT NULL DEFAULT '',
+      message_count INTEGER NOT NULL DEFAULT 0,
+      files_touched TEXT NOT NULL DEFAULT '[]',
+      files_read TEXT NOT NULL DEFAULT '[]',
+      commands TEXT NOT NULL DEFAULT '[]',
+      errored INTEGER NOT NULL DEFAULT 0,
+      error_count INTEGER NOT NULL DEFAULT 0,
+      closing_user TEXT NOT NULL DEFAULT '',
+      closing_assistant TEXT NOT NULL DEFAULT '',
+      branch TEXT NOT NULL DEFAULT '',
+      -- Pi lineage (v10): in-file /tree fork count, the PiFork[] JSON verbatim
+      -- (queryable later without re-parsing), and the /fork parent path stored
+      -- raw — the parent file may not exist on disk, so nothing resolves it here.
+      -- Zero/empty defaults for non-pi tools.
+      branches INTEGER NOT NULL DEFAULT 0,
+      fork_points TEXT NOT NULL DEFAULT '[]',
+      forked_from TEXT NOT NULL DEFAULT ''
+    )
+  `);
+  // Session-level searchable text only — message text lives in message_fts (one row
+  // per message) so a hit localizes to an exchange instead of a whole session.
+  // `porter unicode61` adds stemming on top of the default unicode tokenizer so
+  // e.g. "refactoring" matches an indexed "refactor".
+  db.run(`
+    CREATE VIRTUAL TABLE IF NOT EXISTS session_fts USING fts5(
+      file_path UNINDEXED,
+      headline,
+      commands,
+      paths,
+      context_text,
+      thinking,
+      tokenize = 'porter unicode61'
+    )
+  `);
+  // One row per indexed message. msg_index mirrors the numbering getSessionMessages
+  // assigns (extractMessages is the single authority), so a search hit's index feeds
+  // get_session_messages(offset) directly. Manual sync, same as session_fts: indexFile
+  // deletes by file_path then re-inserts; refreshIndex prunes removed files.
+  db.run(`
+    CREATE VIRTUAL TABLE IF NOT EXISTS message_fts USING fts5(
+      file_path UNINDEXED,
+      msg_index UNINDEXED,
+      role UNINDEXED,
+      text,
+      tokenize = 'porter unicode61'
+    )
+  `);
+  // Negative inventory cache: malformed/empty transcripts and explicitly
+  // excluded worktree logs otherwise look "new" on every refresh and get parsed
+  // forever. The mtime+size signal makes them candidates again if they change.
+  db.run(`
+    CREATE TABLE IF NOT EXISTS ignored_files (
+      file_path TEXT PRIMARY KEY,
+      mtime REAL NOT NULL,
+      size INTEGER NOT NULL
+    )
+  `);
+  // Optional semantic lane (v12): one embedding per session. `model` is the
+  // embedder id — vectors from a different model live in a different space, so a
+  // mismatch (or a stale mtime/size) forces a re-embed on the next refresh. `vec`
+  // is Float32Array bytes. Absent/empty when no embedder has ever run; searching
+  // degrades to lexical-only, byte-identical to the pre-semantic behavior.
+  db.run(`
+    CREATE TABLE IF NOT EXISTS session_vectors (
+      file_path TEXT PRIMARY KEY,
+      model TEXT NOT NULL,
+      dim INTEGER NOT NULL,
+      vec BLOB NOT NULL,
+      mtime REAL NOT NULL,
+      size INTEGER NOT NULL
+    )
+  `);
+  return db;
+}
+
+// Best-effort removal of the index file and its WAL/SHM sidecars (lazily-resolved)
+// so a corrupt index can be rebuilt from scratch. Each unlink is independent — a
+// missing sidecar must not stop us deleting the others.
+function removeDbFiles(): void {
+  const dbPath = getDbPath();
+  for (const f of [dbPath, dbPath + '-wal', dbPath + '-shm']) {
+    try {
+      require('node:fs').unlinkSync(f);
+    } catch {}
+  }
+}
+
+// A corrupt or non-database index file surfaces as a SQLiteError on the first
+// PRAGMA/CREATE in openDb (e.g. "file is not a database" / "database disk image is
+// malformed"). Match SQLite's wording case-insensitively so getDb can self-heal.
+function isCorruption(cause: unknown): boolean {
+  const msg = cause instanceof Error ? cause.message.toLowerCase() : String(cause).toLowerCase();
+  return msg.includes('malformed') || msg.includes('corrupt') || msg.includes('not a database');
+}
+
+function getDb(): Database {
+  if (_db) return _db;
+  mkdirSync(getCacheDir(), { recursive: true });
+  try {
+    _db = openDb();
+  } catch (e) {
+    if (!isCorruption(e)) throw e;
+    // The index is a disposable, rebuildable cache of the session files — so a
+    // corrupt one is safe to delete and recreate. refreshIndex repopulates on use.
+    removeDbFiles();
+    _db = openDb();
+  }
+  return _db;
+}
+
+interface FileEntry {
+  path: string;
+  tool: Tool;
+}
+
+async function discoverFiles(): Promise<FileEntry[]> {
+  const entries: FileEntry[] = [];
+  const claudeDir = getClaudeDir();
+  const piDir = getPiDir();
+  const codexDir = getCodexDir();
+
+  if (existsSync(claudeDir)) {
+    let dirs: string[];
+    try {
+      dirs = await readdir(claudeDir);
+    } catch {
+      dirs = [];
+    }
+    for (const dirname of dirs) {
+      const dirpath = join(claudeDir, dirname);
+      const glob = new Bun.Glob('*.jsonl');
+      for await (const p of glob.scan(dirpath)) {
+        entries.push({ path: join(dirpath, p), tool: 'claude' });
+      }
+    }
+  }
+
+  if (existsSync(piDir)) {
+    let dirs: string[];
+    try {
+      dirs = await readdir(piDir);
+    } catch {
+      dirs = [];
+    }
+    for (const dirname of dirs) {
+      const dirpath = join(piDir, dirname);
+      const glob = new Bun.Glob('*.jsonl');
+      for await (const p of glob.scan(dirpath)) {
+        entries.push({ path: join(dirpath, p), tool: 'pi' });
+      }
+    }
+  }
+
+  if (existsSync(codexDir)) {
+    const glob = new Bun.Glob('**/*.jsonl');
+    for await (const p of glob.scan(codexDir)) {
+      entries.push({ path: join(codexDir, p), tool: 'codex' });
+    }
+  }
+
+  // OpenCode has no per-session files — sessions live in one SQLite DB, so each
+  // discovered "file" is a synthetic dbPath/sessionId handle (see src/opencode.ts).
+  // Returns [] when the DB is absent.
+  entries.push(...discoverOpencodeSessions());
+
+  // Vault-only sessions: transcripts whose live source is gone but whose archived
+  // copy survives. Appended under their ORIGINAL path so they re-index with the same
+  // identity; parsing reads through the session-io vault fallback. Skip any path a
+  // live source already produced — a vendor-restored file wins over its vault entry.
+  const live = new Set(entries.map((e) => e.path));
+  for (const archived of listArchived(getArchiveDir())) {
+    if (!live.has(archived.path)) entries.push({ path: archived.path, tool: archived.tool });
+  }
+
+  return entries;
+}
+
+function collectSubagentContent(filePath: string): string {
+  const dir = join(filePath.replace(/\.jsonl$/, ''), 'subagents');
+  if (!existsSync(dir)) return '';
+
+  const parts: string[] = [];
+  try {
+    const files = readdirSync(dir);
+    for (const f of files) {
+      if (!f.endsWith('.jsonl')) continue;
+      try {
+        const raw = readFileSync(join(dir, f), 'utf-8');
+        const lines = raw.trimEnd().split('\n');
+        const msgs = getSessionMessages(lines);
+        for (const m of msgs) {
+          if (m.role === 'user') parts.push(m.text);
+        }
+      } catch {}
+    }
+  } catch {}
+  return parts.join('\n');
+}
+
+/** Searchable subagent text folded into the parent session: Claude keeps sibling
+ *  transcript files, OpenCode keeps child sessions in its DB; other tools have none. */
+function collectSubagentText(filePath: string, tool: Tool): string {
+  if (tool === 'claude') return collectSubagentContent(filePath);
+  if (tool === 'opencode') return collectOpencodeSubagentText(filePath);
+  return '';
+}
+
+// Refresh-scoped state threaded through indexFile: the vault manifest (mutated in
+// place, saved once at the end) and a one-shot warn flag so a failing archive dir
+// (disk full, EACCES) warns once and never blocks indexing.
+interface RefreshCtx {
+  manifest: Manifest;
+  dir: string;
+  warned: boolean;
+}
+
+// Archive one transcript into the vault, best-effort. Indexing must never be blocked
+// by archiving, so a copy failure warns at most once per refresh and is swallowed.
+function tryArchive(
+  ctx: RefreshCtx,
+  entry: { path: string; tool: Tool },
+  parsed: { cwd: string; sessionId: string },
+  stat: { mtime: number; size: number },
+): void {
+  try {
+    archiveFile(entry, parsed, stat, ctx.manifest, ctx.dir);
+  } catch (e) {
+    if (!ctx.warned) {
+      const msg = e instanceof Error ? e.message : String(e);
+      process.stderr.write(`sessions: vault archive failed (${msg}); continuing without archiving\n`);
+      ctx.warned = true;
+    }
+  }
+}
+
+// Whether a session's LIVE source still exists (not the vault copy). A vault-only
+// session (source gone) is served from the vault and must never be re-archived.
+function liveSourcePresent(filePath: string, tool: Tool): boolean {
+  if (tool === 'opencode') return opencodeStat(filePath) !== null;
+  return existsSync(filePath);
+}
+
+// The negative-inventory path: drop any indexed rows for this file and record its
+// mtime+size so an unchanged malformed/excluded transcript is not re-parsed forever.
+function ignoreSession(
+  db: Database,
+  filePath: string,
+  stat: { mtimeMs: number; size: number },
+  hasExisting: boolean,
+): void {
+  if (hasExisting) {
+    db.run('DELETE FROM sessions WHERE file_path = ?', [filePath]);
+    db.run('DELETE FROM session_fts WHERE file_path = ?', [filePath]);
+    db.run('DELETE FROM message_fts WHERE file_path = ?', [filePath]);
+    db.run('DELETE FROM session_vectors WHERE file_path = ?', [filePath]);
+  }
+  db.run('INSERT OR REPLACE INTO ignored_files (file_path, mtime, size) VALUES (?, ?, ?)', [
+    filePath,
+    stat.mtimeMs,
+    stat.size,
+  ]);
+}
+
+// Parse `lines` and write the session row + FTS rows, returning the session cwd on
+// success or null when the lines are unusable (empty, no cwd, or an excluded worktree
+// log). The caller owns ignored_files; this only writes on success.
+function writeSessionRow(
+  db: Database,
+  filePath: string,
+  tool: Tool,
+  stat: { mtimeMs: number; size: number },
+  lines: string[],
+  hasExisting: boolean,
+): { cwd: string } | null {
+  if (lines.length === 0) return null;
+
+  const metadata = extractSessionMetadata(lines, tool);
+  if (!metadata.cwd) return null;
+  if (metadata.cwd.includes('.claude/worktrees') || metadata.cwd.includes('/.bare')) return null;
+
+  const sessionId = basename(filePath).replace('.jsonl', '');
+  const messages = extractMessages(lines);
+  const summary = summarizeMessages(messages);
+  const subagentContent = collectSubagentText(filePath, tool);
+
+  const filesTouchedArr = extractFiles(lines, tool);
+  const filesTouched = JSON.stringify(filesTouchedArr);
+  const filesReadArr = extractFilesRead(lines, tool);
+  const filesRead = JSON.stringify(filesReadArr);
+  const commandsArr = extractCommands(lines, tool);
+  const commands = JSON.stringify(commandsArr);
+  const errors = extractErrors(lines, tool);
+  const thinking = extractThinking(lines, tool);
+  // Pi lineage. buildPiTree already ran inside extractMessages above (phase 1); this
+  // is a deliberate second linear pass per changed pi file rather than threading the
+  // tree out of extractMessages and coupling two stable interfaces. mtime-gated, so
+  // the cost lands only on files that actually changed.
+  const forkedFrom = sessionParentSession(lines, tool);
+  const piTree = tool === 'pi' ? buildPiTree(lines) : null;
+  const branches = piTree?.forks.length ?? 0;
+  const forkPoints = JSON.stringify(piTree?.forks ?? []);
+  const headline = `${summary.firstPrompt}\n${metadata.customTitle}`;
+  const pathsText = [...filesTouchedArr, ...filesReadArr].join('\n');
+  const commandsText = commandsArr.join('\n');
+  // context_text carries conversational context that is not a message: error text
+  // (all tools) plus pi custom/custom_message injections (recaps, web-search
+  // fetches, intercom) — extension output, never turns, so it stays out of
+  // message_fts and ranks at the middle bm25 weight.
+  const contextText = [errors.messages.join('\n'), extractCustomContext(lines, tool)].filter(Boolean).join('\n');
+  if (hasExisting) {
+    db.run('DELETE FROM session_fts WHERE file_path = ?', [filePath]);
+    db.run('DELETE FROM message_fts WHERE file_path = ?', [filePath]);
+  }
+  db.run('DELETE FROM ignored_files WHERE file_path = ?', [filePath]);
+  db.run(
+    `INSERT OR REPLACE INTO sessions (file_path, mtime, size, cwd, tool, session_id, date, created_at, started_at, ended_at, first_prompt, custom_title, message_count, files_touched, files_read, commands, errored, error_count, closing_user, closing_assistant, branch, branches, fork_points, forked_from)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      filePath,
+      stat.mtimeMs,
+      stat.size,
+      metadata.cwd,
+      tool,
+      sessionId,
+      metadata.date,
+      metadata.createdAt,
+      metadata.startedAt,
+      metadata.endedAt,
+      summary.firstPrompt,
+      metadata.customTitle,
+      metadata.messageCount,
+      filesTouched,
+      filesRead,
+      commands,
+      errors.errored ? 1 : 0,
+      errors.count,
+      summary.closingUser,
+      summary.closingAssistant,
+      metadata.branch,
+      branches,
+      forkPoints,
+      forkedFrom,
+    ],
+  );
+  db.run(
+    'INSERT INTO session_fts (file_path, headline, commands, paths, context_text, thinking) VALUES (?, ?, ?, ?, ?, ?)',
+    [filePath, headline, commandsText, pathsText, contextText, thinking],
+  );
+  // Message rows: assistant turns always; user turns only when genuine — injected
+  // skill bodies and tool results match everything and are exactly the noise the
+  // trust fixes eliminated elsewhere. Their indices are still consumed by the
+  // numbering (extractMessages counts them), they just get no FTS row. db.query()
+  // caches the prepared statement, which matters at ~74 rows/session; the calls run
+  // inside refreshIndex's per-batch transaction, never autocommit.
+  const insertMessage = db.query('INSERT INTO message_fts (file_path, msg_index, role, text) VALUES (?, ?, ?, ?)');
+  for (const m of messages) {
+    if (m.role === 'user' && !m.genuine) continue;
+    insertMessage.run(filePath, m.index, m.role, m.text);
+  }
+  // Subagent transcripts have no place in the parent's message numbering, so their
+  // user text rides in a single sentinel row (msg_index -1): it keeps the session
+  // findable by subagent-only terms but is excluded from messageHits.
+  if (subagentContent) insertMessage.run(filePath, -1, 'user', subagentContent);
+  return { cwd: metadata.cwd };
+}
+
+function indexFile(db: Database, filePath: string, tool: Tool, ctx: RefreshCtx): boolean {
+  // Deliberately re-stat rather than trusting refreshIndex's pre-lock snapshot: a
+  // candidate may have waited behind another MCP process at BEGIN IMMEDIATE, and
+  // this is where we observe that process's completed write (or a transcript
+  // append) and skip the parse. A file that vanished during the wait — with no vault
+  // copy either — stats as null and is left entirely alone; pruning is its owner.
+  const stat = statSession(filePath, tool);
+  if (!stat) return false;
+
+  const existing = db
+    .query<{ mtime: number; size: number }, [string]>('SELECT mtime, size FROM sessions WHERE file_path = ?')
+    .get(filePath);
+  if (existing && existing.mtime === stat.mtimeMs && existing.size === stat.size) return false;
+  const ignored = db
+    .query<{ mtime: number; size: number }, [string]>('SELECT mtime, size FROM ignored_files WHERE file_path = ?')
+    .get(filePath);
+  if (ignored && ignored.mtime === stat.mtimeMs && ignored.size === stat.size) return false;
+
+  const lines = readSessionLines(filePath, tool);
+  const indexed = writeSessionRow(db, filePath, tool, stat, lines, !!existing);
+  if (indexed) {
+    // Archive only when the LIVE source is present. `stat` is the live stat in that
+    // case (statSession tries the original path before the vault fallback).
+    if (liveSourcePresent(filePath, tool)) {
+      tryArchive(
+        ctx,
+        { path: filePath, tool },
+        { cwd: indexed.cwd, sessionId: basename(filePath).replace('.jsonl', '') },
+        { mtime: stat.mtimeMs, size: stat.size },
+      );
+    }
+    return true;
+  }
+
+  // The live file is unusable (empty/truncated/rotated by the vendor). If the vault
+  // holds a parseable copy, index from that instead of ignoring the session — the
+  // archived version is the durability promise.
+  const entry = ctx.manifest[filePath];
+  if (entry && existsSync(entry.vaultPath)) {
+    let vaultLines: string[] = [];
+    try {
+      vaultLines = readFileSync(entry.vaultPath, 'utf-8').trimEnd().split('\n');
+    } catch {}
+    if (writeSessionRow(db, filePath, tool, stat, vaultLines, !!existing)) return true;
+  }
+
+  ignoreSession(db, filePath, stat, !!existing);
+  return false;
+}
+
+async function runRefreshIndex(): Promise<RefreshResult> {
+  const db = getDb();
+  // The vault manifest, loaded once and saved once (saveManifest at the end):
+  // archiveFile mutates this map in place during the batches, and a per-file save
+  // could persist an archive whose index write later rolled back. One write follows.
+  const ctx: RefreshCtx = { manifest: loadManifest(getArchiveDir()), dir: getArchiveDir(), warned: false };
+  // De-duplicate at the boundary. It also makes the set/map work below line up
+  // exactly with the total reported to callers.
+  const files = [...new Map((await discoverFiles()).map((file) => [file.path, file])).values()];
+  const filePaths = new Set(files.map((f) => f.path));
+
+  // Fetch the current inventory once. The old path issued SELECT mtime,size once
+  // per discovered file (~4,500 statements on the author's corpus) even when no
+  // transcript had changed.
+  const dbRows = db
+    .query<{ file_path: string; mtime: number; size: number }, []>('SELECT file_path, mtime, size FROM sessions')
+    .all();
+  const indexedByPath = new Map(dbRows.map((row) => [row.file_path, row]));
+  const ignoredRows = db
+    .query<{ file_path: string; mtime: number; size: number }, []>('SELECT file_path, mtime, size FROM ignored_files')
+    .all();
+  const ignoredByPath = new Map(ignoredRows.map((row) => [row.file_path, row]));
+  const inventoryPaths = new Set([...indexedByPath.keys(), ...ignoredByPath.keys()]);
+  // A path backed by the vault is never pruned even when its live source is gone:
+  // discoverFiles re-added it to `filePaths` (listArchived only returns entries whose
+  // vault copy still exists), so the row stays and is served from the vault. Only
+  // paths absent from BOTH the live sources and the vault are removed here.
+  const removedPaths = [...inventoryPaths].filter((path) => !filePaths.has(path));
+  if (removedPaths.length > 0) {
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      for (const path of removedPaths) {
+        db.run('DELETE FROM sessions WHERE file_path = ?', [path]);
+        db.run('DELETE FROM session_fts WHERE file_path = ?', [path]);
+        db.run('DELETE FROM message_fts WHERE file_path = ?', [path]);
+        db.run('DELETE FROM session_vectors WHERE file_path = ?', [path]);
+        db.run('DELETE FROM ignored_files WHERE file_path = ?', [path]);
+      }
+      db.exec('COMMIT');
+    } catch (error) {
+      db.exec('ROLLBACK');
+      throw error;
+    }
+    if (removedPaths.length > 100) {
+      db.exec('VACUUM');
+    }
+  }
+
+  // Stat source files before opening a write transaction, then transact only
+  // candidates whose invalidation signal differs. indexFile re-checks after
+  // BEGIN IMMEDIATE so a second MCP process that refreshed first makes this one
+  // skip the expensive parse instead of duplicating it or racing a write lock.
+  const candidates: FileEntry[] = [];
+  for (const file of files) {
+    const stat = statSession(file.path, file.tool);
+    if (!stat) continue;
+    const existing = indexedByPath.get(file.path);
+    const ignored = ignoredByPath.get(file.path);
+    const indexedMatches = existing && existing.mtime === stat.mtimeMs && existing.size === stat.size;
+    const ignoredMatches = ignored && ignored.mtime === stat.mtimeMs && ignored.size === stat.size;
+    if (!indexedMatches && !ignoredMatches) {
+      candidates.push(file);
+    }
+  }
+
+  let updated = 0;
+  const BATCH = 200;
+  for (let i = 0; i < candidates.length; i += BATCH) {
+    const batch = candidates.slice(i, i + BATCH);
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      for (const file of batch) {
+        if (indexFile(db, file.path, file.tool, ctx)) updated++;
+      }
+      db.exec('COMMIT');
+    } catch (error) {
+      db.exec('ROLLBACK');
+      throw error;
+    }
+  }
+
+  // Backfill: archive every already-indexed session still missing from the manifest,
+  // even though its index row is unchanged. The first refresh after upgrade preserves
+  // the entire existing corpus this way. Vault-only sessions are already in the
+  // manifest; a source that has since vanished has no live bytes to copy, so skip it.
+  const indexedRows = db
+    .query<{ file_path: string; cwd: string; session_id: string; tool: string; mtime: number; size: number }, []>(
+      'SELECT file_path, cwd, session_id, tool, mtime, size FROM sessions',
+    )
+    .all();
+  for (const row of indexedRows) {
+    if (ctx.manifest[row.file_path]) continue;
+    // SAFETY: the tool column is written by the index from Tool values only.
+    const tool = row.tool as Tool;
+    if (!liveSourcePresent(row.file_path, tool)) continue;
+    tryArchive(
+      ctx,
+      { path: row.file_path, tool },
+      { cwd: row.cwd, sessionId: row.session_id },
+      { mtime: row.mtime, size: row.size },
+    );
+  }
+
+  // One atomic manifest write for the whole refresh (see the ctx comment above).
+  saveManifest(ctx.dir, ctx.manifest);
+
+  // Optional semantic lane: embed sessions missing (or with stale) vectors. Runs
+  // after all index writes commit, is entirely skipped when no embedder is
+  // present, and fails open — an embed error abandons embedding for THIS refresh
+  // (one warning) but never the refresh itself.
+  await embedMissingVectors(db);
+
+  return ctx.warned ? { total: files.length, updated, archiveWarning: true } : { total: files.length, updated };
+}
+
+// The retrieval document embedded per session: title + first prompt + the files
+// it touched + its first few genuine user messages, capped so a long session
+// can't dominate. Deterministic from the transcript.
+// # ponytail: crude doc recipe; tune only against a logged real miss, per EVAL.md.
+const EMBED_DOC_CHARS = 2000;
+const EMBED_DOC_USER_MESSAGES = 8;
+const EMBED_BATCH = 32;
+
+function buildEmbedDoc(
+  row: { first_prompt: string; custom_title: string; files_touched: string },
+  lines: string[],
+): string {
+  const userMessages = getSessionMessages(lines)
+    .filter((m) => m.role === 'user')
+    .slice(0, EMBED_DOC_USER_MESSAGES)
+    .map((m) => m.text);
+  const parts = [
+    row.custom_title || row.first_prompt,
+    row.first_prompt,
+    parseFiles(row.files_touched).join('\n'),
+    ...userMessages,
+  ].filter((p) => p.length > 0);
+  return parts.join('\n').slice(0, EMBED_DOC_CHARS);
+}
+
+interface EmbedCandidateRow {
+  file_path: string;
+  tool: string;
+  mtime: number;
+  size: number;
+  first_prompt: string;
+  custom_title: string;
+  files_touched: string;
+}
+
+// Embed every session whose vector is missing, or stale (source mtime/size
+// changed), or from a different model (a swapped SESSIONS_OLLAMA_MODEL). Installing
+// Ollama later thus upgrades the whole corpus on the next refresh, and a schema
+// rebuild self-heals. Never throws.
+async function embedMissingVectors(db: Database): Promise<void> {
+  const embedder = await detectEmbedder();
+  if (!embedder) return;
+
+  const stale = db
+    .query<EmbedCandidateRow, [string]>(`
+      SELECT s.file_path, s.tool, s.mtime, s.size, s.first_prompt, s.custom_title, s.files_touched
+      FROM sessions s
+      LEFT JOIN session_vectors v ON v.file_path = s.file_path
+      WHERE v.file_path IS NULL OR v.model != ? OR v.mtime != s.mtime OR v.size != s.size
+    `)
+    .all(embedder.id);
+  if (stale.length === 0) return;
+
+  const upsert = db.query(
+    'INSERT OR REPLACE INTO session_vectors (file_path, model, dim, vec, mtime, size) VALUES (?, ?, ?, ?, ?, ?)',
+  );
+  for (let i = 0; i < stale.length; i += EMBED_BATCH) {
+    const batch = stale.slice(i, i + EMBED_BATCH);
+    // SAFETY: the tool column is written by the index from Tool values only.
+    const docs = batch.map((row) => buildEmbedDoc(row, readSessionLines(row.file_path, row.tool as Tool)));
+    let vectors: number[][];
+    try {
+      vectors = await embedder.embed(docs);
+    } catch {
+      // Fail open: warn once, abandon embedding for this refresh. Missing rows
+      // are picked up on the next refresh once the embedder is healthy again.
+      process.stderr.write('sessions: embedding unavailable this refresh; search continues lexical-only\n');
+      return;
+    }
+    db.exec('BEGIN IMMEDIATE');
+    try {
+      for (let j = 0; j < batch.length; j++) {
+        const nums = vectors[j];
+        if (!nums || nums.length === 0) continue;
+        const vec = Float32Array.from(nums);
+        upsert.run(
+          batch[j]!.file_path,
+          embedder.id,
+          vec.length,
+          new Uint8Array(vec.buffer),
+          batch[j]!.mtime,
+          batch[j]!.size,
+        );
+      }
+      db.exec('COMMIT');
+    } catch (error) {
+      db.exec('ROLLBACK');
+      throw error;
+    }
+  }
+}
+
+/**
+ * Force a source scan, coalescing concurrent callers in this process onto one
+ * pass. Every query/MCP entry point goes through ensureIndexFresh instead, so
+ * today this is reached only by tests — it stays exported as the "scan now" seam
+ * for an explicit rebuild command.
+ *
+ * Coalescing weakens "scan now" for a caller that arrives mid-flight: it joins a
+ * pass whose file list was snapshotted before the caller's own write, so it may
+ * not observe that write. Anything needing a guaranteed post-write scan must run
+ * after the in-flight promise settles, not alongside it.
+ */
+export async function refreshIndex(): Promise<RefreshResult> {
+  if (_refreshPromise) return _refreshPromise;
+
+  const promise = (async () => {
+    const release = await acquireRefreshLock(getArchiveDir());
+    try {
+      return await runRefreshIndex();
+    } finally {
+      release();
+    }
+  })();
+  _refreshPromise = promise;
+  try {
+    const result = await promise;
+    _lastRefreshAt = Date.now();
+    _lastRefreshResult = result;
+    return result;
+  } finally {
+    if (_refreshPromise === promise) _refreshPromise = null;
+  }
+}
+
+function refreshIntervalMs(): number {
+  const configured = Number(process.env.SESSIONS_REFRESH_INTERVAL_MS ?? 5_000);
+  return Number.isFinite(configured) ? Math.max(0, configured) : 5_000;
+}
+
+async function ensureIndexFresh(): Promise<RefreshResult> {
+  if (_refreshPromise) return _refreshPromise;
+  if (_db && Date.now() - _lastRefreshAt < refreshIntervalMs()) return _lastRefreshResult;
+  return refreshIndex();
+}
+
+// Read-only index access for stats consumers (`pacifico wrapped`). Refreshes
+// first so queries see current transcripts, then hands back the shared handle.
+// Callers must treat the connection as read-only — all writes stay in this file.
+export async function getIndexDb(): Promise<Database> {
+  await ensureIndexFresh();
+  return getDb();
+}
+
+/**
+ * A row count safe to hand to a `LIMIT ?` placeholder (or a `.slice()` that stands in for
+ * one): at least 1, an integer, never NaN.
+ *
+ * SQLite reads a NEGATIVE limit as no limit at all, so `-1` — the value most likely to be
+ * passed meaning "none" — selects every matching row instead. A fractional limit is no
+ * better defined. Callers at the MCP boundary are bounded by their input schemas
+ * (src/mcp.ts), and this is the floor under every other caller, including the next one.
+ * `grepSessions` keeps its own guard because 0 is meaningful there: it returns the
+ * uncapped totals with no snippets.
+ */
+function rowLimit(value: number | undefined, fallback: number): number {
+  if (value === undefined || !Number.isFinite(value)) return fallback;
+  return Math.max(1, Math.floor(value));
+}
+
+// Ranking knobs — the eval fixture's tuning surface (src/eval/, docs/EVAL.md).
+// These move ONLY against the golden fixture, in coarse steps: change a value,
+// run `bun run eval`, and keep the change only if the gate stays green because a
+// real miss got fixed. The fixture is versioned with the values; grow it (log
+// real misses as new goldens) before giving the knobs another pass.
+//
+// bm25 column weights map to session_fts columns in declaration order:
+// file_path, headline, commands, paths, context_text, thinking. Headline,
+// commands, and paths carry the concrete cues people re-find sessions by;
+// verbose thinking adds recall without dominating (message text ranks via
+// message_fts below).
+export const SESSION_FTS_COLUMN_WEIGHTS = [0.0, 10.0, 6.0, 5.0, 2.0, 0.5] as const;
+// message_fts: file_path, msg_index, role, text — only the text column ranks.
+export const MESSAGE_FTS_COLUMN_WEIGHTS = [0.0, 0.0, 0.0, 1.0] as const;
+// bm25 can't weight by row, so user-turn ranks are boosted in JS instead (bm25
+// is more-negative-is-better; multiplying a negative rank improves it).
+export const USER_HIT_BOOST = 1.5;
+
+export interface SearchOptions {
+  tool?: Tool | '';
+  project?: string;
+  errored?: boolean;
+  /** Substring match against files_touched OR files_read; multiple values AND-compose.
+   *  Empty array = absent. With no query, filtered results order newest-first (created_at). */
+  files?: string[];
+  limit?: number;
+}
+
+export async function searchSessions(query: string, opts: SearchOptions = {}): Promise<SessionResult[]> {
+  const db = getDb();
+  await ensureIndexFresh();
+
+  const toolFilter = opts.tool ?? '';
+  const project = opts.project ?? '';
+  const limit = rowLimit(opts.limit, 50);
+
+  interface SessionRow {
+    file_path: string;
+    cwd: string;
+    tool: string;
+    session_id: string;
+    date: string;
+    created_at: string;
+    first_prompt: string;
+    custom_title: string;
+    message_count: number;
+    files_touched: string;
+    files_read: string;
+    commands: string;
+    errored: number;
+    branches: number;
+    forked_from: string;
+    snippet: string | null;
+  }
+
+  let rows: SessionRow[];
+  const hitsByPath = new Map<string, MessageHit[]>();
+
+  // Split the free-text query into individual quoted terms joined with OR. OR recall
+  // (any term may match) paired with bm25() ranking surfaces the sessions matching the
+  // most — and rarest — terms first, instead of the old strict-AND that returned
+  // nothing unless every word was present. This matters most for the LLM/MCP caller,
+  // which issues long natural-language queries. Quoting each term keeps FTS5 operators
+  // in user input literal. An all-whitespace/quotes query yields no terms → recent list.
+  const ftsTerms = query
+    .replace(/['"]/g, '')
+    .split(/\s+/)
+    .filter((w) => w.length > 0)
+    .map((w) => `"${w}"`);
+  const ftsQuery = ftsTerms.join(' OR ');
+
+  // Both branches filter the sessions table directly with the same conditions.
+  const conditions: string[] = [];
+  const condParams: (string | number)[] = [];
+  if (toolFilter) {
+    conditions.push('tool = ?');
+    condParams.push(toolFilter);
+  }
+  if (project) {
+    // Boundary-aware: the project root itself or a descendant, never a sibling
+    // sharing a prefix (e.g. `dotfiles-v2` must not match `dotfiles`).
+    conditions.push('(cwd = ? OR cwd GLOB ?)');
+    condParams.push(project, globPrefix(project));
+  }
+  if (opts.errored) conditions.push('errored = 1');
+  // Files filter: substring match over the JSON-array text columns — callers pass a
+  // path suffix or full path. Deliberately imprecise (a short fragment can match an
+  // unrelated longer path); precision comes from passing longer suffixes. LIKE
+  // metacharacters are escaped so paths with `_` (common) match literally.
+  const files = (opts.files ?? []).filter((f) => f.length > 0); // blank entries = absent, like an empty array
+  for (const f of files) {
+    conditions.push("(files_touched LIKE '%' || ? || '%' ESCAPE '\\' OR files_read LIKE '%' || ? || '%' ESCAPE '\\')");
+    const escaped = f.replace(/[\\%_]/g, (c) => `\\${c}`);
+    condParams.push(escaped, escaped);
+  }
+
+  if (ftsQuery) {
+    // Session-level results merge two hit sources: the slimmed session_fts (metadata
+    // match) and message_fts aggregated by file_path (content match). Fetch both,
+    // join in JS on file_path, combine ranks, sort, slice to limit.
+
+    const SESSION_RANK = `bm25(session_fts, ${SESSION_FTS_COLUMN_WEIGHTS.join(', ')})`;
+    interface SessionHitRow {
+      file_path: string;
+      srank: number;
+      ssnippet: string | null;
+    }
+    const sessionHits = db
+      .query<SessionHitRow, [string]>(`
+      SELECT file_path, ${SESSION_RANK} AS srank, snippet(session_fts, -1, '', '', '…', 32) AS ssnippet
+      FROM session_fts WHERE session_fts MATCH ?
+    `)
+      .all(ftsQuery);
+
+    interface MessageHitRow {
+      file_path: string;
+      msg_index: number;
+      role: string;
+      mrank: number;
+      msnippet: string;
+    }
+    const messageRows = db
+      .query<MessageHitRow, [string]>(`
+      SELECT file_path, msg_index, role,
+             bm25(message_fts, ${MESSAGE_FTS_COLUMN_WEIGHTS.join(', ')}) AS mrank,
+             snippet(message_fts, 3, '', '', '…', 32) AS msnippet
+      FROM message_fts WHERE message_fts MATCH ?
+    `)
+      .all(ftsQuery);
+
+    // Role weighting replaces the old user_content 3.0 / assistant_content 2.0
+    // column weights (see USER_HIT_BOOST above).
+    interface MessageAgg {
+      best: number; // best (most negative) weighted rank across the session's hits
+      hits: { hit: MessageHit; rank: number }[];
+    }
+    const msgAgg = new Map<string, MessageAgg>();
+    for (const m of messageRows) {
+      const rank = m.role === 'user' ? m.mrank * USER_HIT_BOOST : m.mrank;
+      let agg = msgAgg.get(m.file_path);
+      if (!agg) {
+        agg = { best: 0, hits: [] };
+        msgAgg.set(m.file_path, agg);
+      }
+      agg.best = Math.min(agg.best, rank);
+      // Sentinel rows (msg_index -1: subagent text) rank the session but are not
+      // addressable messages, so they never become visible hits.
+      if (m.msg_index >= 0) {
+        // SAFETY: the role column is written by the index from 'user' | 'assistant' values only.
+        agg.hits.push({ hit: { index: m.msg_index, role: m.role as 'user' | 'assistant', snippet: m.msnippet }, rank });
+      }
+    }
+
+    const sessionHitByPath = new Map(sessionHits.map((s) => [s.file_path, s]));
+    const candidatePaths = [...new Set([...sessionHitByPath.keys(), ...msgAgg.keys()])];
+
+    // Fetch metadata (applying the filters) for every candidate, chunked to stay
+    // well under SQLite's bound-parameter limit however many sessions match.
+    const metaByPath = new Map<string, SessionRow>();
+    const CHUNK = 400;
+    const extra = conditions.length > 0 ? 'AND ' + conditions.join(' AND ') : '';
+    for (let i = 0; i < candidatePaths.length; i += CHUNK) {
+      const chunk = candidatePaths.slice(i, i + CHUNK);
+      const placeholders = chunk.map(() => '?').join(', ');
+      const metaRows = db
+        .query<SessionRow, any[]>(`
+        SELECT file_path, cwd, tool, session_id, date, created_at, first_prompt,
+               custom_title, message_count, files_touched, files_read, commands, errored,
+               branches, forked_from, NULL as snippet
+        FROM sessions WHERE file_path IN (${placeholders}) ${extra}
+      `)
+        .all(...chunk, ...condParams);
+      for (const r of metaRows) metaByPath.set(r.file_path, r);
+    }
+
+    // finalRank = sessionRank + bestMessageRank: a missing side contributes 0, and
+    // matching both sources compounds (both are negative). The display snippet
+    // prefers the best message hit (localized — strictly better than a whole-session
+    // snippet) and falls back to the session-side snippet for metadata-only matches.
+    const merged = [...metaByPath.values()].map((meta) => {
+      const s = sessionHitByPath.get(meta.file_path);
+      const agg = msgAgg.get(meta.file_path);
+      const hits = (agg?.hits ?? [])
+        .sort((a, b) => a.rank - b.rank)
+        .slice(0, 3)
+        .map((h) => h.hit);
+      return {
+        meta,
+        hits,
+        snippet: hits[0]?.snippet ?? s?.ssnippet ?? null,
+        finalRank: (s?.srank ?? 0) + (agg?.best ?? 0),
+      };
+    });
+    merged.sort((a, b) => a.finalRank - b.finalRank || b.meta.date.localeCompare(a.meta.date));
+
+    // ——— optional semantic lane (RRF fusion) ———
+    // Skipped entirely — leaving the lexical ordering above untouched, byte for
+    // byte — unless an embedder, stored vectors, AND an embeddable query all
+    // exist. That short-circuit is the absence-identity guarantee: no embedder or
+    // no vectors ⇒ today's exact lexical result.
+    type Entry = (typeof merged)[number];
+    const entryByPath = new Map<string, Entry>(merged.map((m) => [m.meta.file_path, m]));
+    let ordered: Entry[] = merged;
+
+    const embedder = await detectEmbedder();
+    if (embedder) {
+      const vecRows = db
+        .query<{ file_path: string; model: string; dim: number; vec: Uint8Array }, [string]>(
+          'SELECT file_path, model, dim, vec FROM session_vectors WHERE model = ?',
+        )
+        .all(embedder.id);
+      const queryVec = vecRows.length > 0 ? await embedQuery(embedder, query) : null;
+      if (queryVec) {
+        const rowsForScan: VectorRow[] = vecRows.map((v) => ({
+          filePath: v.file_path,
+          model: v.model,
+          dim: v.dim,
+          vec: bytesToF32(v.vec),
+        }));
+        const sims = topKSimilar(queryVec, rowsForScan, Math.max(limit, 50));
+        // Only similarities at/above the abstention threshold count as semantic
+        // hits: this is the negative-abstention guard (a zero-lexical query with
+        // only weak nearest vectors yields no semantic hits, so `ordered` stays
+        // the empty lexical result) AND the noise filter (a fused query never
+        // drags in unrelated near-zero-similarity sessions).
+        // # ponytail: fixed threshold; tune only against a logged real miss.
+        const semanticHits = sims.filter((s) => s.sim >= ABSTENTION_THRESHOLD);
+        if (semanticHits.length > 0) {
+          // Pull metadata (with the SAME filters) for purely-semantic candidates
+          // so a paraphrase hit that BM25 never surfaced can enter the results.
+          const semanticOnly = semanticHits.map((s) => s.filePath).filter((p) => !entryByPath.has(p));
+          const extraSem = conditions.length > 0 ? 'AND ' + conditions.join(' AND ') : '';
+          for (let i = 0; i < semanticOnly.length; i += CHUNK) {
+            const chunk = semanticOnly.slice(i, i + CHUNK);
+            const placeholders = chunk.map(() => '?').join(', ');
+            const metaRows = db
+              .query<SessionRow, any[]>(`
+              SELECT file_path, cwd, tool, session_id, date, created_at, first_prompt,
+                     custom_title, message_count, files_touched, files_read, commands, errored,
+                     branches, forked_from, NULL as snippet
+              FROM sessions WHERE file_path IN (${placeholders}) ${extraSem}
+            `)
+              .all(...chunk, ...condParams);
+            for (const r of metaRows) {
+              if (!entryByPath.has(r.file_path)) {
+                entryByPath.set(r.file_path, { meta: r, hits: [], snippet: null, finalRank: 0 });
+              }
+            }
+          }
+          // Both ranked lists carry only filter-passing paths (lexical from
+          // `merged`, semantic filtered against `entryByPath`).
+          const lexicalRanked = merged.map((m) => m.meta.file_path);
+          const semanticRanked = semanticHits.map((s) => s.filePath).filter((p) => entryByPath.has(p));
+          const scores = fuseRRF(lexicalRanked, semanticRanked);
+          ordered = [...entryByPath.values()]
+            .filter((e) => scores.has(e.meta.file_path))
+            .sort(
+              (a, b) =>
+                (scores.get(b.meta.file_path) ?? 0) - (scores.get(a.meta.file_path) ?? 0) ||
+                b.meta.date.localeCompare(a.meta.date),
+            );
+        }
+      }
+    }
+
+    const top = ordered.slice(0, limit);
+    rows = top.map((m) => ({ ...m.meta, snippet: m.snippet }));
+    for (const m of top) hitsByPath.set(m.meta.file_path, m.hits);
+  } else {
+    const params: (string | number)[] = [...condParams, limit];
+    const where = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
+    // A files filter without a query is the "what happened to this file lately"
+    // shape: newest-first by creation time, not last-activity date.
+    const orderBy = files.length > 0 ? 'created_at DESC' : 'date DESC';
+    rows = db
+      .query<SessionRow, any[]>(`
+      SELECT file_path, cwd, tool, session_id, date, created_at, first_prompt,
+             custom_title, message_count, files_touched, files_read, commands, errored,
+             branches, forked_from, NULL as snippet
+      FROM sessions ${where}
+      ORDER BY ${orderBy} LIMIT ?
+    `)
+      .all(...params);
+  }
+
+  return rows.map((r) => ({
+    date: r.date,
+    createdAt: r.created_at,
+    cwd: r.cwd,
+    // SAFETY: the tool column is written by the index from Tool values only.
+    tool: r.tool as Tool,
+    sessionId: r.session_id,
+    displayText: r.snippet ?? (r.custom_title || r.first_prompt),
+    customTitle: r.custom_title,
+    messageCount: r.message_count,
+    filePath: r.file_path,
+    exists: existsSync(r.cwd),
+    // `files` is the union of edited + read files so it answers "what files did this
+    // session involve" (a Read-only target is still surfaced).
+    files: [...new Set([...parseFiles(r.files_touched), ...parseFiles(r.files_read)])],
+    commands: parseFiles(r.commands),
+    errored: r.errored === 1,
+    branches: r.branches,
+    forkedFrom: r.forked_from,
+    messageHits: hitsByPath.get(r.file_path) ?? [],
+  }));
+}
+
+export interface GrepOptions {
+  /** Treat the pattern as a JS regular expression. Default false = literal substring. */
+  regex?: boolean;
+  /** Case-insensitive match (default true). */
+  ignoreCase?: boolean;
+  /** Restrict to one message role. */
+  role?: 'user' | 'assistant';
+  tool?: Tool | '';
+  project?: string;
+  /** Session date (YYYY-MM-DD) lower/upper bounds, inclusive. */
+  after?: string;
+  before?: string;
+  /** Max hit snippets to return (default 50). totalHits still counts every match. */
+  limit?: number;
+  /** Snippet radius in chars around the match (default 60). */
+  contextChars?: number;
+}
+
+export interface GrepHit {
+  tool: Tool;
+  project: string;
+  sessionId: string;
+  filePath: string;
+  date: string;
+  role: 'user' | 'assistant';
+  /** Feeds get_session_messages(offset) directly — same numbering as message_fts. */
+  msgIndex: number;
+  snippet: string;
+}
+
+export interface GrepResult {
+  /** Messages containing at least one match (across the whole corpus, uncapped). */
+  totalHits: number;
+  /** Distinct sessions with a match. */
+  totalSessions: number;
+  returnedHits: number;
+  /** True when totalHits exceeds the returned snippets (some hits not shown). */
+  truncated: boolean;
+  hits: GrepHit[];
+}
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Exhaustive literal-or-regex match over every indexed message (genuine user turns +
+ * assistant text), unlike searchSessions which is ranked and top-k. Each hit carries
+ * filePath + msgIndex so it feeds get_session_messages(offset) with no extra lookup.
+ * Streams message rows so memory stays O(limit) however large the corpus. Matches the
+ * same text corpus as search (message_fts): assistant tool-call inputs are not indexed,
+ * so a command string won't be found here — grep prose, navigate to the turn, then read
+ * it with include_tools.
+ */
+export async function grepSessions(pattern: string, opts: GrepOptions = {}): Promise<GrepResult> {
+  if (!pattern) throw new Error('Empty pattern: pass a non-empty string to search for.');
+
+  const db = getDb();
+  await ensureIndexFresh();
+
+  const ignoreCase = opts.ignoreCase ?? true;
+  // Guard against fractional/negative limits so `hits.length < limit` behaves as a
+  // whole-number "max snippets" cap; 0 is allowed (count-only, snippets suppressed).
+  const limit = Math.max(0, Math.floor(opts.limit ?? 50));
+  const radius = Math.max(0, Math.floor(opts.contextChars ?? 60));
+
+  let re: RegExp;
+  try {
+    re = new RegExp(opts.regex ? pattern : escapeRegExp(pattern), ignoreCase ? 'i' : '');
+  } catch (e) {
+    throw new Error(`Invalid regex pattern: ${e instanceof Error ? e.message : String(e)}`);
+  }
+
+  const conditions: string[] = ['m.msg_index >= 0']; // exclude the subagent sentinel (-1)
+  const params: (string | number)[] = [];
+  if (opts.role) {
+    conditions.push('m.role = ?');
+    params.push(opts.role);
+  }
+  if (opts.tool) {
+    conditions.push('s.tool = ?');
+    params.push(opts.tool);
+  }
+  if (opts.project) {
+    conditions.push('(s.cwd = ? OR s.cwd GLOB ?)');
+    params.push(opts.project, globPrefix(opts.project));
+  }
+  if (opts.after) {
+    conditions.push('s.date >= ?');
+    params.push(opts.after);
+  }
+  if (opts.before) {
+    conditions.push('s.date <= ?');
+    params.push(opts.before);
+  }
+  // Literal mode: a LIKE filter cuts rows before the JS regex confirms each match — a huge
+  // win for rare terms. But SQLite LIKE folds case for ASCII only, while the JS `/i` regex
+  // folds Unicode too, so for a case-insensitive pattern containing a non-ASCII letter the
+  // LIKE is NOT a superset (`%café%` would drop a stored "CAFÉ" the regex would match).
+  // Apply the prefilter only when it's provably a superset: case-sensitive, or ASCII-only
+  // pattern. Otherwise stream the full candidate set and let the regex alone decide (as
+  // regex mode already does). Regex mode is never prefiltered.
+  const asciiOnly = ![...pattern].some((ch) => ch.codePointAt(0)! > 0x7f);
+  if (!opts.regex && (!ignoreCase || asciiOnly)) {
+    conditions.push("m.text LIKE '%' || ? || '%' ESCAPE '\\'");
+    params.push(pattern.replace(/[\\%_]/g, (c) => `\\${c}`));
+  }
+
+  interface Row {
+    filePath: string;
+    msgIndex: number;
+    role: string;
+    text: string;
+    tool: string;
+    cwd: string;
+    date: string;
+    sessionId: string;
+  }
+  const stmt = db.query<Row, any[]>(`
+    SELECT m.file_path AS filePath, m.msg_index AS msgIndex, m.role AS role, m.text AS text,
+           s.tool AS tool, s.cwd AS cwd, s.date AS date, s.session_id AS sessionId
+    FROM message_fts m JOIN sessions s ON s.file_path = m.file_path
+    WHERE ${conditions.join(' AND ')}
+  `);
+
+  let totalHits = 0;
+  const sessions = new Set<string>();
+  const hits: GrepHit[] = [];
+  for (const row of stmt.iterate(...params)) {
+    const m = re.exec(row.text); // non-global regex → always scans from position 0
+    if (!m) continue;
+    totalHits++;
+    sessions.add(row.filePath);
+    if (hits.length < limit) {
+      const pos = m.index;
+      const start = Math.max(0, pos - radius);
+      const end = Math.min(row.text.length, pos + m[0].length + radius);
+      let snippet = row.text.slice(start, end).replace(/\s+/g, ' ').trim();
+      if (start > 0) snippet = '…' + snippet;
+      if (end < row.text.length) snippet = snippet + '…';
+      hits.push({
+        // SAFETY: tool/role columns are written by the index from Tool and 'user'|'assistant' values only.
+        tool: row.tool as Tool,
+        project: row.cwd,
+        sessionId: row.sessionId,
+        filePath: row.filePath,
+        date: row.date,
+        // SAFETY: same index-written contract as tool above.
+        role: row.role as 'user' | 'assistant',
+        msgIndex: row.msgIndex,
+        snippet,
+      });
+    }
+  }
+
+  return {
+    totalHits,
+    totalSessions: sessions.size,
+    returnedHits: hits.length,
+    truncated: totalHits > hits.length,
+    hits,
+  };
+}
+
+/**
+ * Resolve a session id to its indexed JSONL file path. Refreshes the index
+ * first (same as searchSessions) so recently created sessions resolve too.
+ * Collisions — the same id indexed from multiple files — pick the newest by
+ * mtime. Returns null when the id is unknown.
+ */
+export async function resolveSessionFile(sessionId: string): Promise<string | null> {
+  const db = getDb();
+  await ensureIndexFresh();
+  const row = db
+    .query<{ file_path: string }, [string]>(
+      'SELECT file_path FROM sessions WHERE session_id = ? ORDER BY mtime DESC LIMIT 1',
+    )
+    .get(sessionId);
+  return row?.file_path ?? null;
+}
+
+interface DateRangeRow {
+  file_path: string;
+  cwd: string;
+  tool: string;
+  session_id: string;
+  date: string;
+  created_at: string;
+  started_at: string;
+  first_prompt: string;
+  custom_title: string;
+  message_count: number;
+}
+
+/** The machine's IANA zone. Resolved per call: `Date#getHours` reads a zone V8 caches on
+ *  first use, which makes the process default untestable once anything has read a clock. */
+function systemTz(): string {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+}
+
+const hourFmtCache = new Map<string, Intl.DateTimeFormat>();
+
+/**
+ * The two-digit hour of an ISO timestamp in `tz`, or null when there is nothing to read.
+ *
+ * Formats against an explicit zone rather than calling `getHours()`, so the conversion
+ * depends on an argument instead of ambient process state. Deliberately not
+ * src/report/parsers/util.ts's localHour: that file is vendored verbatim from upstream
+ * and the report subtree stays self-contained. This one keys the activeHours histogram,
+ * so it returns the zero-padded string that map is indexed by.
+ */
+function hourIn(iso: string, tz: string): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  let fmt = hourFmtCache.get(tz);
+  if (!fmt) {
+    fmt = new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: '2-digit', hour12: false });
+    hourFmtCache.set(tz, fmt);
+  }
+  const h = fmt.formatToParts(d).find((p) => p.type === 'hour')?.value;
+  if (h === undefined) return null;
+  // en-US renders midnight as '24' in some ICU builds; the histogram is 00-23.
+  return String(Number(h) % 24).padStart(2, '0');
+}
+
+function queryDateRange(
+  db: Database,
+  startDate: string,
+  endDate: string,
+  toolFilter: Tool | '',
+  project: string,
+): DateRangeRow[] {
+  const conditions: string[] = ['created_at >= ?', 'created_at <= ?'];
+  const params: (string | number)[] = [startDate, endDate];
+
+  if (toolFilter) {
+    conditions.push('tool = ?');
+    params.push(toolFilter);
+  }
+  if (project) {
+    conditions.push('(cwd = ? OR cwd GLOB ?)');
+    params.push(project, globPrefix(project));
+  }
+
+  const where = 'WHERE ' + conditions.join(' AND ');
+  return db
+    .query<DateRangeRow, any[]>(
+      `SELECT file_path, cwd, tool, session_id, date, created_at, started_at, first_prompt, custom_title, message_count
+       FROM sessions ${where}
+       ORDER BY created_at ASC, date ASC`,
+    )
+    .all(...params);
+}
+
+const MAX_TOPICS = 10;
+const MAX_FILEPATHS = 5;
+const MAX_SESSIONS_DETAIL = 10;
+const MAX_USER_MESSAGES = 20;
+const MAX_MESSAGE_LENGTH = 500;
+
+interface PendingGroup {
+  group: DigestProjectGroup;
+  rows: DateRangeRow[];
+}
+
+function readUserMessages(filePath: string, mode: 'full' | 'highlights'): string[] {
+  const lines = readSessionLines(filePath);
+  const msgs = getSessionMessages(lines).filter((m) => m.role === 'user');
+  if (msgs.length === 0) return [];
+
+  const cap = (t: string, len: number) => (t.length > len ? t.slice(0, len) + '…' : t);
+
+  if (mode === 'highlights') {
+    const result = [cap(msgs[0]!.text, 300)];
+    if (msgs.length > 1) result.push(cap(msgs[msgs.length - 1]!.text, 300));
+    return result;
+  }
+
+  return msgs.slice(0, MAX_USER_MESSAGES).map((m) => cap(m.text, MAX_MESSAGE_LENGTH));
+}
+
+export type DigestDetail = 'compact' | 'highlights' | 'full';
+
+export async function getActivityDigest(
+  startDate: string,
+  endDate: string,
+  toolFilter: Tool | '',
+  project: string,
+  detail: DigestDetail = 'compact',
+): Promise<ActivityDigest> {
+  const db = getDb();
+  await ensureIndexFresh();
+
+  const rows = queryDateRange(db, startDate, endDate, toolFilter, project);
+
+  const toolCounts: Record<string, number> = {};
+  const projectSet = new Set<string>();
+  let totalMessages = 0;
+
+  const dayProjectMap = new Map<string, Map<string, PendingGroup>>();
+
+  for (const r of rows) {
+    toolCounts[r.tool] = (toolCounts[r.tool] ?? 0) + 1;
+    projectSet.add(r.cwd);
+    totalMessages += r.message_count;
+
+    const day = r.created_at;
+    if (!dayProjectMap.has(day)) dayProjectMap.set(day, new Map());
+    const projectMap = dayProjectMap.get(day)!;
+
+    if (!projectMap.has(r.cwd)) {
+      projectMap.set(r.cwd, {
+        group: {
+          project: r.cwd,
+          sessions: 0,
+          totalMessages: 0,
+          tools: [],
+          topics: [],
+          filePaths: [],
+        },
+        rows: [],
+      });
+    }
+
+    const pending = projectMap.get(r.cwd)!;
+    const g = pending.group;
+    g.sessions++;
+    g.totalMessages += r.message_count;
+    if (!g.tools.includes(r.tool)) g.tools.push(r.tool);
+    const topic = r.custom_title || r.first_prompt;
+    if (topic) g.topics.push(topic);
+    g.filePaths.push(r.file_path);
+    pending.rows.push(r);
+  }
+
+  const days: DigestDay[] = [];
+  for (const [date, projectMap] of dayProjectMap) {
+    const projects = [...projectMap.values()].map(({ group: g, rows: sessionRows }) => {
+      const result: DigestProjectGroup = {
+        ...g,
+        topics: [...new Set(g.topics)].slice(0, MAX_TOPICS),
+        filePaths: g.filePaths.slice(-MAX_FILEPATHS),
+      };
+
+      if (detail === 'full' || detail === 'highlights') {
+        const sorted = [...sessionRows].sort((a, b) => b.message_count - a.message_count);
+        const minMessages = detail === 'highlights' ? 3 : 0;
+        const candidates = sorted.filter((r) => r.message_count > minMessages);
+        result.sessionDetails = candidates.slice(0, MAX_SESSIONS_DETAIL).map(
+          (r): DigestSessionDetail => ({
+            sessionId: r.session_id,
+            tool: r.tool,
+            title: r.custom_title || r.first_prompt,
+            messageCount: r.message_count,
+            filePath: r.file_path,
+            userMessages: readUserMessages(r.file_path, detail),
+          }),
+        );
+      }
+
+      return result;
+    });
+    const daySessions = projects.reduce((sum, p) => sum + p.sessions, 0);
+    days.push({ date, sessions: daySessions, projects });
+  }
+
+  return {
+    period: { start: startDate, end: endDate },
+    totalSessions: rows.length,
+    totalMessages,
+    tools: toolCounts,
+    projects: [...projectSet],
+    days,
+  };
+}
+
+export async function getSessionMetrics(
+  startDate: string,
+  endDate: string,
+  toolFilter: Tool | '',
+  project: string,
+  /** IANA zone for the active-hours histogram. Defaults to the machine's. */
+  tz: string = systemTz(),
+): Promise<SessionMetrics> {
+  const db = getDb();
+  await ensureIndexFresh();
+
+  const rows = queryDateRange(db, startDate, endDate, toolFilter, project);
+
+  const toolBreakdown: Record<string, number> = {};
+  const projectMap = new Map<string, { sessions: number; messages: number }>();
+  const dailyMap = new Map<string, { sessions: number; messages: number }>();
+  const activeHours: Record<string, number> = {};
+  let totalMessages = 0;
+
+  for (const r of rows) {
+    toolBreakdown[r.tool] = (toolBreakdown[r.tool] ?? 0) + 1;
+    totalMessages += r.message_count;
+
+    const pm = projectMap.get(r.cwd) ?? { sessions: 0, messages: 0 };
+    pm.sessions++;
+    pm.messages += r.message_count;
+    projectMap.set(r.cwd, pm);
+
+    const day = r.created_at;
+    const dm = dailyMap.get(day) ?? { sessions: 0, messages: 0 };
+    dm.sessions++;
+    dm.messages += r.message_count;
+    dailyMap.set(day, dm);
+
+    // Local, not UTC. Transcript timestamps are Z-normalized, and slicing the hour out
+    // of the ISO string read it as wall-clock — shifting the whole histogram by the
+    // machine's offset, so a US-Central user's 9am showed up as 2pm or 3pm.
+    const hour = hourIn(r.started_at, tz);
+    if (hour !== null) activeHours[hour] = (activeHours[hour] ?? 0) + 1;
+  }
+
+  const projectBreakdown = [...projectMap.entries()]
+    .map(([p, v]) => ({ project: p, sessions: v.sessions, messages: v.messages }))
+    .sort((a, b) => b.sessions - a.sessions);
+
+  const dailyActivity = [...dailyMap.entries()]
+    .map(([date, v]) => ({ date, sessions: v.sessions, messages: v.messages }))
+    .sort((a, b) => (a.date > b.date ? 1 : -1));
+
+  return {
+    period: { start: startDate, end: endDate },
+    totalSessions: rows.length,
+    totalMessages,
+    toolBreakdown,
+    projectBreakdown,
+    dailyActivity,
+    activeHours,
+  };
+}
+
+export interface ContextOptions {
+  limit?: number; // recent-tier size (default 10)
+  days?: number; // optional window (last N days)
+  tool?: Tool | ''; // optional tool filter
+  worktreeOnly?: boolean; // restrict to current worktree (default false → aggregate)
+  headlineCap?: number; // older-tier cap (default 40)
+}
+
+interface ContextRow {
+  cwd: string;
+  tool: string;
+  session_id: string;
+  date: string;
+  created_at: string;
+  first_prompt: string;
+  custom_title: string;
+  message_count: number;
+  files_touched: string;
+  closing_user: string;
+  closing_assistant: string;
+  branch: string;
+}
+
+/**
+ * Drop every root that another root already contains, so a scope predicate carries one
+ * pair of parameters per genuinely distinct tree.
+ *
+ * Sorted first, which is what makes one pass correct: an ancestor is a strict prefix of its
+ * descendants, and a prefix always sorts before the longer string — so by the time a root is
+ * considered, any root that contains it has already been kept.
+ */
+function coveringRoots(roots: string[]): string[] {
+  const kept: string[] = [];
+  for (const root of [...new Set(roots.filter(Boolean))].sort()) {
+    if (!kept.some((parent) => cwdUnder(root, parent))) kept.push(root);
+  }
+  return kept;
+}
+
+/**
+ * Every directory a repo's sessions can have been recorded in.
+ *
+ * `repo.container` alone is NOT the repo, and this is the bug the container abstraction
+ * hides. In the bare layout every worktree lives under the container, so one prefix covers
+ * all of them — but `git worktree add ../feature-x` on a normal repo puts the new worktree
+ * BESIDE the main one, and `container` falls back to `--show-toplevel`, which resolves to
+ * whichever worktree the caller happens to be standing in (src/repo.ts). Container-and-
+ * descendants therefore returns only the current worktree's sessions from either side,
+ * while the surfaces built on it advertise aggregation.
+ *
+ * The additional roots are the live worktree paths `resolveRepo` already parsed out of
+ * `git worktree list --porcelain` — an enumeration, not a path heuristic. That is precisely
+ * what keeps a `…-v2` SIBLING out: it shares a prefix with the container but git does not
+ * list it as a worktree of this repo, and only a prefix rule could ever have matched it.
+ */
+function repoRoots(repo: RepoInfo, worktreeOnly = false): string[] {
+  if (worktreeOnly) return [repo.currentWorktree];
+  return coveringRoots([repo.container, ...repo.branches.keys()]);
+}
+
+/** A boundary-aware `cwd` predicate over several roots. Parenthesized as a whole: OR'd
+ *  alternatives inside a clause that gets AND'd with tool/date filters must not leak. */
+interface ScopeClause {
+  clause: string;
+  params: string[];
+}
+
+function repoScopeClause(roots: string[]): ScopeClause {
+  // No roots means no repo, which must select nothing rather than everything.
+  if (roots.length === 0) return { clause: '(1 = 0)', params: [] };
+  return {
+    clause: '(' + roots.map(() => '(cwd = ? OR cwd GLOB ?)').join(' OR ') + ')',
+    params: roots.flatMap((root) => [root, globPrefix(root)]),
+  };
+}
+
+function parseFiles(json: string): string[] {
+  try {
+    // The files_touched column is written by the index from string[]; the JSON
+    // read-back still validates because a hand-edited row could carry anything.
+    return jsonStrings(JSON.parse(json));
+  } catch {
+    return [];
+  }
+}
+
+// Reinterpret a stored session_vectors.vec BLOB as its Float32Array. slice()
+// copies into a fresh, zero-offset ArrayBuffer so the reinterpretation is safe
+// regardless of how bun:sqlite backs the returned bytes.
+function bytesToF32(bytes: Uint8Array): Float32Array {
+  const copy = bytes.slice();
+  return new Float32Array(copy.buffer, copy.byteOffset, Math.floor(copy.byteLength / 4));
+}
+
+/**
+ * Repo-scoped, two-tier, worktree-aggregated context primer assembled entirely
+ * from indexed columns + the RepoInfo branch map. Reads zero session source
+ * files (everything comes from the `sessions` table and the one `git worktree
+ * list` call already made in resolveRepo).
+ */
+/**
+ * How many approved memories the primer carries. Always-on rows are exempt: the flag
+ * exists so a standing constraint is never withheld, and a cap that could drop one would
+ * reintroduce exactly the silent suppression it was added to prevent.
+ *
+ * A count rather than a char budget, matching the primer's other tiers. Topic-conditional
+ * `get_memory` is still the precise path — this tier's job is to guarantee delivery, so it
+ * says how many it left out rather than pretending the list is complete.
+ */
+export const PRIMER_MEMORY_LIMIT = 8;
+
+/** Approved memories for a repo, always-on first, capped — plus the true in-scope total. */
+interface PrimerMemoryTier {
+  memory: PrimerMemory[];
+  memoryTotal: number;
+}
+
+function primerMemory(container: string): PrimerMemoryTier {
+  let all: MemoryRecord[];
+  try {
+    // No topic: the primer has no task to condition on. Opening the store must never be
+    // what fails a primer, so a broken or absent store degrades to no memory tier.
+    all = activeMemoryFor(container);
+  } catch {
+    return { memory: [], memoryTotal: 0 };
+  }
+  const alwaysOn = all.filter((r) => r.alwaysOn);
+  const rest = all.filter((r) => !r.alwaysOn);
+  const chosen = [...alwaysOn, ...rest.slice(0, Math.max(0, PRIMER_MEMORY_LIMIT - alwaysOn.length))];
+  return {
+    memory: chosen.map((r) => ({ text: r.text, kind: r.kind, scope: r.scope.type, alwaysOn: r.alwaysOn })),
+    memoryTotal: all.length,
+  };
+}
+
+export async function getContextPrimer(repo: RepoInfo, opts: ContextOptions): Promise<ContextPrimer> {
+  const db = getDb();
+  await ensureIndexFresh();
+
+  const limit = rowLimit(opts.limit, 10);
+  const headlineCap = rowLimit(opts.headlineCap, 40);
+  const toolFilter = opts.tool ?? '';
+
+  // Boundary-aware scope: every root of this repo (or just the current worktree) and their
+  // descendants — captures linked worktrees wherever git put them, while excluding a
+  // same-prefix `…-v2` sibling that is not a worktree of this repo at all.
+  const scope = repoScopeClause(repoRoots(repo, opts.worktreeOnly));
+  const conditions: string[] = [scope.clause];
+  const params: (string | number)[] = [...scope.params];
+
+  if (toolFilter) {
+    conditions.push('tool = ?');
+    params.push(toolFilter);
+  }
+  if (opts.days && opts.days > 0) {
+    const cutoff = new Date(Date.now() - opts.days * 86_400_000).toISOString().slice(0, 10);
+    conditions.push('created_at >= ?');
+    params.push(cutoff);
+  }
+
+  const where = 'WHERE ' + conditions.join(' AND ');
+  const rows = db
+    .query<ContextRow, any[]>(
+      `SELECT cwd, tool, session_id, date, created_at, first_prompt, custom_title, message_count,
+              files_touched, closing_user, closing_assistant, branch
+       FROM sessions ${where}
+       ORDER BY created_at DESC, date DESC`,
+    )
+    .all(...params);
+
+  const repoLabel = basename(repo.container);
+  // Read regardless of whether any session matched: a repo with approved memory and no
+  // indexed history still has something to say, and the memory is the half that a
+  // topic-less delivery must not drop.
+  const { memory, memoryTotal } = primerMemory(repo.container);
+
+  if (rows.length === 0) {
+    return { repoLabel, toolFilter, recent: [], headlines: [], memory, memoryTotal, isEmpty: memory.length === 0 };
+  }
+
+  // Rank the detail tier by recency-weighted significance instead of raw recency,
+  // keeping trivial sessions out of it. All inputs are already-selected columns.
+  const now = Date.now();
+  const scored = rows.map((r) => {
+    const s: ScorableSession = {
+      messageCount: r.message_count,
+      filesTouchedCount: parseFiles(r.files_touched).length,
+      closingText: `${r.closing_user} ${r.closing_assistant}`,
+      createdAt: r.created_at !== '?' ? r.created_at : r.date,
+    };
+    return { row: r, trivia: isTrivia(s), score: blendedScore(s, now) };
+  });
+
+  const byScore = (a: { score: number }, b: { score: number }): number => b.score - a.score;
+  const substantive = scored.filter((x) => !x.trivia).sort(byScore);
+  // Fallback: an all-trivial repo still shows something rather than an empty
+  // detail tier — trivia only loses its slot when real work competes for it.
+  const pool = substantive.length > 0 ? substantive : [...scored].sort(byScore);
+  const recentRows = pool.slice(0, limit).map((x) => x.row);
+
+  // Headlines = every row not promoted to the detail tier, kept in the SQL
+  // recency order (created_at DESC), capped. Demoted trivia lands here.
+  const detailSet = new Set(recentRows);
+  const headlineRows = rows.filter((r) => !detailSet.has(r)).slice(0, headlineCap);
+
+  const recent: ContextSession[] = recentRows.map((r) => {
+    // One parse per row: files_touched is a JSON column and the detail tier holds up to
+    // `limit` rows, so parsing it twice (once to cap, once to count) doubles the work on
+    // the primer's hot path for nothing.
+    const files = parseFiles(r.files_touched);
+    return {
+      sessionId: r.session_id,
+      // SAFETY: the tool column is written by the index from Tool values only.
+      tool: r.tool as Tool,
+      branch: r.branch || branchLabel(r.cwd, repo.branches),
+      date: r.date,
+      messageCount: r.message_count,
+      intent: r.custom_title || r.first_prompt,
+      // Same cap as the search projection: 10 sessions × an unbounded file list was the
+      // primer's version of the search payload problem.
+      files: files.slice(0, MAX_PRIMER_FILES),
+      fileCount: files.length,
+      opening: r.first_prompt,
+      closing: { user: r.closing_user, assistant: r.closing_assistant },
+    };
+  });
+
+  const headlines: ContextHeadline[] = headlineRows.map((r) => ({
+    date: r.date,
+    // SAFETY: the tool column is written by the index from Tool values only.
+    tool: r.tool as Tool,
+    branch: r.branch || branchLabel(r.cwd, repo.branches),
+    intent: r.custom_title || r.first_prompt,
+  }));
+
+  return { repoLabel, toolFilter, recent, headlines, memory, memoryTotal, isEmpty: false };
+}
+
+/** Fallback row cap when a caller hands `recentSessionsForRepo` an unusable limit. The MCP
+ *  surface passes MAX_LISTED_RESOURCES (src/mcp.ts); this is only the floor under nonsense. */
+const MAX_REPO_SESSION_ROWS = 50;
+
+/** One indexed session projected to just what an MCP `resources/list` entry needs. */
+export interface RepoSessionRow {
+  session_id: string;
+  tool: string;
+  date: string;
+  /** MAX(created_at) of the id's rows — the ordering key, not display data. */
+  created_at: string;
+  first_prompt: string;
+  custom_title: string;
+}
+
+/**
+ * The newest `limit` sessions in a repo, plus the untruncated total.
+ *
+ * Same boundary-aware scope as getContextPrimer — every root of the repo plus their
+ * descendants, so linked worktrees aggregate while a `…-v2` sibling stays out. Bounded in
+ * SQL rather than in JS as the primer does: MCP clients call `resources/list` speculatively, and
+ * selecting thousands of rows to hand back 50 is exactly the enumeration cost this surface
+ * exists to avoid.
+ *
+ * Grouped by session_id because file_path — not session_id — is the primary key, and a
+ * resource list must never carry the same `sessions://<id>` URI twice. MAX(created_at)
+ * makes the surviving row the newest of a collision (SQLite's bare-column rule), the same
+ * tie-break resolveSessionFile applies by mtime.
+ */
+export async function recentSessionsForRepo(
+  repo: RepoInfo,
+  limit: number,
+): Promise<{ rows: RepoSessionRow[]; totalCount: number }> {
+  const db = getDb();
+  await ensureIndexFresh();
+
+  const scope = repoScopeClause(repoRoots(repo));
+  const where = `WHERE ${scope.clause}`;
+
+  const rows = db
+    .query<RepoSessionRow, any[]>(
+      `SELECT session_id, tool, date, first_prompt, custom_title, MAX(created_at) AS created_at
+       FROM sessions ${where}
+       GROUP BY session_id
+       ORDER BY created_at DESC, date DESC
+       LIMIT ?`,
+    )
+    .all(...scope.params, rowLimit(limit, MAX_REPO_SESSION_ROWS));
+
+  // COUNT(DISTINCT session_id), not COUNT(*): the total has to be countable against the
+  // grouped rows above, or a repo with a collision reports more sessions than exist.
+  const total = db
+    .query<{ n: number }, string[]>(`SELECT COUNT(DISTINCT session_id) AS n FROM sessions ${where}`)
+    .get(...scope.params);
+
+  return { rows, totalCount: total?.n ?? 0 };
+}
+
+/** One indexed session projected to what correlation (pacifico why) needs. */
+export interface CandidateSessionRow {
+  file_path: string;
+  cwd: string;
+  tool: string;
+  session_id: string;
+  date: string;
+  started_at: string;
+  ended_at: string;
+  first_prompt: string;
+  custom_title: string;
+  files_touched: string;
+}
+
+/**
+ * Repo-scoped sessions whose `date` falls in `[after, before]` (inclusive, YYYY-MM-DD).
+ *
+ * The coarse date bound keeps the scan O(window) rather than O(corpus) — `pacifico why`
+ * derives the bound from a commit's authored day plus a buffer, then applies the precise
+ * `started_at <= authoredAt <= (ended_at | end-of-day) + slack` rule in JS. Same
+ * boundary-aware repo scope as the primer, so linked worktrees aggregate while a
+ * same-prefix sibling stays out.
+ */
+export async function candidateSessionsForRepoWindow(
+  repo: RepoInfo,
+  after: string,
+  before: string,
+): Promise<CandidateSessionRow[]> {
+  const db = getDb();
+  await ensureIndexFresh();
+
+  const scope = repoScopeClause(repoRoots(repo));
+  const where = `WHERE ${scope.clause} AND date >= ? AND date <= ?`;
+
+  return db
+    .query<CandidateSessionRow, any[]>(
+      `SELECT file_path, cwd, tool, session_id, date, started_at, ended_at, first_prompt, custom_title, files_touched
+       FROM sessions ${where}
+       ORDER BY started_at DESC, date DESC`,
+    )
+    .all(...scope.params, after, before);
+}
+
+/**
+ * Repo-scoped sessions whose files_touched mentions `relPath`, newest first, no date
+ * bound — the recall side of `why`'s unlanded-attempt bucket, which cannot know when the
+ * abandoned work happened. files_touched only, never files_read: an attempt means the
+ * session *changed* the file. Same substring-LIKE imprecision contract as the
+ * searchSessions files filter; the caller re-checks after repo-relative normalization.
+ */
+export async function sessionsTouchingFile(repo: RepoInfo, relPath: string): Promise<CandidateSessionRow[]> {
+  const db = getDb();
+  await ensureIndexFresh();
+
+  const scope = repoScopeClause(repoRoots(repo));
+  const escaped = relPath.replace(/[\\%_]/g, (c) => `\\${c}`);
+
+  return db
+    .query<CandidateSessionRow, any[]>(
+      `SELECT file_path, cwd, tool, session_id, date, started_at, ended_at, first_prompt, custom_title, files_touched
+       FROM sessions
+       WHERE ${scope.clause} AND files_touched LIKE '%' || ? || '%' ESCAPE '\\'
+       ORDER BY started_at DESC, date DESC`,
+    )
+    .all(...scope.params, escaped);
+}
+
+/** Read up to `limit` best FTS message hits for one session, scoped by its file_path. */
+export interface SessionExcerptRow {
+  msg_index: number;
+  role: string;
+  snippet: string;
+}
+
+/**
+ * The best `limit` message excerpts for one session matching `terms` (already an FTS
+ * query string). Scoped to the session's `file_path` — the same message_fts MATCH shape
+ * searchSessions uses. Returns [] on an empty/blank term set or an FTS syntax error;
+ * evidence without quotes is never an error.
+ */
+export function sessionExcerpts(filePath: string, ftsQuery: string, limit: number): SessionExcerptRow[] {
+  if (!ftsQuery) return [];
+  const db = getDb();
+  try {
+    return db
+      .query<SessionExcerptRow, [string, string, number]>(
+        `SELECT msg_index, role, snippet(message_fts, 3, '', '', '\u2026', 32) AS snippet
+         FROM message_fts
+         WHERE file_path = ? AND message_fts MATCH ?
+         ORDER BY bm25(message_fts, ${MESSAGE_FTS_COLUMN_WEIGHTS.join(', ')})
+         LIMIT ?`,
+      )
+      .all(filePath, ftsQuery, limit)
+      .filter((r) => r.msg_index >= 0);
+  } catch {
+    return [];
+  }
+}

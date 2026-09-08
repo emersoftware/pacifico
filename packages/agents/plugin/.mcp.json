@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "pacifico": {
+      "command": "pacifico",
+      "args": ["--mcp"]
+    }
+  }
+}

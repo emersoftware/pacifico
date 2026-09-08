@@ -1,0 +1,8 @@
+Pacifico is a derivative of nicknisi/sessions.
+Upstream: https://github.com/nicknisi/sessions
+Base commit: 9f3c401896bb5b5620c07e07063cd235aab3d4a6 (1.29.2)
+Original copyright and MIT license are preserved in LICENSE.
+Pacifico modifications: monorepo organization, product namespace, installation alias,
+background indexing with macOS launchd, release distribution, research and
+architecture documentation.
+Pacifico is not affiliated with Mosaic or its authors.

@@ -1,0 +1,13 @@
+{
+  "name": "@pacifico/cli",
+  "version": "0.1.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "dependencies": {
+    "@pacifico/core": "workspace:*",
+    "@pacifico/agents": "workspace:*"
+  }
+}

@@ -1,0 +1,144 @@
+// Sessions-owned usage report schema — the public contract for `pacifico report`.
+// Independent of tokenmaxing's gist shape: no weeklyHighlights, no PR fields.
+// The internal aggregation (vendored from tokenmaxing) is mapped down to this
+// via `toUsageReport`. Generic breakdown/daily shapes are reused from the
+// aggregation types since they carry no tokenmaxing-specific concerns.
+import type {
+  TokenmaxingData,
+  ToolBreakdown,
+  ProviderBreakdown,
+  ModelBreakdown,
+  ProjectBreakdown,
+  DailyEntry,
+  ModelRef,
+  ToolId,
+} from './types.ts';
+
+import type {
+  CacheStats,
+  SubagentReport,
+  SessionCost,
+  SessionDistribution,
+  ModelWeek,
+  BurnStats,
+  ReportFacets,
+} from './facets.ts';
+
+export type { ToolBreakdown, ProviderBreakdown, ModelBreakdown, ProjectBreakdown, DailyEntry, ModelRef, ToolId };
+export type {
+  CacheStats,
+  SubagentReport,
+  SubagentTypeBreakdown,
+  SubagentDispatch,
+  SessionCost,
+  SessionDistribution,
+  ModelWeek,
+  BurnStats,
+} from './facets.ts';
+
+export interface UsageSummary {
+  totalCostUSD: number;
+  totalTokens: number;
+  sessions: number;
+  messages: number;
+  activeDays: number;
+  currentStreakDays: number;
+  longestStreakDays: number;
+  peakHourLocal: number;
+  favoriteModel: ModelRef;
+}
+
+export interface UsageWeek {
+  weekEnding: string; // YYYY-MM-DD local Sunday
+  tokens: number;
+  costUSD: number;
+  sessions: number;
+  messages: number;
+  byTool: Partial<Record<ToolId, { tokens: number; costUSD: number }>>;
+}
+
+export interface UsageInsights {
+  weekly: UsageWeek[]; // dense: every week from first→last active week
+  hourCounts: number[]; // length 24, by local hour
+  weekdayCounts: number[]; // length 7, 0 = Sunday
+}
+
+// A logged model that had tokens but no pricing match. Surfaced loudly
+// (CLI stderr + this JSON field + HTML notice) — never a silent $0.
+export interface PricingWarning {
+  model: string;
+  tokens: number;
+  /** Set when the tokens were billed at a same-family rate instead of being
+   *  zeroed. The cost is an estimate; absent means it really was counted as $0. */
+  pricedAs?: string;
+}
+
+export interface UsageReport {
+  generator: 'sessions';
+  // Kept at 1: `warnings` is an additive field, so this remains non-breaking.
+  version: 1;
+  generatedAt: string; // ISO UTC
+  period: { from: string; to: string };
+  summary: UsageSummary;
+  byTool: ToolBreakdown[];
+  byProvider: ProviderBreakdown[];
+  byModel: ModelBreakdown[];
+  byProject: ProjectBreakdown[];
+  daily: DailyEntry[];
+  insights: UsageInsights;
+  warnings: PricingWarning[]; // unpriced models with tokens; [] when all priced
+  // Sessions-owned facets (see ./facets.ts) — dimensions the vendored
+  // aggregation does not model, computed from the same events.
+  cache: CacheStats;
+  subagents: SubagentReport;
+  topSessions: SessionCost[];
+  totalSessions: number;
+  sessionDistribution: SessionDistribution;
+  modelWeekly: ModelWeek[];
+  modelOrder: string[];
+  /** Pace against the period. Null for an all-time report, which has no period to
+   *  pace against. */
+  burn: BurnStats | null;
+}
+
+// Map the internal aggregation result to the sessions-owned public schema,
+// dropping tokenmaxing/website-specific fields (weeklyHighlights + per-week PR counts).
+export function toUsageReport(data: TokenmaxingData, facets: ReportFacets): UsageReport {
+  return {
+    generator: 'sessions',
+    version: 1,
+    generatedAt: data.generatedAt,
+    period: data.period,
+    summary: data.summary,
+    byTool: data.byTool,
+    byProvider: data.byProvider,
+    byModel: data.byModel,
+    byProject: data.byProject,
+    daily: data.daily,
+    insights: {
+      weekly: data.insights.weekly.map((w) => ({
+        weekEnding: w.weekEnding,
+        tokens: w.tokens,
+        costUSD: w.costUSD,
+        sessions: w.sessions,
+        messages: w.messages,
+        byTool: w.byTool,
+      })),
+      hourCounts: data.insights.hourCounts,
+      weekdayCounts: data.insights.weekdayCounts,
+    },
+    // Kept pure: runReport overwrites this with drainPricingWarnings() after
+    // aggregation. toUsageReport itself prices nothing, so it starts empty.
+    warnings: [],
+    cache: facets.cache,
+    subagents: facets.subagents,
+    topSessions: facets.topSessions,
+    totalSessions: facets.totalSessions,
+    sessionDistribution: facets.sessionDistribution,
+    modelWeekly: facets.modelWeekly,
+    modelOrder: facets.modelOrder,
+    // Filled by runReport, which is the only caller that knows the requested
+    // window and can gather the window before it.
+    burn: null,
+  };
+}

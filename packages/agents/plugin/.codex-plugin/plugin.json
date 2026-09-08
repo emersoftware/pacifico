@@ -1,0 +1,25 @@
+{
+  "name": "pacifico",
+  "description": "Skills for summarizing and recalling AI coding sessions across Claude Code, Codex, Pi, and OpenCode.",
+  "version": "0.1.1",
+  "author": {
+    "name": "Pacifico contributors"
+  },
+  "license": "MIT",
+  "keywords": [
+    "pacifico",
+    "context",
+    "weekly-summary",
+    "standup",
+    "recall",
+    "metrics",
+    "activity",
+    "digest"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Pacifico",
+    "shortDescription": "Summarize and recall AI coding sessions",
+    "category": "Productivity"
+  }
+}
