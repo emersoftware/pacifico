@@ -9,7 +9,6 @@
   "ignorePatterns": [
     "dist/",
     "node_modules/",
-    "CHANGELOG.md",
     ".github/",
     "apps/site/",
     "tools/oxlint/anti-slop/**",

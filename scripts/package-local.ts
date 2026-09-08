@@ -10,18 +10,7 @@ if (!['darwin', 'linux'].includes(process.platform)) throw new Error('Packaging 
 const arch = process.arch === 'x64' ? 'x86_64' : process.arch;
 const artifact = `pacifico-${process.platform}-${arch}.tar.gz`;
 mkdirSync('dist/local-tap/Formula', { recursive: true });
-const tar = Bun.spawnSync([
-  'tar',
-  '-czf',
-  `dist/${artifact}`,
-  '-C',
-  'dist',
-  'pacifico',
-  '-C',
-  '..',
-  'LICENSE',
-  'NOTICE',
-]);
+const tar = Bun.spawnSync(['tar', '-czf', `dist/${artifact}`, '-C', 'dist', 'pacifico', '-C', '..', 'LICENSE']);
 if (tar.exitCode !== 0) throw new Error(new TextDecoder().decode(tar.stderr));
 const sha = createHash('sha256')
   .update(readFileSync(`dist/${artifact}`))
@@ -40,6 +29,7 @@ class Pacifico < Formula
 
   def install
     bin.install "pacifico"
+    pkgshare.install "LICENSE"
   end
 
   test do

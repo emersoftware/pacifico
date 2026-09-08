@@ -39,7 +39,7 @@ function pluginDest(): string {
 function ownedInstallPaths(): string[] {
   return [pluginDest(), join(sessionsDir(), '.claude-plugin')];
 }
-const PLUGIN_VERSION = '0.2.0'; // x-release-please-version
+const PLUGIN_VERSION = '0.2.0';
 const MARKETPLACE_NAME = 'pacifico';
 const PLUGIN_NAME = 'pacifico';
 
