@@ -1,0 +1,110 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BUN_VERSION: '1.3.13'
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - run: bun install --frozen-lockfile
+      - run: bun run lint
+
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - run: bun install --frozen-lockfile
+      - run: bun run format:check
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun run check:architecture
+
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+      - run: bun run test:binary
+
+  # The bilingual static site has its own dependency tree and type checker.
+  site:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      # The root workspace does not install this app.
+      - run: bun install --frozen-lockfile
+        working-directory: apps/site
+      - run: bun run check
+        working-directory: apps/site
+      - run: bun run build
+        working-directory: apps/site
+
+  # release-please drops any commit whose body has a line-initial nested-paren token,
+  # then exits 0 — so a release silently goes missing while every check is green. This
+  # has cost two releases here, most recently 89f15bd. See the script for the mechanism.
+  commit-messages:
+    runs-on: ubuntu-latest
+    # This workflow also runs on pushes to main, where there is no pull_request payload
+    # to read a base and head from. By then the squash commit is already written, so the
+    # check has nothing left to prevent.
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: ./scripts/check-commit-messages.sh --selftest
+      - name: Check this branch's commits
+        # Via env, not inline interpolation: these are SHAs today, but a `run:` block
+        # that expands PR-controlled fields directly is the shape injections arrive in.
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: ./scripts/check-commit-messages.sh "$BASE_SHA" "$HEAD_SHA"
+
+  # Runs deliberately on a runner with no agent CLI installed. Several suites used to
+  # pass only because `claude` happened to be on the developer's PATH; keeping the
+  # runner bare is what stops that class of test from regressing silently.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - run: bun install --frozen-lockfile
+      - run: bun run test

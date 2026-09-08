@@ -1,0 +1,50 @@
+{
+  "name": "pacifico",
+  "version": "0.2.0",
+  "description": "Local archive and recall for AI coding sessions",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "pacifico": "./dist/pacifico"
+  },
+  "scripts": {
+    "dev": "bun run apps/cli/src/index.ts",
+    "generate-plugin-embed": "bun scripts/generate-plugin-embed.ts",
+    "generate-pricing-embed": "bun scripts/generate-pricing-embed.ts",
+    "build": "bun run generate-plugin-embed && bun build --compile --minify apps/cli/src/index.ts --outfile dist/pacifico",
+    "lint": "oxlint",
+    "format": "oxfmt . '!packages/agents/plugin/**/plugin.json'",
+    "format:check": "oxfmt --check . '!packages/agents/plugin/**/plugin.json'",
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "eval": "bun test packages/core/src/eval/",
+    "site:dev": "cd apps/site && bun run dev",
+    "site:build": "cd apps/site && bun install --frozen-lockfile && bun run build",
+    "site:check": "cd apps/site && bun run check",
+    "check:architecture": "bun scripts/check-architecture.ts",
+    "test:binary": "bun scripts/smoke-binary.ts",
+    "package:local": "bun scripts/package-local.ts",
+    "test:launchd": "bun scripts/smoke-launchd.ts"
+  },
+  "devDependencies": {
+    "@oxlint/plugins": "1.79.0",
+    "@types/bun": "latest",
+    "oxfmt": "^0.47.0",
+    "oxlint": "1.79.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^4.4.3",
+    "@pacifico/core": "workspace:*",
+    "@pacifico/agents": "workspace:*",
+    "@pacifico/cli": "workspace:*"
+  },
+  "private": true,
+  "workspaces": [
+    "apps/cli",
+    "packages/*"
+  ]
+}

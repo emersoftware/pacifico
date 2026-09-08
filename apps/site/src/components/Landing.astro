@@ -1,0 +1,47 @@
+---
+import Page from '../layouts/Page.astro';
+import CopyCommand from './CopyCommand';
+import SiteFooter from './SiteFooter.astro';
+import VideoArt from './VideoArt';
+import { content, installCommand, type Locale } from '../data/content';
+import { localPath } from '../lib/paths';
+interface Props { locale: Locale; }
+const { locale } = Astro.props;
+const t = content[locale];
+const copyLabels = { copyLabel: t.copy, copiedLabel: t.copied, failedLabel: t.copyFailed };
+const short = locale === 'es' ? {
+  how: 'Cómo funciona', description: 'Pacifico archiva tus sesiones para consultarlas desde la terminal o mediante MCP.',
+  steps: ['Importa las sesiones de Claude Code, Codex, Pi y OpenCode.', 'Busca mensajes, archivos y comandos en tu historial.', 'Tu agente lee las conversaciones anteriores mediante MCP.'],
+  install: 'Instalación', requirements: 'macOS o Linux · ARM64 o x86-64 · Homebrew',
+  guide: 'Ver documentación completa', restart: 'Reinicia tu agente después de instalar.',
+} : {
+  how: 'How it works', description: 'Pacifico archives your sessions so you can read them from the terminal or through MCP.',
+  steps: ['Import sessions from Claude Code, Codex, Pi, and OpenCode.', 'Search messages, files, and commands in your history.', 'Your agent reads past conversations through MCP.'],
+  install: 'Installation', requirements: 'macOS or Linux · ARM64 or x86-64 · Homebrew',
+  guide: 'Read the full documentation', restart: 'Restart your agent after installation.',
+};
+---
+<Page locale={locale}>
+  <main id="main">
+    <section id="top" class="page-width hero" aria-labelledby="wordmark">
+      <VideoArt client:visible mediaPath={localPath('media/')} locale={locale} />
+      <h1 id="wordmark" class="wordmark">pacifico</h1>
+      <p class="hero-intro">{t.intro}</p>
+    </section>
+    <section id="install" class="page-width section-space compact-install" aria-labelledby="install-title">
+      <h2 id="install-title" class="section-title">{short.install}</h2>
+      <p class="quiet-text">{short.requirements}</p>
+      <CopyCommand client:load command={installCommand} label={t.terminal} {...copyLabels} />
+      <p class="quiet-text">{short.restart}</p>
+      <a class="text-link" href={localPath(locale === 'es' ? 'es/guide/' : 'guide/')}>{short.guide}</a>
+    </section>
+    <section id="how" class="page-width section-space" aria-labelledby="how-title">
+      <h2 id="how-title" class="section-title">{short.how}</h2>
+      <p class="section-intro">{short.description}</p>
+      <ol class="flow-list compact-flow">
+        {short.steps.map((step, i) => <li class="flex gap-5"><span class="flow-step" aria-hidden="true">{i + 1}</span><p>{step}</p></li>)}
+      </ol>
+    </section>
+  </main>
+  <SiteFooter locale={locale} />
+</Page>

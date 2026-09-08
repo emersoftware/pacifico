@@ -1,0 +1,32 @@
+---
+interface Props { locale: 'en' | 'es'; }
+const { locale } = Astro.props;
+---
+<button class="theme-toggle" type="button" data-theme-toggle
+  data-light-label={locale === 'es' ? 'Activar modo claro' : 'Switch to light mode'}
+  data-dark-label={locale === 'es' ? 'Activar modo oscuro' : 'Switch to dark mode'}
+  aria-label={locale === 'es' ? 'Cambiar tema' : 'Change theme'}>
+  <svg class="theme-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg>
+  <svg class="theme-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M20 14a8 8 0 0 1-10-10A8.5 8.5 0 1 0 20 14Z"/></svg>
+</button>
+<script>
+  const button = document.querySelector<HTMLButtonElement>('[data-theme-toggle]');
+  const preference = matchMedia('(prefers-color-scheme: dark)');
+  function sync() {
+    const dark = document.documentElement.dataset.theme === 'dark';
+    button?.setAttribute('aria-label', (dark ? button.dataset.lightLabel : button.dataset.darkLabel) || 'Change theme');
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#000000' : '#ffffff');
+  }
+  button?.addEventListener('click', () => {
+    const theme = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = theme;
+    try { localStorage.setItem('pacifico-theme', theme); } catch { /* Theme changes still work without storage. */ }
+    sync();
+  });
+  preference.addEventListener('change', () => {
+    try { if (localStorage.getItem('pacifico-theme')) return; } catch { /* Follow the system when storage is unavailable. */ }
+    document.documentElement.dataset.theme = preference.matches ? 'dark' : 'light';
+    sync();
+  });
+  sync();
+</script>

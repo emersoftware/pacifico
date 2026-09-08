@@ -1,0 +1,15 @@
+{
+  "name": "pacifico",
+  "description": "Local session search and reading through MCP.",
+  "version": "0.2.0",
+  "author": {
+    "name": "emersoftware"
+  },
+  "license": "MIT",
+  "keywords": [
+    "pacifico",
+    "sessions",
+    "search",
+    "mcp"
+  ]
+}

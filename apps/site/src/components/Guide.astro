@@ -1,0 +1,103 @@
+---
+import Page from '../layouts/Page.astro';
+import CopyCommand from './CopyCommand';
+import SiteFooter from './SiteFooter.astro';
+import { content, installCommand, repository, type Locale } from '../data/content';
+import { localPath } from '../lib/paths';
+import { version } from '../../../../package.json';
+interface Props { locale: Locale; }
+const { locale } = Astro.props;
+const t = content[locale];
+const copyLabels = { copyLabel: t.copy, copiedLabel: t.copied, failedLabel: t.copyFailed };
+const title = locale === 'es' ? 'Instalación' : 'Installation';
+---
+<Page locale={locale} title={`${title} — pacifico`} section="guide/">
+  <main id="main">
+    <div id="top" class="page-width guide-page-heading">
+      <a class="text-link" href={localPath(locale === 'es' ? 'es/' : '')}>← pacifico</a>
+      <h1 class="section-title">{title}</h1>
+      <CopyCommand client:load command={installCommand} label={t.terminal} {...copyLabels} />
+    </div>
+  <div class="guide-surface">
+    <section id="guide" class="page-width section-space" aria-labelledby="guide-title">
+      <div class="guide-heading">
+        <h2 id="guide-title" class="section-title">{t.guideTitle}</h2>
+        <p class="section-intro">{t.guideIntro}</p>
+      </div>
+      <div class="guide-grid">
+
+        <div class="guide-content">
+          <section id="requirements" aria-labelledby="requirements-title">
+            <h3 id="requirements-title">{t.beforeTitle}</h3>
+            <ul class="prose-list">{t.before.map(item => <li>{item}</li>)}</ul>
+            <p class="quiet-text">{t.alternative} <a class="text-link" href={`${repository}/releases`}>{t.releaseLink}</a>.</p>
+          </section>
+          <section id="setup" aria-labelledby="setup-title">
+            <h3 id="setup-title">{t.setupTitle}</h3>
+            <ol class="prose-list list-decimal">{t.setup.map(item => <li>{item}</li>)}</ol>
+            <p class="quiet-text">{t.setupNote}</p>
+          </section>
+          <section id="background" aria-labelledby="background-title">
+            <h3 id="background-title">{t.daemonTitle}</h3>
+            <p>{t.daemonBody}</p>
+            <CopyCommand client:load command="pacifico daemon start" label={t.daemonLabel} {...copyLabels} />
+            <p class="quiet-text">{t.daemonStop} <code>pacifico daemon stop</code>.</p>
+            <p class="quiet-text">{t.linux}</p>
+          </section>
+          <section id="verify" aria-labelledby="verify-title">
+            <h3 id="verify-title">{t.verifyTitle}</h3>
+            <p>{t.verifyBody}</p>
+            <CopyCommand client:load command={'pacifico --version\npacifico vault status\npacifico daemon status'} label={t.verifyLabel} {...copyLabels} />
+            <p class="quiet-text">{t.verifyNote}</p>
+          </section>
+          <section id="recovery" aria-labelledby="recovery-title">
+            <h3 id="recovery-title">{t.recoverTitle}</h3>
+            <div class="recovery-list">
+              {t.recover.map(item => <details>
+                <summary>{item.title}<svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" /></svg></summary>
+                <div class="recovery-body"><p>{item.body}</p><CopyCommand client:load command={item.command} label={item.title} {...copyLabels} /></div>
+              </details>)}
+            </div>
+          </section>
+          <section id="files" aria-labelledby="files-title">
+            <h3 id="files-title">{t.filesTitle}</h3>
+            <p>{t.filesBody}</p>
+            <dl class="file-list">{t.files.map(([label, path]) => <div><dt>{label}</dt><dd><code>{path}</code></dd></div>)}</dl>
+            <p>{t.retention}</p>
+            <CopyCommand client:load command={'pacifico uninstall\nbrew uninstall pacifico'} label={t.uninstall} {...copyLabels} />
+          </section>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section class="page-width section-space commands-section" aria-labelledby="commands-title">
+    <h2 id="commands-title" class="section-title">{t.commandsTitle}</h2>
+    <dl class="command-reference">
+      {t.commands.map(([command, description]) => <div class="grid gap-2"><dt><code>{command}</code></dt><dd>{description}</dd></div>)}
+    </dl>
+    <a class="text-link inline-flex items-center gap-2" href={`${repository}/releases`}>v{version} · {t.releaseLink}</a>
+  </section>
+
+  <section id="how" class="page-width how-section section-space" aria-labelledby="how-title">
+    <div class="how-content">
+      <div>
+        <h2 id="how-title" class="section-title whitespace-pre-line">{t.howTitle}</h2>
+        <p class="section-intro">{t.howBody}</p>
+      </div>
+      <ol class="flow-list">
+        {t.flow.map((step, i) => <li class="flex gap-5">
+          <span class="flow-step" aria-hidden="true">{i + 1}</span>
+          <div><h3>{step.title}</h3><p>{step.body}</p></div>
+        </li>)}
+      </ol>
+    </div>
+    <div class="search-example">
+      <CopyCommand client:load command={t.searchCommand} label={t.exampleLabel} {...copyLabels} />
+    </div>
+  </section>
+
+
+  </main>
+  <SiteFooter locale={locale} guide />
+</Page>

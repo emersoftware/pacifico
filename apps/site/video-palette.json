@@ -1,0 +1,14 @@
+{
+  "white": {
+    "hex": "#f7d4db",
+    "samples": 14926
+  },
+  "blue": {
+    "hex": "#244ff4",
+    "samples": 78835
+  },
+  "pink": {
+    "hex": "#e87fd2",
+    "samples": 35899
+  }
+}

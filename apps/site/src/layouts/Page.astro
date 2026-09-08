@@ -1,0 +1,46 @@
+---
+import '../styles/global.css';
+import { content, type Locale } from '../data/content';
+import { localPath } from '../lib/paths';
+import serifFont from '@fontsource/instrument-serif/files/instrument-serif-latin-400-normal.woff2?url';
+interface Props { locale: Locale; title?: string; section?: string; }
+const { locale, title = content[Astro.props.locale].title } = Astro.props;
+const text = content[locale];
+const section = Astro.props.section || '';
+const canonical = new URL(Astro.url.pathname, Astro.site);
+---
+<!doctype html>
+<html lang={locale}>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={text.description} />
+    <meta name="theme-color" content="#ffffff" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={text.description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:locale" content={locale === 'es' ? 'es_ES' : 'en_US'} />
+    <meta property="og:image" content={new URL(localPath('pacifico.png'), Astro.site)} />
+    <meta name="twitter:card" content="summary" />
+    <link rel="canonical" href={canonical} />
+    <link rel="alternate" hreflang="en" href={new URL(localPath(section), Astro.site)} />
+    <link rel="alternate" hreflang="es" href={new URL(localPath(`es/${section}`), Astro.site)} />
+    <link rel="alternate" hreflang="x-default" href={new URL(localPath(section), Astro.site)} />
+    <link rel="icon" type="image/svg+xml" href={localPath('favicon.svg')} />
+    <link rel="preload" as="font" type="font/woff2" href={serifFont} crossorigin />
+    <script is:inline>
+      (() => {
+        let theme;
+        try { theme = localStorage.getItem('pacifico-theme'); } catch {}
+        document.documentElement.dataset.theme = theme === 'dark' || theme === 'light'
+          ? theme : matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      })();
+    </script>
+    <title>{title}</title>
+  </head>
+  <body>
+    <a href="#main" class="skip-link">{text.skip}</a>
+    <slot />
+  </body>
+</html>
