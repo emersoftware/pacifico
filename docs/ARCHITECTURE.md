@@ -11,8 +11,7 @@ packages/
   agents/src/       MCP server, client configuration, installer, and background service
   agents/plugin/    MCP integration manifests embedded in the executable
 scripts/            Generation, validation, and packaging
-distribution/      Release and Homebrew instructions
-docs/              Reference material and engineering notes
+docs/              Architecture, MCP, daemon, testing, and releases
 ```
 
 Production dependencies flow from the CLI to agents/core, and from agents to core. Core does not import production code from either of the other packages. Some integration tests exercise those boundaries; the architecture checker distinguishes tests from runtime dependencies.
@@ -36,7 +35,3 @@ Agent integrations own client-specific configuration, plugin registration, MCP s
 The daemon reuses the same import operation as MCP. A separate SQLite lock in `core/refresh-lock.ts` protects the full refresh across processes. Archive files are written through temporary files and atomic renames.
 
 Homebrew installs use a verified stable `opt/pacifico/bin/pacifico` alias for MCP configuration and launchd, so removing an old keg does not invalidate either integration. Standalone installations retain their absolute executable path.
-
-## Existing limitations
-
-`core/cache.ts` remains large, and some inherited modules combine report formatting with their operations. An extraction should isolate independently changing knowledge behind a simpler interface, rather than merely reduce a file's line count. See [design decisions](DECISIONS.md) and [background indexing](DAEMON.md).

@@ -759,7 +759,7 @@ function rowLimit(value: number | undefined, fallback: number): number {
   return Math.max(1, Math.floor(value));
 }
 
-// Ranking knobs - the eval fixture's tuning surface (src/eval/, docs/EVAL.md).
+// Ranking knobs - the eval fixture's tuning surface (src/eval/, docs/TESTING.md).
 // These move ONLY against the golden fixture, in coarse steps: change a value,
 // run `bun run eval`, and keep the change only if the gate stays green because a
 // real miss got fixed. The fixture is versioned with the values; grow it (log

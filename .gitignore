@@ -42,15 +42,9 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 usage-report.json
 report.html
 
-# ideation planning artifacts (kept local)
-docs/ideation/*
-!docs/ideation/learnings.md
-
 # site build caches (site/dist and site/node_modules are already covered above)
 apps/site/.astro/
 apps/site/.wrangler/
 
-# Local design review artifacts
-.impeccable/review/
-.impeccable/mocks/
-.impeccable/build/
+# Local design tool state
+**/.impeccable/

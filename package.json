@@ -23,11 +23,9 @@
     "site:check": "cd apps/site && bun run check",
     "check:architecture": "bun scripts/check-architecture.ts",
     "test:binary": "bun scripts/smoke-binary.ts",
-    "package:local": "bun scripts/package-local.ts",
     "test:launchd": "bun scripts/smoke-launchd.ts"
   },
   "devDependencies": {
-    "@oxlint/plugins": "1.79.0",
     "@types/bun": "latest",
     "oxlint": "1.79.0",
     "prettier": "3.9.6",

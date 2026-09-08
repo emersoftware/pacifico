@@ -12,28 +12,11 @@ concurrency:
 env:
   BUN_VERSION: '1.3.13'
 
+permissions:
+  contents: read
+
 jobs:
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: ${{ env.BUN_VERSION }}
-      - run: bun install --frozen-lockfile
-      - run: bun run lint
-
-  format:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: ${{ env.BUN_VERSION }}
-      - run: bun install --frozen-lockfile
-      - run: bun run format:check
-
-  typecheck:
+  cli:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -44,45 +27,25 @@ jobs:
         with:
           bun-version: ${{ env.BUN_VERSION }}
       - run: bun install --frozen-lockfile
+      - run: bun run format:check
+      - run: bun run lint
       - run: bun run typecheck
       - run: bun run check:architecture
-
-  compile:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: ${{ env.BUN_VERSION }}
-      - run: bun install --frozen-lockfile
+      - run: bun test
       - run: bun run build
       - run: bun run test:binary
+      - run: bun run format:check
 
-  # The bilingual static site has its own dependency tree and type checker.
   site:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/site
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
-      # The root workspace does not install this app.
       - run: bun install --frozen-lockfile
-        working-directory: apps/site
       - run: bun run check
-        working-directory: apps/site
       - run: bun run build
-        working-directory: apps/site
-
-  # Runs deliberately on a runner with no agent CLI installed. Several suites used to
-  # pass only because `claude` happened to be on the developer's PATH; keeping the
-  # runner bare is what stops that class of test from regressing silently.
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: ${{ env.BUN_VERSION }}
-      - run: bun install --frozen-lockfile
-      - run: bun run test

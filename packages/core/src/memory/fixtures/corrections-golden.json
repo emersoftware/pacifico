@@ -1,5 +1,5 @@
 {
-  "_comment": "Hand-labeled corrections fixture set, the G1 instrument for the memory-recurrence mine (docs/ideation/memory-recurrence/spec-phase-1.md). Labels are human-made; this file changes only deliberately, with the reason recorded in the change itself, mirroring the frozen-corpus discipline in docs/EVAL.md and src/eval/corpus.ts. Each entry is { text, label: 'correction' | 'not', source }; `source` is a one-line note on where the phrasing shape came from. Entries must stay in the 25-240 char band (or deliberately out of it for band tests) and corrections must not be question-shaped, or the label stops meaning what recall.test.ts asserts.",
+  "_comment": "Hand-labeled correction fixtures. Each entry contains text, a correction/not label, and its source. Change labels only when the expected extraction behavior changes. See recall.test.ts and docs/TESTING.md.",
   "entries": [
     {
       "text": "Always run the full test suite before marking a ticket as done, not just the file you changed.",
@@ -356,12 +356,36 @@
       "label": "not",
       "source": "pasted task template, term-free"
     },
-    { "text": "never mind, carry on", "label": "not", "source": "corrective vocabulary under the 25-char floor" },
-    { "text": "stop right there", "label": "not", "source": "corrective vocabulary under the floor" },
-    { "text": "wrong file, sorry", "label": "not", "source": "corrective vocabulary under the floor" },
-    { "text": "let's revert this", "label": "not", "source": "reversal vocabulary under the floor" },
-    { "text": "undo that please", "label": "not", "source": "reversal vocabulary under the floor" },
-    { "text": "don't do that", "label": "not", "source": "corrective vocabulary under the floor" },
+    {
+      "text": "never mind, carry on",
+      "label": "not",
+      "source": "corrective vocabulary under the 25-char floor"
+    },
+    {
+      "text": "stop right there",
+      "label": "not",
+      "source": "corrective vocabulary under the floor"
+    },
+    {
+      "text": "wrong file, sorry",
+      "label": "not",
+      "source": "corrective vocabulary under the floor"
+    },
+    {
+      "text": "let's revert this",
+      "label": "not",
+      "source": "reversal vocabulary under the floor"
+    },
+    {
+      "text": "undo that please",
+      "label": "not",
+      "source": "reversal vocabulary under the floor"
+    },
+    {
+      "text": "don't do that",
+      "label": "not",
+      "source": "corrective vocabulary under the floor"
+    },
     {
       "text": "Always check the printed contract before you regenerate the client, because the generator reads the spec from the sibling repo and silently drops any endpoint whose summary line is missing from the yaml file, and the failure only surfaces two releases later as a runtime 404 for one tenant.",
       "label": "not",

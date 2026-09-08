@@ -351,12 +351,8 @@ describe('mineRestriction', () => {
 });
 
 describe('distinctPhrasings stays 1, and snooze-resurface therefore cannot fire', () => {
-  // A RECORDED LIMITATION, locked so a future change has to be deliberate. See the
-  // amendment and Open Item in docs/ideation/context-memory/spec-phase-6.md: the spec's
-  // "a genuinely new phrasing bumps distinctPhrasings and can trigger resurface" case is
-  // not reachable through the shipped pipeline, because a record is content-addressed on
-  // its own text. Closing the gap needs a clustering write-back no phase specifies; when
-  // one lands, these two tests are the ones that must change on purpose.
+  // New wording produces a separate content-addressed record, so incremental
+  // mining cannot increase distinctPhrasings or resurface a snoozed record.
   const REWORDED = 'Always run the migration script first, before the api service is deployed';
 
   test('a new wording becomes a new record instead of bumping the existing one', async () => {

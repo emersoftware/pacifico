@@ -1,8 +1,4 @@
-// Unit + golden coverage for recurrence matching (the G2 instrument of
-// docs/ideation/memory-recurrence/spec-phase-2.md), plus the phase-4 trend
-// snapshot coverage (G4 of spec-phase-4.md). The matching unit tests keep the
-// no-tmpdir promise - hand-built records, matcher is pure; the snapshot tests
-// below bring the tmpdir harness because the snapshot file is the G4 instrument.
+// Recurrence matching and append-only trend snapshot coverage.
 
 import { beforeAll, beforeEach, afterAll, describe, expect, test } from 'bun:test';
 import { existsSync, readFileSync, rmSync } from 'node:fs';

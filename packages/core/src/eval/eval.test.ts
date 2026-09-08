@@ -1,5 +1,5 @@
 // The eval runner: seeds the frozen corpus, plays every golden query through the
-// real search engine, and gates on the metrics (docs/EVAL.md). Runs as part of
+// real search engine, and gates on the metrics (docs/TESTING.md). Runs as part of
 // `bun test` so CI enforces it; `bun run eval` runs just this file for tuning.
 //
 // Every golden query is executed ONCE in beforeAll and materialized into plain

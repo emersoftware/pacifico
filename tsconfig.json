@@ -1,10 +1,8 @@
 {
-  // site/ is its own Astro project with its own tsconfig and its own
+  // apps/site/ is its own Astro project with its own tsconfig and its own
   // `astro check`. It targets the browser and the Astro build, not Bun, so it
   // must not inherit these options.
-  // tools/ is vendored lint tooling with its own compiler options; this
-  // repo's strict flags (e.g. noUncheckedIndexedAccess) do not apply to it.
-  "exclude": ["apps/site", "dist", "node_modules", "tools"],
+  "exclude": ["apps/site", "dist", "node_modules"],
   "compilerOptions": {
     // Environment setup & latest features
     "lib": ["ESNext"],

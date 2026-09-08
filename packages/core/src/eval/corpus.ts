@@ -1,5 +1,5 @@
 // The eval corpus: a FROZEN set of fixture sessions that golden.ts's queries run
-// against. Discipline (docs/EVAL.md):
+// against. Discipline (docs/TESTING.md):
 //  - The corpus changes only deliberately, and every change bumps EVAL_V.
 //  - It grows by logging REAL misses as new sessions + goldens, never by editing
 //    an expectation to match whatever the ranker currently does.

@@ -3,7 +3,7 @@
 //
 // This is an extraction gate, not a ranking gate - it lives in src/memory/ rather
 // than src/eval/ because the eval harness ranks sessions while this measures
-// candidate extraction (docs/ideation/memory-recurrence/spec-phase-1.md).
+// candidate extraction.
 //
 // Each entry becomes its own session with a single typed user turn followed by an
 // assistant turn, so the interruption pass can never fire inside this corpus: recall

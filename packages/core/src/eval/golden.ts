@@ -1,5 +1,5 @@
 // The golden fixture: the queries search ranking is held to, the gates they must
-// pass, and the version that ties them to the corpus. Discipline in docs/EVAL.md.
+// pass, and the version that ties them to the corpus. Discipline in docs/TESTING.md.
 //
 // Classes:
 //  - lexical          concrete cues: error strings, paths, commands, identifiers

@@ -359,7 +359,7 @@ export async function mine(opts: MineOptions = {}): Promise<MemoryRecord[]> {
     for (const row of stmt.iterate(...params, ...extraParams)) onRow(row);
   };
 
-  // The interruption pass (Phase 1, docs/ideation/memory-recurrence/spec-phase-1.md):
+  // The interruption pass:
   // message_fts excludes tool results and injected turns, so two consecutive
   // role='user' rows in one session are a real interruption - the user cut the agent
   // off - and the second turn, matching the relaxed INTERRUPTION_TERMS, is
@@ -491,18 +491,8 @@ export async function mine(opts: MineOptions = {}): Promise<MemoryRecord[]> {
 
   const records: MemoryRecord[] = [];
   for (const cluster of clusters.values()) {
-    // A cluster is exactly one distinct phrasing: grouping paraphrases is an LLM
-    // judgment and belongs to the /memory triage skill, which merges records and
-    // recomputes this.
-    //
-    // Phase 6 deliberately does NOT change that, and that is a RECORDED SPEC AMENDMENT
-    // rather than an omission: see "Amendments recorded during implementation" and the
-    // matching Open Item in docs/ideation/context-memory/spec-phase-6.md. An incremental
-    // mine cannot make this number grow: a record is content-addressed on its own text
-    // (src/memory/record.ts:105-110), so a genuinely new wording is a NEW record with a
-    // new id, not a bump on an existing one. Counting occurrences or contributing
-    // sessions instead is the "raw volume counting" the contract rejected - one eval
-    // fixture prompt appeared 14 times byte-identical and would have topped the batch.
+    // Each cluster represents one distinct phrasing. Different wording produces a
+    // different content-addressed record; repeated occurrences do not increase it.
     //
     // The consequence is user-visible and documented as such: the resurface predicate's
     // second condition (src/memory/triage.ts) cannot fire through the shipped pipeline,

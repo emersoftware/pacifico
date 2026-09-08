@@ -1,5 +1,5 @@
 // Recurrence matching: compare freshly mined corrective clusters against the memory
-// store and classify what recurs. Phase 2 of docs/ideation/memory-recurrence/.
+// store and classify what recurs.
 //
 // This module is PURE and imports no store, no index, no clock - same constraint
 // src/memory/topic.ts:1-8 ships under, and for the same reason: recurrence.test.ts

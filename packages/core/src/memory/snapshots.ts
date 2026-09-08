@@ -1,9 +1,4 @@
-// Trend snapshots for the recurrence report (phase 4 of
-// docs/ideation/memory-recurrence/). One JSONL line per `pacifico memory report`
-// run, appended - never rewritten - so the trend is an audit trail, not state.
-// JSONL over a memory.db table on purpose: a file is inspectable and survives
-// store schema migrations without one; the contract's whole thesis is that JSONL
-// you can read beats a table you can't.
+// Append one JSONL snapshot per memory report run to preserve its trend history.
 //
 // Everything here is pure apart from the two I/O seams, and those take the
 // directory as an argument (the caller passes `getDataDir()`) so a test points at
