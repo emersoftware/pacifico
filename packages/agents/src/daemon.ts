@@ -46,10 +46,12 @@ export function renderLaunchAgent(program: string[], environment: NodeJS.Process
     'SESSIONS_ARCHIVE_DIR',
     'SESSIONS_CLAUDE_DIR',
     'SESSIONS_CODEX_DIR',
-    'SESSIONS_PI_DIR',
+    'SESSIONS_CODEX_ARCHIVED_DIR',
+    'SESSIONS_CURSOR_DIR',
+    'SESSIONS_CURSOR_IDE_DIR',
+    'SESSIONS_ANTIGRAVITY_DIR',
+    'SESSIONS_NATIVE_HOME',
     'SESSIONS_OPENCODE_DB',
-    'PI_CODING_AGENT_SESSION_DIR',
-    'PI_CODING_AGENT_DIR',
   ];
   const values: Array<[string, string]> = [];
   for (const key of pathKeys) {
@@ -63,7 +65,7 @@ ${OWNERSHIP}
 <plist version="1.0"><dict>
 <key>Label</key><string>${DAEMON_LABEL}</string>
 <key>ProgramArguments</key><array>${program.map((arg) => `<string>${xml(arg)}</string>`).join('')}</array>
-<key>WorkingDirectory</key><string>${xml(resolve(getHome()))}</string>
+<key>WorkingDirectory</key><string>${xml(resolve(environment.SESSIONS_HOME || getHome()))}</string>
 <key>RunAtLoad</key><true/>
 <key>StartInterval</key><integer>${DAEMON_INTERVAL_SECONDS}</integer>
 <key>ProcessType</key><string>Background</string>

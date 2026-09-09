@@ -1,52 +1,17 @@
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 
-/**
- * Home root. `SESSIONS_HOME` exists so the installer can be exercised against a temp
- * dir: src/mcp-config.ts edits real client config files (~/.codex/config.toml among
- * them), and a test that writes those for real is not a test anyone can run twice.
- */
+/** Resolve the configured home lazily for isolated installs and native-source discovery. */
 export function getHome(): string {
   return process.env.SESSIONS_HOME || homedir();
 }
 
-/**
- * The durable data directory. Honors SESSIONS_DATA_DIR and is resolved lazily -
- * never frozen at import - for the same reason as src/cache.ts:41-45: the module
- * instance is shared across a `bun test` run, so a test that mutates the env on an
- * already-imported module must still be honored.
- */
+/** Durable user data survives integration uninstall. */
 export function getDataDir(): string {
   return process.env.SESSIONS_DATA_DIR || join(getHome(), '.local', 'share', 'pacifico');
 }
 
-/**
- * The transcript vault: an append-only, user-owned archive of session transcripts.
- * Built on getDataDir() (the ~/.local/share/pacifico durable-data convention that
- * `pacifico uninstall` leaves alone) so it inherits SESSIONS_DATA_DIR, with
- * SESSIONS_ARCHIVE_DIR as the direct override. Resolved lazily - never frozen at
- * import - for the same test-hermeticity reason as getDataDir above.
- */
+/** Latest durable session snapshots, with an optional directory override. */
 export function getArchiveDir(): string {
   return process.env.SESSIONS_ARCHIVE_DIR || join(getDataDir(), 'archive');
-}
-
-/**
- * Where Pi keeps its session transcripts. One resolver shared by the index
- * (src/cache.ts), the no-index scanner (src/scanner.ts), and the usage report
- * (src/report/extract.ts) so all three always look at the same tree.
- *
- * Order:
- *   1. SESSIONS_PI_DIR - this project's own override (tests, unusual setups);
- *   2. PI_CODING_AGENT_SESSION_DIR - Pi's documented session-storage override;
- *   3. PI_CODING_AGENT_DIR - Pi's config-dir override (sessions live under it);
- *   4. ~/.pi/agent/sessions - Pi's default.
- * Resolved lazily (never frozen at import) for the same test-hermeticity reason
- * as getDataDir above.
- */
-export function getPiSessionsDir(): string {
-  if (process.env.SESSIONS_PI_DIR) return process.env.SESSIONS_PI_DIR;
-  if (process.env.PI_CODING_AGENT_SESSION_DIR) return process.env.PI_CODING_AGENT_SESSION_DIR;
-  if (process.env.PI_CODING_AGENT_DIR) return join(process.env.PI_CODING_AGENT_DIR, 'sessions');
-  return join(homedir(), '.pi', 'agent', 'sessions');
 }

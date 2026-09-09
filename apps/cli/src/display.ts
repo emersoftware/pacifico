@@ -40,28 +40,10 @@ export function formatLine(r: SessionResult, cols: number): string {
   const hit = r.messageHits?.[0];
   const hitBadge = hit ? `${C.dim}msg#${hit.index}${C.reset} ` : '';
 
-  // Pi /tree fork count. Like the other badges it lives in the display field BEFORE
-  // the prompt: the prompt is the only truncated element, so the badge survives
-  // narrow terminals rather than being squeezed out by a long prompt.
-  const forkBadge = r.branches > 0 ? `${C.dim}⑂${r.branches}${C.reset} ` : '';
-
-  const display = `${dot} ${C.bold}${dirName}${C.reset}  ${toolBadge}  ${C.dim}${rel}${C.reset}  ${msgs ? msgs + '  ' : ''}${warn}${hitBadge}${forkBadge}${truncated}`;
+  const display = `${dot} ${C.bold}${dirName}${C.reset}  ${toolBadge}  ${C.dim}${rel}${C.reset}  ${msgs ? msgs + '  ' : ''}${warn}${hitBadge}${truncated}`;
 
   // tab-separated: filePath, cwd, tool, sessionId, exists, prompt, display
   // filePath leads so the selector's fzf --preview can reference {1} directly;
   // --with-nth skips it (and the other metadata fields) to show only `display`.
   return `${r.filePath}\t${r.cwd}\t${r.tool}\t${r.sessionId}\t${r.exists ? 'exists' : 'deleted'}\t${prompt}\t${display}`;
-}
-
-/**
- * The session-detail lineage line: the /fork parent (BASENAME only - the stored path
- * is deliberately unresolved; the parent file may not exist on disk and no DB join
- * happens here) plus the in-file fork count. '' when the session has no lineage to
- * show, so the caller skips the line entirely.
- */
-export function formatLineage(r: SessionResult): string {
-  const parts: string[] = [];
-  if (r.forkedFrom) parts.push(`Forked from ${basename(r.forkedFrom)}`);
-  if (r.branches > 0) parts.push(`${r.branches} in-file fork${r.branches === 1 ? '' : 's'}`);
-  return parts.join(' · ');
 }

@@ -1,4 +1,9 @@
+import { antigravityGitVersion } from './sources/antigravity-git';
+import { codexRolloutPath, readCodexRollout } from './sources/codex-rollout';
+import { cursorIdeLocation, cursorIdeSessionExists } from './sources/cursor-ide';
 import { readFileSync, statSync } from 'node:fs';
+import { antigravityHistoryPath, antigravityDatabasePath } from './sources/antigravity-history';
+import { readImportedSession } from './ingestion/imported-session';
 import { type Tool } from './types';
 import { isOpencodePath, readOpencodeSession, opencodeStat } from './opencode';
 import { getArchiveDir, getManifestPath, loadManifest, type Manifest, type VaultEntry } from './vault/archive';
@@ -18,7 +23,7 @@ import { getArchiveDir, getManifestPath, loadManifest, type Manifest, type Vault
 // file's mtime changes. A concurrent refresh's vault write bumps that mtime, so a
 // long-lived reader (the MCP server) re-reads it rather than declaring a path missing
 // off a stale copy. Absent manifest → null cache and no vault fallback.
-let _manifestCache: { mtimeMs: number; manifest: Manifest } | null = null;
+let _manifestCache: { path: string; mtimeMs: number; manifest: Manifest } | null = null;
 
 function vaultEntry(filePath: string): VaultEntry | null {
   const manifestPath = getManifestPath(getArchiveDir());
@@ -29,8 +34,8 @@ function vaultEntry(filePath: string): VaultEntry | null {
     _manifestCache = null;
     return null;
   }
-  if (!_manifestCache || _manifestCache.mtimeMs !== mtimeMs) {
-    _manifestCache = { mtimeMs, manifest: loadManifest(getArchiveDir()) };
+  if (!_manifestCache || _manifestCache.path !== manifestPath || _manifestCache.mtimeMs !== mtimeMs) {
+    _manifestCache = { path: manifestPath, mtimeMs, manifest: loadManifest(getArchiveDir()) };
   }
   const entry = _manifestCache.manifest[filePath];
   return entry ?? null;
@@ -42,13 +47,32 @@ function vaultEntry(filePath: string): VaultEntry | null {
  * path shape. Falls back to the vault copy when the live source is gone.
  */
 export function readSessionLines(filePath: string, tool?: Tool): string[] {
-  if (tool === 'opencode' || (tool === undefined && isOpencodePath(filePath))) {
-    const lines = readOpencodeSession(filePath);
-    if (lines.length > 0) return lines;
-    // DB row (or the whole DB) is gone - fall back to the vault export below.
+  const archivedTool = vaultEntry(filePath)?.tool;
+  if (archivedTool !== 'pi') tool ??= archivedTool;
+  if (tool === 'cursor' || tool === 'antigravity') {
+    try {
+      let previous: string[] = [];
+      const archived = vaultEntry(filePath);
+      if (tool === 'antigravity' && archived) {
+        try {
+          previous = readFileSync(archived.vaultPath, 'utf8').split('\n');
+        } catch {}
+      }
+      const lines = readImportedSession(filePath, tool, previous);
+      if (lines.length) return lines;
+    } catch {}
+  } else if (tool === 'opencode' || (tool === undefined && isOpencodePath(filePath))) {
+    try {
+      const lines = readOpencodeSession(filePath);
+      if (lines.length > 0) return lines;
+    } catch {
+      // A partial native write must not hide the last durable transcript.
+    }
+    // Missing or unreadable native records fall back to the vault export below.
   } else {
     try {
-      return readFileSync(filePath, 'utf-8').trimEnd().split('\n');
+      const content = tool === 'codex' ? readCodexRollout(filePath).toString('utf8') : readFileSync(filePath, 'utf-8');
+      return content.trimEnd().split('\n');
     } catch {
       // Live source missing - fall back to the vault copy below.
     }
@@ -68,8 +92,44 @@ export function statSession(filePath: string, tool: Tool): { mtimeMs: number; si
     const s = opencodeStat(filePath);
     if (s) return s;
   } else {
+    if (tool === 'antigravity' && filePath.endsWith('/transcript.jsonl')) {
+      const gitVersion = antigravityGitVersion(filePath);
+      const stats = [
+        filePath,
+        filePath.replace(/transcript\.jsonl$/, 'transcript_full.jsonl'),
+        antigravityDatabasePath(filePath),
+      ].flatMap((path) => {
+        try {
+          return [statSync(path)];
+        } catch {
+          return [];
+        }
+      });
+      if (stats.length || gitVersion !== null) {
+        try {
+          stats.push(statSync(antigravityDatabasePath(filePath) + '-wal'));
+        } catch {}
+        try {
+          stats.push(statSync(antigravityHistoryPath(filePath)));
+        } catch {}
+        return {
+          mtimeMs: Math.max(0, ...stats.map((s) => s.mtimeMs)),
+          size: stats.reduce((n, s) => n + s.size, gitVersion ?? 0),
+        };
+      }
+    }
     try {
-      const s = statSync(filePath);
+      if (tool === 'cursor' && cursorIdeLocation(filePath) && !cursorIdeSessionExists(filePath)) {
+        throw new Error('Cursor composer is absent');
+      }
+      const nativePath = tool === 'cursor' ? (cursorIdeLocation(filePath)?.database ?? filePath) : filePath;
+      const s = statSync(tool === 'codex' ? codexRolloutPath(nativePath) : nativePath);
+      if (tool === 'cursor' && (nativePath.endsWith('/store.db') || nativePath.endsWith('/state.vscdb'))) {
+        try {
+          const wal = statSync(nativePath + '-wal');
+          return { mtimeMs: Math.max(s.mtimeMs, wal.mtimeMs), size: s.size + wal.size };
+        } catch {}
+      }
       return { mtimeMs: s.mtimeMs, size: s.size };
     } catch {
       // Live source missing - fall back to the vault copy below.

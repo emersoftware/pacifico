@@ -9,15 +9,13 @@ import type { ContextPrimer } from './types';
 // and a beforeEach re-asserts these on the shared module instance before each test.
 const fixtureRoot = realpathSync(mkdtempSync(join(tmpdir(), 'sessions-ctx-')));
 const claudeDir = join(fixtureRoot, 'claude');
-const piDir = join(fixtureRoot, 'pi');
 const codexDir = join(fixtureRoot, 'codex');
 const cacheDir = join(fixtureRoot, 'cache');
 const archiveDir = join(fixtureRoot, 'archive'); // hermetic vault; keep off the real ~/.local/share
 const opencodeDb = join(fixtureRoot, 'opencode.db'); // absent → no OpenCode sessions leak in
-for (const d of [claudeDir, piDir, codexDir, cacheDir]) mkdirSync(d, { recursive: true });
+for (const d of [claudeDir, codexDir, cacheDir]) mkdirSync(d, { recursive: true });
 
 process.env.SESSIONS_CLAUDE_DIR = claudeDir;
-process.env.SESSIONS_PI_DIR = piDir;
 process.env.SESSIONS_CODEX_DIR = codexDir;
 process.env.SESSIONS_CACHE_DIR = cacheDir;
 process.env.SESSIONS_OPENCODE_DB = opencodeDb;
@@ -30,7 +28,6 @@ beforeEach(() => {
   // re-assert this fixture's env and drop any connection another file opened. Each
   // query below then reopens against this fixture's index.db - order-independent.
   process.env.SESSIONS_CLAUDE_DIR = claudeDir;
-  process.env.SESSIONS_PI_DIR = piDir;
   process.env.SESSIONS_CODEX_DIR = codexDir;
   process.env.SESSIONS_CACHE_DIR = cacheDir;
   process.env.SESSIONS_OPENCODE_DB = opencodeDb;
@@ -438,7 +435,7 @@ describe('cli', () => {
       recent: [
         {
           sessionId: 's',
-          tool: 'pi',
+          tool: 'opencode',
           branch: 'feat',
           date: '2026-06-19',
           messageCount: 3,
@@ -471,6 +468,12 @@ describe('cli', () => {
     expect(args.here).toBe(true);
   });
 
+  test('parseContextArgs accepts the new session sources', () => {
+    for (const tool of ['cursor', 'antigravity', 'opencode'] as const) {
+      expect(ctx.parseContextArgs(['--tool', tool]).tool).toBe(tool);
+    }
+  });
+
   test('parseContextArgs defaults', () => {
     const args = ctx.parseContextArgs([]);
     expect(args.limit).toBe(10);
@@ -491,6 +494,7 @@ describe('cli', () => {
     const errSpy = spyOn(process.stderr, 'write').mockImplementation((() => true) as never);
     try {
       expect(() => ctx.parseContextArgs(['--bogus'])).toThrow('exit');
+      expect(() => ctx.parseContextArgs(['--tool', 'pi'])).toThrow('exit');
       expect(errSpy).toHaveBeenCalled();
     } finally {
       exitSpy.mockRestore();

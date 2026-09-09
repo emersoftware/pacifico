@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Database } from 'bun:sqlite';
 import {
+  getOpencodeDbPath,
   opencodeFilePath,
   isOpencodePath,
   sessionIdFromPath,
@@ -91,7 +92,7 @@ function buildFixtureDb(path: string): void {
     j({ type: 'tool', tool: 'bash', state: { status: 'error', input: { command: 'x' }, error: 'boom quux' } }),
   );
 
-  // Subagent (child) session - folds into the parent for recall, never listed on its own.
+  // Child session retains its own identity and its native parent relationship.
   session.run('ses_child', 'p1', 'ses_parent', '/repo/app', 'Explore (@explore subagent)', 1200, 1400);
   message.run('msg_u2', 'ses_child', 1200, j({ role: 'user', time: { created: 1200 } }));
   part.run('prt_u2', 'msg_u2', 'ses_child', 1200, j({ type: 'text', text: 'subagent secret term wibbleflorp' }));
@@ -118,6 +119,23 @@ afterAll(() => {
 });
 
 describe('opencode module', () => {
+  test('exports complete source rows alongside the search projection', () => {
+    const source = JSON.parse(readOpencodeSession(opencodeFilePath('ses_parent'))[0]!);
+    const native = new Database(dbPath, { readonly: true });
+    try {
+      expect(source.type).toBe('source_records');
+      expect(source.session).toEqual(native.query('SELECT * FROM session WHERE id = ?').get('ses_parent'));
+      expect(source.messages).toEqual(
+        native.query('SELECT * FROM message WHERE session_id = ? ORDER BY time_created, id').all('ses_parent'),
+      );
+      expect(source.parts).toEqual(
+        native.query('SELECT * FROM part WHERE session_id = ? ORDER BY time_created, id').all('ses_parent'),
+      );
+    } finally {
+      native.close();
+    }
+  });
+
   test('path helpers round-trip and detect OpenCode paths', () => {
     const p = opencodeFilePath('ses_parent');
     expect(sessionIdFromPath(p)).toBe('ses_parent');
@@ -125,16 +143,43 @@ describe('opencode module', () => {
     expect(isOpencodePath('/home/x/.claude/projects/p/abc.jsonl')).toBe(false);
   });
 
-  test('discovers only top-level sessions (subagents fold into the parent)', () => {
+  test('discovers parent and child sessions independently', () => {
     const ids = discoverOpencodeSessions()
       .map((s) => sessionIdFromPath(s.path))
       .sort();
-    expect(ids).toEqual(['ses_parent', 'ses_plain']);
+    expect(ids).toEqual(['ses_child', 'ses_parent', 'ses_plain']);
+    const child = JSON.parse(readOpencodeSession(opencodeFilePath('ses_child'))[0]!);
+    expect(child.session.parent_id).toBe('ses_parent');
+    expect(child.messages).toHaveLength(1);
+    expect(child.parts).toHaveLength(1);
   });
 
-  test('stat reports time_updated as mtime and message count as size', () => {
-    expect(opencodeStat(opencodeFilePath('ses_parent'))).toEqual({ mtimeMs: 2000, size: 2 });
+  test('stat includes database changes and rejects missing sessions', () => {
+    expect(opencodeStat(opencodeFilePath('ses_parent'))!.mtimeMs).toBeGreaterThanOrEqual(2000);
+    expect(opencodeStat(opencodeFilePath('ses_parent'))!.size).toBeGreaterThan(2);
     expect(opencodeStat(opencodeFilePath('ses_missing'))).toBeNull();
+  });
+
+  test('a WAL part update invalidates an otherwise unchanged session', () => {
+    const isolated = join(tmp, 'wal-test.db');
+    buildFixtureDb(isolated);
+    closeOpencodeDb();
+    process.env.SESSIONS_OPENCODE_DB = isolated;
+    const writer = new Database(isolated);
+    try {
+      writer.exec('PRAGMA journal_mode=WAL');
+      const before = opencodeStat(opencodeFilePath('ses_parent'));
+      const original = writer.query<{ data: string }, []>("SELECT data FROM part WHERE id = 'prt_u1'").get()!.data;
+      writer
+        .query("UPDATE part SET data = ? WHERE id = 'prt_u1'")
+        .run(j({ type: 'text', text: 'updated independently' }));
+      expect(opencodeStat(opencodeFilePath('ses_parent'))).not.toEqual(before);
+      writer.query("UPDATE part SET data = ? WHERE id = 'prt_u1'").run(original);
+    } finally {
+      closeOpencodeDb();
+      writer.close();
+      process.env.SESSIONS_OPENCODE_DB = dbPath;
+    }
   });
 
   test('synthesizes lines the shared parser understands', () => {
@@ -175,7 +220,7 @@ describe('opencode module', () => {
     copyFileSync(dbPath, copyPath);
     process.env.SESSIONS_OPENCODE_DB = copyPath;
     closeOpencodeDb();
-    expect(discoverOpencodeSessions()).toHaveLength(2); // handle now open + cached
+    expect(discoverOpencodeSessions()).toHaveLength(3); // handle now open + cached
     rmSync(copyPath);
     expect(discoverOpencodeSessions()).toEqual([]);
     process.env.SESSIONS_OPENCODE_DB = dbPath;
@@ -190,11 +235,10 @@ describe('opencode cache integration', () => {
     // Point every source at hermetic locations; only OpenCode has a (fixture) DB.
     process.env.SESSIONS_CACHE_DIR = join(tmp, 'cache');
     process.env.SESSIONS_CLAUDE_DIR = join(tmp, 'claude');
-    process.env.SESSIONS_PI_DIR = join(tmp, 'pi');
     process.env.SESSIONS_CODEX_DIR = join(tmp, 'codex');
     process.env.SESSIONS_OPENCODE_DB = dbPath;
     process.env.SESSIONS_ARCHIVE_DIR = join(tmp, 'archive'); // hermetic vault; keep off the real ~/.local/share
-    for (const d of ['cache', 'claude', 'pi', 'codex']) mkdirSync(join(tmp, d), { recursive: true });
+    for (const d of ['cache', 'claude', 'codex']) mkdirSync(join(tmp, d), { recursive: true });
     cache = await import('./cache');
     cache.closeDb();
   });
@@ -218,16 +262,61 @@ describe('opencode cache integration', () => {
     );
   });
 
-  test('subagent text makes the parent findable, without listing the subagent', async () => {
+  test('child text makes both the child and parent findable', async () => {
     const results = await cache.searchSessions('wibbleflorp');
-    expect(results).toHaveLength(1);
-    expect(results[0]!.sessionId).toBe('ses_parent');
+    expect(results.map((r) => r.sessionId).sort()).toEqual(['ses_child', 'ses_parent']);
   });
 
-  test('lists top-level sessions when filtered to the opencode tool', async () => {
+  test('lists all native sessions when filtered to the opencode tool', async () => {
     const results = await cache.searchSessions('', { tool: 'opencode', limit: 100 });
-    expect(results.map((r) => r.sessionId).sort()).toEqual(['ses_parent', 'ses_plain']);
+    expect(results.map((r) => r.sessionId).sort()).toEqual(['ses_child', 'ses_parent', 'ses_plain']);
   });
+});
+
+test('OpenCode child source records survive database deletion and index rebuild', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'pacifico-opencode-recovery-'));
+  const environment = {
+    SESSIONS_OPENCODE_DB: join(root, 'opencode.db'),
+    SESSIONS_CACHE_DIR: join(root, 'cache'),
+    SESSIONS_ARCHIVE_DIR: join(root, 'archive'),
+    SESSIONS_NATIVE_HOME: root,
+    SESSIONS_CLAUDE_DIR: join(root, 'claude'),
+    SESSIONS_CODEX_DIR: join(root, 'codex'),
+    SESSIONS_CODEX_ARCHIVED_DIR: join(root, 'codex-archived'),
+    SESSIONS_CURSOR_DIR: join(root, 'cursor'),
+    SESSIONS_ANTIGRAVITY_DIR: join(root, 'gemini'),
+  };
+  const prior = Object.fromEntries(Object.keys(environment).map((key) => [key, process.env[key]]));
+  const cache = await import('./cache');
+  Object.assign(process.env, environment);
+  cache.closeDb();
+  closeOpencodeDb();
+  try {
+    buildFixtureDb(environment.SESSIONS_OPENCODE_DB);
+    const before = (await cache.searchSessions('wibbleflorp')).find((row) => row.sessionId === 'ses_child')!;
+    expect(before).toBeDefined();
+    const original = readSessionLines(before.filePath, 'opencode');
+    closeOpencodeDb();
+    rmSync(environment.SESSIONS_OPENCODE_DB);
+    cache.closeDb();
+    cache.clearCache();
+    const recoveredResults = await cache.searchSessions('wibbleflorp');
+    expect(recoveredResults.map((row) => row.sessionId).sort()).toEqual(['ses_child', 'ses_parent']);
+    const recovered = recoveredResults.find((row) => row.sessionId === 'ses_child')!;
+    expect(recovered).toBeDefined();
+    expect(readSessionLines(recovered.filePath, 'opencode')).toEqual(original);
+    const source = JSON.parse(original[0]!);
+    expect(source.session.parent_id).toBe('ses_parent');
+    expect(source.parts[0].session_id).toBe('ses_child');
+  } finally {
+    cache.closeDb();
+    closeOpencodeDb();
+    for (const [key, value] of Object.entries(prior)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 describe('opencode report parser', () => {
@@ -251,4 +340,21 @@ describe('opencode report parser', () => {
     const { parseOpencode } = await import('./report/parsers/opencode');
     expect(await parseOpencode(join(tmp, 'nope.db'))).toEqual([]);
   });
+});
+
+test('OpenCode source defaults honor Pacifico home and explicit database precedence', () => {
+  const home = process.env.SESSIONS_HOME;
+  const database = process.env.SESSIONS_OPENCODE_DB;
+  try {
+    process.env.SESSIONS_HOME = '/fixture/pacifico-home';
+    delete process.env.SESSIONS_OPENCODE_DB;
+    expect(getOpencodeDbPath()).toBe('/fixture/pacifico-home/.local/share/opencode/opencode.db');
+    process.env.SESSIONS_OPENCODE_DB = '/fixture/custom.db';
+    expect(getOpencodeDbPath()).toBe('/fixture/custom.db');
+  } finally {
+    if (home === undefined) delete process.env.SESSIONS_HOME;
+    else process.env.SESSIONS_HOME = home;
+    if (database === undefined) delete process.env.SESSIONS_OPENCODE_DB;
+    else process.env.SESSIONS_OPENCODE_DB = database;
+  }
 });

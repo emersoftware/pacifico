@@ -66,23 +66,6 @@ function extractCodex(lines: string[], push: (m: string) => void): void {
   }
 }
 
-function extractPi(lines: string[], push: (m: string) => void): void {
-  for (const line of lines) {
-    const d = tryParse(line);
-    if (!d || d.type !== 'message') continue;
-    const msg = asJsonObject(d.message);
-    if (!msg) continue;
-    if (msg.role === 'toolResult' && msg.isError === true) push(textOf(msg.content) || 'tool error');
-    else if (msg.role === 'assistant') {
-      const errorMessage = asJsonString(msg.errorMessage);
-      if (errorMessage) push(errorMessage);
-    } else if (msg.role === 'bashExecution') {
-      const exitCode = asJsonNumber(msg.exitCode);
-      if (exitCode !== undefined && exitCode !== 0) push(textOf(msg.output) || `exit ${exitCode}`);
-    }
-  }
-}
-
 // OpenCode: a tool block whose `state.status` is 'error' - the message is `state.error`.
 function extractOpencode(lines: string[], push: (m: string) => void): void {
   for (const block of opencodeAssistantBlocks(lines)) {
@@ -104,7 +87,6 @@ export function extractErrors(lines: string[], tool: Tool): SessionErrors {
   };
   if (tool === 'claude') extractClaude(lines, push);
   else if (tool === 'codex') extractCodex(lines, push);
-  else if (tool === 'pi') extractPi(lines, push);
   else if (tool === 'opencode') extractOpencode(lines, push);
   return { errored: count > 0, count, messages };
 }

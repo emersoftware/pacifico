@@ -153,7 +153,7 @@ function cacheStats(events: UsageEvent[]): CacheStats {
     // Gated on a pricing hit so an unpriced model doesn't push two more warnings
     // per event into the collector for a number we'd end up reporting as 0. A
     // family estimate counts as a hit: computeCost prices it (at the family rate),
-    // so gating it out would understate savings for models like Pi's kimi-k3.
+    // so gating it out would understate savings for models like kimi-k3.
     if (e.tokens.cacheRead > 0 && (find(e.model) || findFamily(e.model))) {
       // Price the same tokens twice - once as cache reads, once as fresh input -
       // through the real pricing path, so tiering and per-model rates apply.

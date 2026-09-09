@@ -9,7 +9,7 @@
 import type { WrappedData, WrappedExtra } from './types.ts';
 import { coerceExtras } from './extras.ts';
 
-export type RoastToolId = 'claude' | 'codex' | 'pi';
+export type RoastToolId = 'claude' | 'codex';
 
 interface RoastTool {
   id: RoastToolId;
@@ -19,12 +19,10 @@ interface RoastTool {
   args: (prompt: string) => string[];
 }
 
-// Preference order when --roast-with isn't given: Claude first (best taste for
-// this), then Codex, then Pi. Each runs its own headless/exec mode.
+// Try Claude before Codex when no CLI is requested.
 const ROAST_TOOLS: RoastTool[] = [
   { id: 'claude', label: 'Claude', bin: 'claude', args: (p) => ['-p', p] },
   { id: 'codex', label: 'Codex', bin: 'codex', args: (p) => ['exec', p] },
-  { id: 'pi', label: 'Pi', bin: 'pi', args: (p) => ['-p', p] },
 ];
 
 /** The table entry for `id`, without asking PATH whether it is installed. */
@@ -139,7 +137,7 @@ export async function runRoast(d: WrappedData, opts: RoastOptions = {}): Promise
     log(
       opts.preferred
         ? `warning: --roast-with ${opts.preferred}: '${opts.preferred}' not found on PATH; skipping roast`
-        : 'warning: --roast: no agent CLI (claude, codex, pi) found on PATH; skipping roast',
+        : 'warning: --roast: no agent CLI (claude, codex) found on PATH; skipping roast',
     );
     return [];
   }

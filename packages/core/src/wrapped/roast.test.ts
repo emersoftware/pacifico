@@ -1,4 +1,4 @@
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect, spyOn } from 'bun:test';
 import { buildRoastPrompt, extractJsonArray, runRoast, detectRoastTool } from './roast.ts';
 import type { WrappedData } from './types.ts';
 
@@ -146,9 +146,12 @@ describe('runRoast', () => {
 
 describe('detectRoastTool', () => {
   test('preferred tool that is not installed yields null, not a fallback', () => {
-    // 'pi' is very unlikely to be on the test PATH; a preferred-but-absent tool
-    // must not silently fall back to claude/codex.
-    const tool = detectRoastTool('pi');
-    if (tool) expect(tool.id).toBe('pi');
+    const which = spyOn(Bun, 'which').mockImplementation((name) => (name === 'claude' ? '/fixture/claude' : null));
+    try {
+      expect(detectRoastTool('codex')).toBeNull();
+      expect(detectRoastTool()?.id).toBe('claude');
+    } finally {
+      which.mockRestore();
+    }
   });
 });

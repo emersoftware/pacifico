@@ -1,13 +1,5 @@
 import type { Tool } from './types';
-import {
-  tryParse,
-  opencodeAssistantBlocks,
-  toolInput,
-  asJsonObject,
-  asJsonString,
-  jsonStrings,
-  type JsonObject,
-} from './extract-util';
+import { tryParse, opencodeAssistantBlocks, toolInput, asJsonObject, asJsonString, jsonStrings } from './extract-util';
 
 /** Upper bound on stored edited-file paths per session (bounds the indexed column). */
 export const MAX_FILES = 50;
@@ -60,47 +52,6 @@ function extractCodex(lines: string[], push: (p: string) => void): void {
 }
 
 /**
- * Pi: assistant messages (`type:'message'`, `message.role:'assistant'`) carry
- * content blocks `{type:'toolCall', name, arguments:{path}}`. Edits come from the
- * `edit`/`write` tools' `arguments.path`. Shape confirmed against a real
- * `~/.pi/agent/sessions` log (2026-08-04). The call block uses `name`; the
- * parallel `toolResult` block uses `toolName`, so both keys are accepted defensively.
- */
-const PI_WRITE_TOOLS = new Set(['edit', 'write']);
-
-function piToolCallPath(block: JsonObject, tools: Set<string>): string | undefined {
-  if (block.type !== 'toolCall') return undefined;
-  const name = asJsonString(block.name) ?? asJsonString(block.toolName) ?? '';
-  if (!tools.has(name)) return undefined;
-  const args = asJsonObject(block.arguments);
-  if (!args) return undefined;
-  const path = asJsonString(args.path);
-  return path ? path : undefined;
-}
-
-function piAssistantBlocks(lines: string[]): JsonObject[] {
-  const blocks: JsonObject[] = [];
-  for (const line of lines) {
-    const d = tryParse(line);
-    if (!d || d.type !== 'message') continue;
-    const msg = asJsonObject(d.message);
-    if (!msg || msg.role !== 'assistant' || !Array.isArray(msg.content)) continue;
-    for (const block of msg.content) {
-      const parsed = asJsonObject(block);
-      if (parsed) blocks.push(parsed);
-    }
-  }
-  return blocks;
-}
-
-function extractPi(lines: string[], push: (p: string) => void): void {
-  for (const block of piAssistantBlocks(lines)) {
-    const path = piToolCallPath(block, PI_WRITE_TOOLS);
-    if (path) push(path);
-  }
-}
-
-/**
  * OpenCode: edited files surface three ways in a synthesized assistant message -
  * `patch` blocks (an authoritative `files[]` list), `edit`/`write` tool blocks
  * (`state.input.filePath`), and `apply_patch` tool blocks whose `state.input.patchText`
@@ -140,7 +91,6 @@ export function extractFiles(lines: string[], tool: Tool): string[] {
 
   if (tool === 'claude') extractClaude(lines, push);
   else if (tool === 'codex') extractCodex(lines, push);
-  else if (tool === 'pi') extractPi(lines, push);
   else if (tool === 'opencode') extractOpencode(lines, push);
 
   return out;
@@ -169,16 +119,6 @@ function extractClaudeRead(lines: string[], push: (p: string) => void): void {
   }
 }
 
-/** Pi: read/searched targets - the `read` tool's `arguments.path`. */
-const PI_READ_TOOLS = new Set(['read']);
-
-function extractPiRead(lines: string[], push: (p: string) => void): void {
-  for (const block of piAssistantBlocks(lines)) {
-    const path = piToolCallPath(block, PI_READ_TOOLS);
-    if (path) push(path);
-  }
-}
-
 /**
  * Read/searched (not edited) file targets, for the searchable `paths` column.
  * Codex read-target shapes still need fixtures to confirm - deliberate no-op.
@@ -192,7 +132,6 @@ export function extractFilesRead(lines: string[], tool: Tool): string[] {
     out.push(path);
   };
   if (tool === 'claude') extractClaudeRead(lines, push);
-  else if (tool === 'pi') extractPiRead(lines, push);
   else if (tool === 'opencode') extractOpencodeRead(lines, push);
   return out;
 }

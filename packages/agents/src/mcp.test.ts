@@ -6,7 +6,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { version as pkgVersion } from '../../../package.json';
-import { asJsonObject, asJsonString, type JsonObject, type JsonValue } from '@pacifico/core/extract-util';
+import { asJsonObject, asJsonString, type JsonValue } from '@pacifico/core/extract-util';
 import { SearchOutput, ReadSessionOutput, ContextOutput } from './mcp-schemas';
 
 const j = (o: JsonValue): string => JSON.stringify(o);
@@ -26,17 +26,11 @@ function firstText(res: ToolCallOutcome | undefined): string {
   return text;
 }
 
-/** Parse a tool result's compact-JSON text block. Throws on non-objects. */
-function payloadOf(res: { content: { text: string }[] }): JsonObject {
-  const parsed = asJsonObject(JSON.parse(res.content[0]!.text));
-  if (!parsed) throw new Error('tool payload is not a JSON object');
-  return parsed;
-}
-
 // cache.ts resolves SESSIONS_* env lazily, but the module instance is shared across
 // test files in one `bun test` run. So we (re)assert our env and reset the cached DB
 // connection before each test - keeping this file hermetic regardless of which other
 // cache-importing file (cache.search.test.ts, context.test.ts) ran first or interleaves.
+const originalNativeHome = process.env.SESSIONS_NATIVE_HOME;
 let tmp: string;
 let mcp: typeof import('./mcp');
 let cache: typeof import('@pacifico/core/cache');
@@ -55,7 +49,7 @@ const REPO_ROOT = realpathSync(join(import.meta.dir, '..'));
 function setEnv(): void {
   process.env.SESSIONS_CACHE_DIR = join(tmp, 'cache');
   process.env.SESSIONS_CLAUDE_DIR = join(tmp, 'claude');
-  process.env.SESSIONS_PI_DIR = join(tmp, 'pi');
+  process.env.SESSIONS_NATIVE_HOME = join(tmp, 'native');
   process.env.SESSIONS_CODEX_DIR = join(tmp, 'codex');
   process.env.SESSIONS_OPENCODE_DB = join(tmp, 'opencode.db'); // absent → no OpenCode sessions leak in
   // Keep durable session archives inside the fixture.
@@ -69,7 +63,9 @@ beforeAll(async () => {
   setEnv();
   const dir = join(tmp, 'claude', 'proj');
   mkdirSync(dir, { recursive: true });
-  mkdirSync(join(tmp, 'pi'), { recursive: true });
+  const memoryDir = join(tmp, 'native', '.codex', 'memories');
+  mkdirSync(memoryDir, { recursive: true });
+  writeFileSync(join(memoryDir, 'MEMORY.md'), 'quartzledger: prefer explicit transactions.');
   mkdirSync(join(tmp, 'codex'), { recursive: true });
 
   // Session A: typed "deploy", then ran "kubectl apply". No error.
@@ -240,6 +236,8 @@ beforeEach(() => {
 afterAll(() => {
   cache.closeDb(); // release the handle before deleting the temp dir
   rmSync(tmp, { recursive: true, force: true });
+  if (originalNativeHome === undefined) delete process.env.SESSIONS_NATIVE_HOME;
+  else process.env.SESSIONS_NATIVE_HOME = originalNativeHome;
 });
 
 test('search_sessions handler returns metadata + resumeCommand', async () => {
@@ -388,147 +386,6 @@ test('get_session_messages omits tools by default (back-compat shape)', async ()
   expect(parsed.messages[0].tools).toBeUndefined();
 });
 
-// --- pi fork surfaces (pi first-class phase 2) - additive ---
-
-function writePiFixture(id: string, records: JsonObject[]): string {
-  const dir = join(tmp, 'pi', 'proj');
-  mkdirSync(dir, { recursive: true });
-  const file = join(dir, `${id}.jsonl`);
-  writeFileSync(file, records.map((r) => j(r)).join('\n'));
-  return file;
-}
-
-// Pi fixture shapes mirror src/parser.test.ts: id/parentId on every line, the header
-// is the root, the header-adjacent model_change has parentId: null.
-const piHeader = (extra: JsonObject = {}) => ({
-  type: 'session',
-  id: 's1',
-  timestamp: '2026-08-04T17:00:00.000Z',
-  cwd: '/repoPi',
-  ...extra,
-});
-const piModelChange = { type: 'model_change', id: 'm1', parentId: null, timestamp: '2026-08-04T17:00:01.000Z' };
-const piUser = (id: string, parentId: string, text: string) => ({
-  type: 'message',
-  id,
-  parentId,
-  timestamp: '2026-08-04T17:01:00.000Z',
-  message: { role: 'user', content: [{ type: 'text', text }] },
-});
-const piAssistant = (id: string, parentId: string, text: string) => ({
-  type: 'message',
-  id,
-  parentId,
-  timestamp: '2026-08-04T17:02:00.000Z',
-  message: { role: 'assistant', content: [{ type: 'text', text }] },
-});
-
-// The canonical one-fork shape: /tree hops back to u1 (abandoning u2/a2), then back
-// to a1 to resume the live conversation. 6 extracted messages, 1 fork marker.
-function branchedPiRecords(): JsonObject[] {
-  return [
-    piHeader(),
-    piModelChange,
-    piUser('u1', 'm1', 'first question'),
-    piAssistant('a1', 'u1', 'first answer'),
-    piUser('u2', 'u1', 'hello world'),
-    piAssistant('a2', 'u2', 'abandoned answer'),
-    piUser('u3', 'a1', 'the real follow-up'),
-    piAssistant('a3', 'u3', 'the live answer'),
-  ];
-}
-
-const PI_PARENT = '/Users/dev/.pi/agent/sessions/--repoPi--/parent-file.jsonl';
-
-test('search_sessions: pi results carry branches and a basename-only forkedFrom', async () => {
-  writePiFixture('pibranch', branchedPiRecords());
-  writePiFixture('pifork', [piHeader({ parentSession: PI_PARENT }), piModelChange, piUser('u1', 'm1', 'continued')]);
-  await cache.refreshIndex();
-  const res = await mcp.runSearchSessions({ tool: 'pi' });
-  const parsed = payloadOf(res);
-  const results = parsed.results;
-  const byId = new Map<string, JsonObject>();
-  if (Array.isArray(results)) {
-    for (const r of results) {
-      const row = asJsonObject(r);
-      const id = row ? asJsonString(row.sessionId) : undefined;
-      if (row && id !== undefined) byId.set(id, row);
-    }
-  }
-  expect(byId.get('pibranch')).toMatchObject({ branches: 1, forkedFrom: '' });
-  // Basename only - agents don't need (and shouldn't act on) the absolute parent path.
-  expect(byId.get('pifork')).toMatchObject({ branches: 0, forkedFrom: 'parent-file.jsonl' });
-});
-
-test("get_session_messages: the fork marker is a field on the branch's first message; total unchanged", async () => {
-  const file = writePiFixture('pimarkers', branchedPiRecords());
-  const res = await mcp.runGetSessionMessages({ filePath: file, offset: 0, limit: 20 });
-  const parsed = JSON.parse(res.content[0]!.text);
-  // The core invariant: a marker is a FIELD, never a synthetic message row - `total`
-  // must equal the unbranched message count, or every search-hit offset drifts.
-  expect(parsed.total).toBe(6);
-  const msgs = payloadOf(res).messages;
-  if (!Array.isArray(msgs)) throw new Error('messages missing');
-  expect(msgs.map((m) => asJsonObject(m)?.branch ?? '')).toEqual(['', '', 'abandoned', 'abandoned', '', '']);
-  expect(msgs.filter((m) => asJsonObject(m)?.fork)).toHaveLength(1);
-  // The marker hangs on the branch's first message (index 2) and names the active
-  // message it forked from (index 0, from u1).
-  const markerMsg = asJsonObject(msgs[2]);
-  const fork = asJsonObject(markerMsg?.fork);
-  expect(fork).toMatchObject({ fromIndex: 0, abandonedCount: 2, firstUserText: 'hello world' });
-  expect(fork?.marker).toBe('⑂ forked from msg #0 - abandoned branch, 2 messages: "hello world"');
-  // Active messages carry no branch/fork keys at all (zero token cost).
-  const firstMsg = asJsonObject(msgs[0]);
-  if (!firstMsg) throw new Error('message 0 missing');
-  expect('branch' in firstMsg).toBe(false);
-  expect('fork' in firstMsg).toBe(false);
-});
-
-test('get_session_messages: markers and branch fields appear with includeTools on too', async () => {
-  const file = writePiFixture('pimarkers2', branchedPiRecords());
-  const res = await mcp.runGetSessionMessages({ filePath: file, offset: 0, limit: 20, includeTools: true });
-  const parsed = JSON.parse(res.content[0]!.text);
-  expect(parsed.total).toBe(6);
-  expect(parsed.messages[2].branch).toBe('abandoned');
-  expect(parsed.messages[2].fork.marker).toContain('⑂ forked from msg #0');
-});
-
-test('get_session_messages: an offset landing exactly on a fork marker returns the marked message first', async () => {
-  const file = writePiFixture('pimarkers3', branchedPiRecords());
-  const res = await mcp.runGetSessionMessages({ filePath: file, offset: 2, limit: 1 });
-  const parsed = JSON.parse(res.content[0]!.text);
-  expect(parsed.returned).toBe(1);
-  expect(parsed.messages[0].text).toBe('hello world');
-  expect(parsed.messages[0].fork.marker).toContain('abandoned branch');
-});
-
-test('schema conformance: fork fields survive tools/call output validation (not zod-stripped)', async () => {
-  const file = writePiFixture('pimarkers4', branchedPiRecords());
-  writePiFixture('pifork2', [piHeader({ parentSession: PI_PARENT }), piModelChange, piUser('u1', 'm1', 'continued')]);
-  await cache.refreshIndex();
-  const client = await connect();
-
-  const msgRes = await client.callTool({ name: 'read_session', arguments: { filePath: file, format: 'messages' } });
-  expect(msgRes.isError).toBeFalsy();
-  const messageResult = ReadSessionOutput.parse(msgRes.structuredContent).result;
-  if (messageResult.mode !== 'messages') throw new Error('Expected messages');
-  const msgs = messageResult.data;
-  expect(msgs.messages[2]!.branch).toBe('abandoned');
-  expect(msgs.messages[2]!.fork?.marker).toContain('abandoned branch');
-
-  const searchRes = await client.callTool({ name: 'search_sessions', arguments: { tool: 'pi' } });
-  expect(searchRes.isError).toBeFalsy();
-  const searchResult = SearchOutput.parse(searchRes.structuredContent).result;
-  if (searchResult.mode !== 'ranked') throw new Error('Expected ranked search');
-  const search = searchResult.data;
-  const forked = search.results.find((r) => r.sessionId === 'pifork2');
-  expect(forked?.forkedFrom).toBe('parent-file.jsonl');
-  expect(search.results.find((r) => r.sessionId === 'pimarkers4')?.branches).toBe(1);
-  await client.close();
-});
-
-// --- stdio lifecycle ---
-
 test('server exits when the client closes stdin instead of lingering as an orphan', async () => {
   const proc = Bun.spawn(
     [process.execPath, 'run', join(import.meta.dir, '..', '..', '..', 'apps', 'cli', 'src', 'index.ts'), '--mcp'],
@@ -577,9 +434,9 @@ async function connect(): Promise<Client> {
   return client;
 }
 
-const TOOL_NAMES = ['get_context', 'read_session', 'search_sessions'];
+const TOOL_NAMES = ['get_context', 'native_documents', 'read_session', 'search_sessions'];
 
-test('MCP advertises exactly three tools, their object schemas, and no prompts', async () => {
+test('MCP advertises exactly four tools, their object schemas, and no prompts', async () => {
   const client = await connect();
   try {
     expect(client.getServerVersion()?.version).toBe(pkgVersion);
@@ -775,5 +632,105 @@ test('project context neither creates nor reads a legacy memory database', async
   } finally {
     await client.close();
     rmSync(legacy, { force: true });
+  }
+});
+
+test('native_documents searches and reads original memory through MCP', async () => {
+  const client = await connect();
+  try {
+    const search = await client.callTool({ name: 'native_documents', arguments: { query: 'quartzledger' } });
+    expect(search.isError).toBeUndefined();
+    const result = JSON.parse(firstText(search));
+    expect(result.mode).toBe('search');
+    expect(result.results).toHaveLength(1);
+    expect(result.results[0].harness).toBe('codex');
+    expect(result.results[0].kind).toBe('memory');
+    const read = await client.callTool({
+      name: 'native_documents',
+      arguments: { mode: 'read', id: result.results[0].id, limit: 12 },
+    });
+    expect(read.isError).toBeUndefined();
+    const document = JSON.parse(firstText(read)).document;
+    expect(document.content).toBe('quartzledger');
+    expect(document.truncated).toBe(true);
+    expect(document.path).toBe(join(tmp, 'native', '.codex', 'memories', 'MEMORY.md'));
+    expect(readFileSync(document.path, 'utf8')).toBe('quartzledger: prefer explicit transactions.');
+  } finally {
+    await client.close();
+  }
+});
+
+test('events mode reconstructs tool records through MCP without changing message offsets', async () => {
+  const client = await connect();
+  const path = join(tmp, 'event-pages.jsonl');
+  const lines = [
+    JSON.stringify({ type: 'user', message: { role: 'user', content: 'question' } }),
+    JSON.stringify({ type: 'message', message: { role: 'tool', content: 'z'.repeat(42_000) } }),
+    JSON.stringify({ type: 'assistant', message: { role: 'assistant', content: 'answer' } }),
+  ];
+  writeFileSync(path, lines.join('\n'));
+  try {
+    const reconstructed = ['', '', ''];
+    let next: { offset: number; characterOffset: number } | null = { offset: 0, characterOffset: 0 };
+    let pages = 0;
+    while (next) {
+      const response = await client.callTool({
+        name: 'read_session',
+        arguments: { filePath: path, format: 'events', ...next },
+      });
+      expect(response.isError).not.toBe(true);
+      const result = ReadSessionOutput.parse(response.structuredContent).result;
+      if (result.mode !== 'events') throw new Error('Expected events mode');
+      for (const event of result.data.events) reconstructed[event.index] += event.text;
+      next = result.data.next;
+      expect(++pages).toBeLessThan(10);
+    }
+    expect(reconstructed).toEqual(lines);
+    const messages = await client.callTool({
+      name: 'read_session',
+      arguments: { filePath: path, format: 'messages', offset: 1, limit: 1 },
+    });
+    expect(firstText(messages)).toContain('answer');
+  } finally {
+    await client.close();
+    rmSync(path, { force: true });
+  }
+});
+
+test('MCP event continuation rejects changed records and versions in other formats', async () => {
+  const client = await connect();
+  const path = join(tmp, 'versioned-events.jsonl');
+  try {
+    writeFileSync(path, '{"text":"first"}\n{"text":"later"}');
+    const response = await client.callTool({
+      name: 'read_session',
+      arguments: { filePath: path, format: 'events', limit: 1 },
+    });
+    const result = ReadSessionOutput.parse(response.structuredContent).result;
+    if (result.mode !== 'events' || !result.data.next) throw new Error('Expected event cursor');
+    writeFileSync(path, '{"text":"other"}\n{"text":"later"}');
+    const changed = await client.callTool({
+      name: 'read_session',
+      arguments: { filePath: path, format: 'events', ...result.data.next },
+    });
+    expect(changed.isError).toBe(true);
+    expect(firstText(changed)).toContain('changed between pages');
+    for (const format of ['digest', 'messages']) {
+      const invalid = await client.callTool({
+        name: 'read_session',
+        arguments: { filePath: path, format, version: result.data.version },
+      });
+      expect(invalid.isError).toBe(true);
+      expect(firstText(invalid)).toContain('version requires events format');
+    }
+    const restarted = await client.callTool({
+      name: 'read_session',
+      arguments: { filePath: path, format: 'events' },
+    });
+    expect(restarted.isError).not.toBe(true);
+    expect(firstText(restarted)).toContain('other');
+  } finally {
+    await client.close();
+    rmSync(path, { force: true });
   }
 });

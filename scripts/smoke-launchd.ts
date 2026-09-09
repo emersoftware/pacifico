@@ -1,5 +1,14 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, rmSync, existsSync } from 'node:fs';
+import {
+  copyFileSync,
+  chmodSync,
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+  rmSync,
+  existsSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -38,10 +47,16 @@ async function waitForRun(after: string): Promise<string> {
     await Bun.sleep(100);
   }
   const details = Bun.spawnSync(['/bin/launchctl', 'print', target]);
-  throw new Error('launchd did not finish the fixture import within 45s\n' + new TextDecoder().decode(details.stdout));
+  const stderr = existsSync(join(directory, 'stderr.log')) ? readFileSync(join(directory, 'stderr.log'), 'utf8') : '';
+  throw new Error(
+    'launchd did not finish the fixture import within 45s\n' + new TextDecoder().decode(details.stdout) + '\n' + stderr,
+  );
 }
 
 try {
+  const executable = join(directory, 'pacifico');
+  copyFileSync(resolve('dist/pacifico'), executable);
+  chmodSync(executable, 0o755);
   mkdirSync(source, { recursive: true });
   const native = join(source, 'launchd-fixture.jsonl');
   const row = {
@@ -59,12 +74,16 @@ try {
     SESSIONS_CACHE_DIR: join(directory, 'cache'),
     SESSIONS_CLAUDE_DIR: join(directory, 'claude'),
     SESSIONS_CODEX_DIR: join(directory, 'absent-codex'),
-    SESSIONS_PI_DIR: join(directory, 'absent-pi'),
     SESSIONS_OPENCODE_DB: join(directory, 'absent-opencode.db'),
   };
   writeFileSync(
     plistPath,
-    renderLaunchAgent([resolve('dist/pacifico'), 'daemon', 'run'], env).replaceAll(DAEMON_LABEL, label),
+    renderLaunchAgent([executable, 'daemon', 'run'], env)
+      .replaceAll(DAEMON_LABEL, label)
+      .replace(
+        '</dict></plist>',
+        `<key>StandardErrorPath</key><string>${join(directory, 'stderr.log')}</string></dict></plist>`,
+      ),
     { mode: 0o600 },
   );
   const lint = Bun.spawnSync(['/usr/bin/plutil', '-lint', plistPath]);

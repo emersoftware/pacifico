@@ -12,7 +12,6 @@ import {
   type JsonObject,
   type JsonValue,
 } from './extract-util';
-import { buildPiTree, type PiEntry } from './pi-tree';
 
 interface JsonLine {
   type?: string;
@@ -29,9 +28,6 @@ interface JsonLine {
    *  PARENT sessionId, so its injected "user" prompt would otherwise pass for
    *  the human speaking mid-session. */
   isSidechain?: boolean;
-  /** Pi /fork and /clone copies record the absolute path of the session they
-   *  were copied from in their line-1 session header. */
-  parentSession?: string;
   message?: JsonObject | string;
   payload?: JsonObject;
 }
@@ -49,6 +45,7 @@ function tryParseJson(line: string): JsonLine | null {
 }
 
 export interface SessionMetadata {
+  sessionId?: string;
   cwd: string;
   customTitle: string;
   date: string;
@@ -80,6 +77,7 @@ export interface SessionMetadata {
  * records over and over.
  */
 export function extractSessionMetadata(lines: string[], tool: Tool): SessionMetadata {
+  let sessionId: string | undefined;
   let cwd = '';
   let title = '';
   let firstDate = '?';
@@ -93,10 +91,26 @@ export function extractSessionMetadata(lines: string[], tool: Tool): SessionMeta
     const d = tryParseJson(line);
     if (!d) continue;
 
+    if (!sessionId) {
+      const candidate =
+        tool === 'codex'
+          ? d.type === 'session_meta'
+            ? asJsonString(d.payload?.id)
+            : undefined
+          : tool === 'claude' || d.type === 'session'
+            ? asJsonString(d.sessionId)
+            : undefined;
+      if (candidate?.trim()) sessionId = candidate;
+    }
+
     if (!cwd) {
       if (tool === 'claude' && d.cwd) {
         cwd = d.cwd;
-      } else if ((tool === 'pi' || tool === 'opencode') && d.type === 'session' && d.cwd) {
+      } else if (
+        (tool === 'opencode' || tool === 'cursor' || tool === 'antigravity') &&
+        d.type === 'session' &&
+        d.cwd
+      ) {
         cwd = d.cwd;
       } else if (tool === 'codex' && d.type === 'session_meta') {
         const value = asJsonString(d.payload?.cwd);
@@ -104,7 +118,7 @@ export function extractSessionMetadata(lines: string[], tool: Tool): SessionMeta
       }
     }
 
-    if (d.type === 'custom-title') title = d.customTitle ?? '';
+    title = titleFromRecord(d) ?? title;
 
     if (d.timestamp?.[0] === '2') {
       const date = d.timestamp.slice(0, 10);
@@ -139,6 +153,7 @@ export function extractSessionMetadata(lines: string[], tool: Tool): SessionMeta
   }
 
   return {
+    ...(sessionId ? { sessionId } : {}),
     cwd,
     customTitle: title,
     date: lastDate,
@@ -150,22 +165,6 @@ export function extractSessionMetadata(lines: string[], tool: Tool): SessionMeta
   };
 }
 
-/**
- * The parentSession path from a pi session header ('' for other tools and for pi
- * sessions that are not /fork or /clone copies). Stored raw - the parent file may
- * not exist on disk, and nothing resolves the path back to a session row; display
- * surfaces derive a basename at render time.
- */
-export function sessionParentSession(lines: string[], tool: Tool): string {
-  // Guard the tool FIRST: Claude transcripts open on a user message and Codex on
-  // session_meta - neither has a type:'session' line 1, but only pi's header can
-  // carry parentSession at all, so non-pi returns without a parse.
-  if (tool !== 'pi' || lines.length === 0) return '';
-  const d = tryParseJson(lines[0]!);
-  const ps = d?.type === 'session' ? asJsonString(d.parentSession) : undefined;
-  return ps ?? '';
-}
-
 export function getCwdFromSession(lines: string[], tool: Tool): string {
   for (const line of lines) {
     const d = tryParseJson(line);
@@ -173,8 +172,8 @@ export function getCwdFromSession(lines: string[], tool: Tool): string {
 
     if (tool === 'claude') {
       if (d.cwd) return d.cwd;
-    } else if (tool === 'pi' || tool === 'opencode') {
-      // Pi's native shape; OpenCode synthesizes the same session line (see src/opencode.ts).
+    } else if (tool === 'opencode' || tool === 'cursor' || tool === 'antigravity') {
+      // Database readers emit a session header with the native workspace.
       if (d.type === 'session' && d.cwd) return d.cwd;
     } else if (tool === 'codex') {
       if (d.type === 'session_meta') {
@@ -189,8 +188,7 @@ export function getCwdFromSession(lines: string[], tool: Tool): string {
 /**
  * The git branch a session ran on, read from the logs (not the current worktree).
  * Claude writes `gitBranch` on every line, so the last non-empty one is "where
- * you left off". Codex records its starting branch once in `session_meta`. Pi
- * and OpenCode carry no git metadata, so they return ''.
+ * you left off". Codex records its starting branch once in `session_meta`. Other sources return ''.
  */
 export function sessionBranch(lines: string[], tool: Tool): string {
   if (tool === 'codex') {
@@ -211,7 +209,7 @@ export function sessionBranch(lines: string[], tool: Tool): string {
     }
     return branch;
   }
-  return ''; // pi, opencode: no git metadata in logs
+  return ''; // No verified branch field for this source.
 }
 
 function clean(text: string): string {
@@ -275,14 +273,20 @@ export function firstPrompt(lines: string[], tool: Tool): string {
   return genuine.length ? clean(genuine[0]!) : '';
 }
 
+function titleFromRecord(record: JsonLine): string | undefined {
+  if (record.type === 'custom-title') return asJsonString(record.customTitle) ?? '';
+  if (record.type === 'event_msg' && record.payload?.type === 'thread_name_updated') {
+    const name = asJsonString(record.payload.thread_name);
+    if (name?.trim()) return name;
+  }
+}
+
 export function customTitle(lines: string[]): string {
   let title = '';
   for (const line of lines) {
     const d = tryParseJson(line);
     if (!d) continue;
-    if (d.type === 'custom-title') {
-      title = asJsonString(d.customTitle) ?? '';
-    }
+    title = titleFromRecord(d) ?? title;
   }
   return title;
 }
@@ -353,10 +357,6 @@ export interface SessionMessage {
   index: number;
   /** Tool calls belonging to this turn (empty for most user turns). See extractMessages. */
   tools: ToolUse[];
-  /** Pi branch label, carried through from ExtractedMessage. See PiForkMarker. */
-  branch?: 'active' | 'abandoned';
-  /** Fork marker, present on the first message of an abandoned pi branch. */
-  fork?: PiForkMarker;
 }
 
 /** Input fields, most-informative first, used to summarize a tool call for display. */
@@ -396,7 +396,7 @@ function summarizeToolInput(input: JsonValue | undefined): string {
 /**
  * The tool_use blocks on a single assistant/message line, in order. Recognizes the
  * Claude/Anthropic content-array shape (`{type:'tool_use', name, input}`); returns []
- * for shapes it doesn't model (most pi/codex tool calls), which is a display-only gap.
+ * for shapes it doesn't model (some native tool calls), which is a display-only gap.
  */
 function extractToolUses(d: JsonLine): ToolUse[] {
   const msg = asJsonObject(d.message);
@@ -447,26 +447,6 @@ function contentText(content: JsonValue | undefined): string {
   return '';
 }
 
-/** Fork marker attached to the first message of an abandoned pi branch. */
-export interface PiForkMarker {
-  /**
-   * msg_index of the active-path message nearest the fork point. The fork parent is
-   * often a non-message entry (model_change, custom), so this maps to the closest
-   * extracted message on the active path at or before the parent's line (the first
-   * active message after it when none precedes).
-   */
-  fromIndex: number;
-  /**
-   * Extracted MESSAGES in the abandoned branch - not the branch's entry count
-   * (PiFork.abandonedCount): toolResult/custom entries and pure-toolCall assistant
-   * lines produce no message.
-   */
-  abandonedCount: number;
-  /** First genuine user text in the branch, truncated; '' when the branch has none. */
-  firstUserText: string;
-  timestamp: string;
-}
-
 export interface ExtractedMessage {
   role: 'user' | 'assistant';
   text: string;
@@ -481,15 +461,6 @@ export interface ExtractedMessage {
    * get_session_messages pagination and search-hit offsets both depend on.
    */
   tools: ToolUse[];
-  /**
-   * Pi branch label. Present only on pi transcripts with topology breaks, and only
-   * ever 'abandoned' - active-path messages are unmarked, and unbranched pi files
-   * get no field at all (the annotation pass returns early when there are no forks,
-   * keeping unbranched output byte-identical).
-   */
-  branch?: 'active' | 'abandoned';
-  /** Fork marker, present on the first message of each abandoned branch. */
-  fork?: PiForkMarker;
 }
 
 export interface MessageSummary {
@@ -570,21 +541,67 @@ function codexToolUse(p: JsonObject): ToolUse {
 }
 
 /**
- * Codex, both streams reconciled.
- *
- * Codex writes two parallel logs. `response_item` is the model-facing history and
- * `event_msg` is the UI event log, and they overlap: every assistant text is duplicated
- * by an `event_msg` `agent_message`. Messages therefore come from `response_item` only -
- * reading both would double every Codex turn in message_fts.
- *
- * What `event_msg` alone has is `user_message`: the harness echo of what the human
- * actually typed, and nothing it injected. That makes genuineness a JOIN rather than a
- * heuristic. Measured over the 305-rollout corpus, 604 of 1,022 user records have a
- * text-identical twin in that stream, and every one of the 417 that do not is matched by
- * CODEX_INJECTED - the two signals agree completely, with nothing left unexplained.
+ * Reconcile model-facing response items with UI message events. A response copy
+ * takes precedence; unmatched UI occurrences remain searchable. Original JSONL
+ * stays unchanged in the archive. User-event text also identifies typed input.
  */
 function extractCodexMessages(lines: string[]): ExtractedMessage[] {
   const parsed = lines.map(tryParseJson);
+  // UI events can be the only visible copy of a message. Match each
+  // response occurrence once, so repeated equal messages retain their count.
+  const responseCounts = new Map<string, Map<string | null, number>>();
+  for (const record of parsed) {
+    const p = record?.payload;
+    if (record?.type !== 'response_item' || p?.type !== 'message') continue;
+    const role = p.role;
+    if (role !== 'user' && role !== 'assistant') continue;
+    const text = codexText(p, role === 'user' ? 'input_text' : 'output_text');
+    const key = JSON.stringify([role, text.trim()]);
+    const turn = asJsonString(p.turn_id) ?? null;
+    const counts = responseCounts.get(key) ?? new Map<string | null, number>();
+    counts.set(turn, (counts.get(turn) ?? 0) + 1);
+    responseCounts.set(key, counts);
+  }
+  const completedIds = new Set<string>();
+  for (let i = 0; i < parsed.length; i++) {
+    const record = parsed[i];
+    if (record?.type !== 'event_msg' || !record.payload) continue;
+    const item = record.payload.type === 'item_completed' ? asJsonObject(record.payload.item) : undefined;
+    const role =
+      record.payload.type === 'user_message' || item?.type === 'UserMessage'
+        ? 'user'
+        : record.payload.type === 'agent_message' || item?.type === 'AgentMessage'
+          ? 'assistant'
+          : null;
+    if (!role) continue;
+    const text = item
+      ? Array.isArray(item.content)
+        ? item.content.map((part) => asJsonString(asJsonObject(part)?.text) ?? '').join('')
+        : ''
+      : (asJsonString(record.payload.message) ?? '');
+    if (!text.trim()) continue;
+    const nativeId = item && asJsonString(item.id);
+    if (nativeId) {
+      const identity = JSON.stringify([asJsonString(record.payload.turn_id) ?? null, nativeId, role, text]);
+      if (completedIds.has(identity)) continue;
+      completedIds.add(identity);
+    }
+    const key = JSON.stringify([role, text.trim()]);
+    const counts = responseCounts.get(key);
+    const turn = asJsonString(record.payload.turn_id) ?? null;
+    // Explicitly different turns cannot be copies of the same message.
+    const candidates = turn === null ? [...(counts?.keys() ?? [])] : [turn, null];
+    const matchingTurn = candidates.find((candidate) => (counts?.get(candidate) ?? 0) > 0);
+    if (matchingTurn !== undefined && counts) {
+      counts.set(matchingTurn, counts.get(matchingTurn)! - 1);
+      continue;
+    }
+    parsed[i] = {
+      ...record,
+      type: 'response_item',
+      payload: { type: 'message', role, content: [{ type: role === 'user' ? 'input_text' : 'output_text', text }] },
+    };
+  }
 
   // Pass 1: the genuineness oracle. The `user_message` event usually lands AFTER its
   // `response_item` twin, so this cannot fold into the emit pass below.
@@ -665,9 +682,6 @@ export function extractMessages(lines: string[]): ExtractedMessage[] {
   if (isCodexTranscript(lines)) return extractCodexMessages(lines);
 
   const messages: ExtractedMessage[] = [];
-  // Source line of each emitted message - the pi annotation pass maps messages back
-  // to tree entries through these.
-  const messageLines: number[] = [];
   let idx = 0;
   // The turn's head message - where a following pure-tool-use line's calls attach.
   let current: ExtractedMessage | null = null;
@@ -683,7 +697,6 @@ export function extractMessages(lines: string[]): ExtractedMessage[] {
         current = { role: 'user', text, index: idx++, genuine: isGenuineUserTurn(d, text.trim()), tools: pending };
         pending = [];
         messages.push(current);
-        messageLines.push(li);
       }
       // A user line with no text is a tool_result/empty turn - it carries no tool_use
       // and must not reset `current` (assistant calls after it still belong to the turn).
@@ -694,7 +707,6 @@ export function extractMessages(lines: string[]): ExtractedMessage[] {
         current = { role: 'assistant', text, index: idx++, genuine: true, tools: pending.concat(tools) };
         pending = [];
         messages.push(current);
-        messageLines.push(li);
       } else if (tools.length) {
         // Pure tool-use turn: no text row (so no index), fold its calls into the head.
         if (current) current.tools.push(...tools);
@@ -702,89 +714,12 @@ export function extractMessages(lines: string[]): ExtractedMessage[] {
       }
     }
   }
-  annotatePiBranches(messages, messageLines, lines);
   return messages;
 }
 
-/**
- * Pi branch annotation. Pi session files are trees: /tree navigation leaves abandoned
- * branches in the same append-only JSONL, and the linear pass above renders those dead
- * exchanges inline as if they happened in the live conversation. The fix is
- * chronological ANNOTATION, not path filtering or reordering - pi appends entries in
- * the order things happened, so raw file order is already truthful, and reordering
- * would falsify the timeline and break the msg_index ↔ get_session_messages(offset)
- * contract. Every message keeps its natural position and gains a label:
- * abandoned-branch messages get branch:'abandoned', and the first message of each
- * abandoned branch carries a fork marker. Numbering is untouched - abandoned messages
- * keep their indices in the single numbering space.
- *
- * No-op purity: buildPiTree returns null on non-pi transcripts, and unbranched pi
- * sessions (~98% of the corpus) return before any field is set, keeping their output
- * byte-identical.
- */
-function annotatePiBranches(messages: ExtractedMessage[], messageLines: number[], lines: string[]): void {
-  const tree = buildPiTree(lines);
-  if (!tree || tree.forks.length === 0) return;
-  const entryByLine = new Map<number, PiEntry>();
-  const entryById = new Map<string, PiEntry>();
-  for (const e of tree.entries) {
-    entryByLine.set(e.lineIndex, e);
-    if (!entryById.has(e.id)) entryById.set(e.id, e);
-  }
-  const entryOf = messageLines.map((li) => entryByLine.get(li));
-  let any = false;
-  for (let i = 0; i < messages.length; i++) {
-    const e = entryOf[i];
-    // A message line with no tree entry can't happen on real pi files (every line
-    // carries an id); treat it as active rather than mislabeling it.
-    if (e && !tree.activeIds.has(e.id)) {
-      messages[i]!.branch = 'abandoned';
-      any = true;
-    }
-  }
-  if (!any) return; // forked, but the abandoned branches hold no messages
-  for (const fork of tree.forks) {
-    const inFork: number[] = [];
-    const lineSet = new Set(fork.lineIndexes);
-    for (let i = 0; i < messages.length; i++) {
-      if (lineSet.has(messageLines[i]!)) inFork.push(i);
-    }
-    // A fork whose branch produces no messages (e.g. a custom-only subtree) gets no
-    // marker - there is no message to hang it on.
-    if (!inFork.length) continue;
-    const fromLine = entryById.get(fork.fromEntryId)?.lineIndex ?? 0;
-    let before = -1;
-    let after = -1;
-    for (let i = 0; i < messages.length; i++) {
-      const e = entryOf[i];
-      if (!e || !tree.activeIds.has(e.id)) continue;
-      if (messageLines[i]! <= fromLine) before = i;
-      else {
-        after = i;
-        break;
-      }
-    }
-    messages[inFork[0]!]!.fork = {
-      // No active messages at all can't occur on the real corpus (the fork parent is
-      // itself an active entry); the marker's own index is the defensive fallback.
-      fromIndex: before >= 0 ? before : after >= 0 ? after : inFork[0]!,
-      abandonedCount: inFork.length,
-      firstUserText: fork.firstUserText,
-      timestamp: fork.timestamp,
-    };
-  }
-}
-
-/** Thin projection of extractMessages - same messages, same numbering, no genuine flag. */
+/** Returns public message fields in the same order as search-hit offsets. */
 export function getSessionMessages(lines: string[]): SessionMessage[] {
-  return extractMessages(lines).map(({ role, text, index, tools, branch, fork }) => {
-    const message: SessionMessage = { role, text, index, tools };
-    // Conditional assignment keeps unbranched output free of the keys entirely (the same
-    // no-op purity annotatePiBranches guarantees on ExtractedMessage).
-    if (branch) message.branch = branch;
-    if (fork) message.fork = fork;
-    return message;
-  });
+  return extractMessages(lines).map(({ role, text, index, tools }) => ({ role, text, index, tools }));
 }
 
 /** Max length of each stored closing message (bounds the indexed columns). */

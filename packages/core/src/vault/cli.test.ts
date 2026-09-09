@@ -33,7 +33,7 @@ beforeAll(() => {
     dir,
   );
   archiveFile(
-    { path: gonePath, tool: 'pi' },
+    { path: gonePath, tool: 'codex' },
     { cwd: '/repo/gone', sessionId: 'goneid' },
     { mtime: 2, size: 10 },
     manifest,
@@ -60,7 +60,7 @@ describe('statusReport', () => {
     const report = statusReport(dir);
     expect(report).toContain('2 archived sessions');
     expect(report).toContain('claude: 1');
-    expect(report).toContain('pi: 1');
+    expect(report).toContain('codex: 1');
     // One source was deleted → exactly one vault-only session.
     expect(report).toContain('vault-only (source gone): 1');
   });

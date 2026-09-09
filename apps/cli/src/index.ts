@@ -3,7 +3,7 @@ import { version } from '../../../package.json';
 import { parseArgs, getRepoRoot, toSearchOptions } from './cli';
 import { C } from '@pacifico/core/colors';
 import { scanSessions } from '@pacifico/core/scanner';
-import { formatLine, formatLineage } from './display';
+import { formatLine } from './display';
 import { selectSession } from './select';
 import { copyToClipboard } from './clipboard';
 import { buildResumeCommand } from '@pacifico/core/search-format';
@@ -176,18 +176,10 @@ process.stderr.write(`  ${C.bold}${dirName}${C.reset} ${C.dim}(${tool})${C.reset
 if (prompt) {
   process.stderr.write(`  ${C.dim}${prompt}${C.reset}\n`);
 }
-// Lineage (pi /tree forks + /fork parent) comes from the SessionResult, not the TSV
-// fields - match the selection back to its result by sessionId+tool. Display-only:
-// formatLineage basenames the raw parent path and never joins it back to the index.
-const selected = results.find((r) => r.sessionId === sessionId && r.tool === tool);
-const lineage = selected ? formatLineage(selected) : '';
-if (lineage) {
-  process.stderr.write(`  ${C.dim}${lineage}${C.reset}\n`);
-}
 process.stderr.write('\n');
 
 // SAFETY: the TSV field was written by formatLine from a SessionResult's Tool, and the
-// find() above matched it back to that same result.
+// selected row carries that same tool identifier.
 const resumeCmd = buildResumeCommand(tool as Tool, fullPath, sessionId);
 
 if (exists === 'deleted') {

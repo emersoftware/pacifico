@@ -42,9 +42,8 @@ export function jsonStrings(v: JsonValue | undefined): string[] {
 }
 
 /**
- * The minimal message-line shape the shared user-turn helpers below read. Kept
- * structural (rather than parser.ts's JsonLine) so both parser.ts and pi-tree.ts
- * can use them without an import cycle between those two modules.
+ * The minimal message-line shape shared by user-turn extraction helpers.
+ * It does not depend on the parser's internal record representation.
  */
 export type MessageLine = {
   type?: JsonValue;
@@ -110,7 +109,7 @@ export function extractUserText(d: MessageLine): string {
   return stripInjected(texts.join(' '));
 }
 
-/** Whether a line carries a user-role message (Claude `user` shape or pi/codex `message` envelope). */
+/** Whether a line carries a user-role message (Claude `user` shape or normalized `message` envelope). */
 export function isUserMessage(d: MessageLine): boolean {
   if (d.type === 'user') return true;
   if (d.type === 'message') {
@@ -130,7 +129,7 @@ const SKILL_INJECTION_PREAMBLE = /^Base directory for this skill:/;
  * pings echoed as `!`-mode shell lines) can arrive with any source.
  * Claude lines then carry `promptSource`: when the field is present, only
  * `typed` and `queued` count (a present-but-null value, as tool results and
- * skill loads have, is rejected). Older logs and pi/codex have no
+ * skill loads have, is rejected). Older logs and normalized messages have no
  * `promptSource`, so fall back to a heuristic: non-empty text that isn't a
  * skill-injection preamble. (Tag-wrapped injections - <task-notification>,
  * <bash-input>, <bash-stdout>, <teammate-message> - are already emptied by

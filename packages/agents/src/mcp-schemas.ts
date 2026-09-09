@@ -18,7 +18,7 @@
 // interfaces is recorded as a future item in the contract.
 import { z } from 'zod';
 
-const toolName = z.enum(['claude', 'pi', 'codex', 'opencode']);
+const toolName = z.enum(['claude', 'codex', 'opencode', 'cursor', 'antigravity']);
 const role = z.enum(['user', 'assistant']);
 const period = z.object({ start: z.string(), end: z.string() });
 /** Hour-of-day / tool-name → count maps, which serialize as plain objects. */
@@ -50,9 +50,6 @@ const formattedResult = z.object({
   exists: z.boolean(),
   filePath: z.string(),
   resumeCommand: z.string(),
-  // Pi lineage: /tree in-file fork count and the /fork parent basename ('' when none).
-  branches: z.number(),
-  forkedFrom: z.string(),
   // Absent on the no-index scanner fallback, empty on a metadata-only match.
   messageHits: z.array(messageHit).optional(),
 });
@@ -96,22 +93,6 @@ export const GetSessionMessagesOutput = z.object({
       text: z.string(),
       // Only present when include_tools was set.
       tools: z.array(z.string()).optional(),
-      // Pi branch labels - only ever 'abandoned' in practice, and absent on
-      // unbranched sessions (conditional-spread purity in runGetSessionMessages).
-      branch: z.enum(['active', 'abandoned']).optional(),
-      // A FIELD on the branch's first message, never a synthetic row: inserting a
-      // marker message would shift `total` and drift every search-hit offset.
-      fork: z
-        .object({
-          fromIndex: z.number(),
-          abandonedCount: z.number(),
-          firstUserText: z.string(),
-          timestamp: z.string(),
-          // Human-readable rendering for chat display; the structured fields above
-          // serve programmatic consumers.
-          marker: z.string(),
-        })
-        .optional(),
     }),
   ),
 });
@@ -174,7 +155,7 @@ export const GetSessionMetricsOutput = z.object({
 export const GetContextPrimerOutput = z.object({
   // '' on the not-a-git-repo sentinel, where there is no repo to label.
   repoLabel: z.string(),
-  toolFilter: z.enum(['claude', 'pi', 'codex', 'opencode', '']),
+  toolFilter: z.enum(['claude', 'codex', 'opencode', 'cursor', 'antigravity', '']),
   recent: z.array(
     z.object({
       sessionId: z.string(),
@@ -239,6 +220,17 @@ export const ReadSessionOutput = z.object({
   result: z.discriminatedUnion('mode', [
     z.object({ mode: z.literal('digest'), data: GetSessionDigestOutput }),
     z.object({ mode: z.literal('messages'), data: GetSessionMessagesOutput }),
+    z.object({
+      mode: z.literal('events'),
+      data: z.object({
+        total: z.number(),
+        events: z.array(
+          z.object({ index: z.number(), characterOffset: z.number(), text: z.string(), complete: z.boolean() }),
+        ),
+        version: z.string(),
+        next: z.object({ offset: z.number(), characterOffset: z.number(), version: z.string() }).nullable(),
+      }),
+    }),
   ]),
 });
 export const ContextOutput = z.object({

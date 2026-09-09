@@ -1,15 +1,6 @@
 import { version } from '../package.json';
 import assert from 'node:assert/strict';
-import {
-  mkdtempSync,
-  mkdirSync,
-  writeFileSync,
-  readFileSync,
-  rmSync,
-  existsSync,
-  symlinkSync,
-  lstatSync,
-} from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -30,7 +21,6 @@ const env = {
   SESSIONS_CACHE_DIR: join(dir, 'cache'),
   SESSIONS_CLAUDE_DIR: claude,
   SESSIONS_CODEX_DIR: codex,
-  SESSIONS_PI_DIR: join(dir, 'absent-pi'),
   SESSIONS_OPENCODE_DB: join(dir, 'absent-opencode.db'),
 };
 const client = new Client({ name: 'pacifico-smoke', version: '1' });
@@ -85,14 +75,10 @@ try {
   const oldSkill = join(data, 'plugin', 'skills', 'recall');
   mkdirSync(oldSkill, { recursive: true });
   writeFileSync(join(oldSkill, 'SKILL.md'), 'retired skill');
-  const piSkills = join(dir, '.pi', 'agent', 'skills');
-  mkdirSync(piSkills, { recursive: true });
-  symlinkSync(oldSkill, join(piSkills, 'recall'));
   run('install');
   assert.ok(!readFileSync(settings, 'utf8').includes('pacifico context --hook'));
   assert.ok(readFileSync(settings, 'utf8').includes('echo keep-other-hook'));
   assert.ok(!existsSync(join(data, 'plugin', 'skills')));
-  assert.ok(!lstatSync(join(piSkills, 'recall'), { throwIfNoEntry: false }));
   const installed = readFileSync(config, 'utf8');
   assert.ok(installed.includes('[mcp_servers.pacifico]'));
   assert.ok(installed.includes(binary));
@@ -117,7 +103,12 @@ try {
   assert.equal(client.getServerVersion()?.name, 'pacifico');
   assert.equal(client.getServerCapabilities()?.prompts, undefined);
   const tools = await client.listTools();
-  assert.deepEqual(tools.tools.map((tool) => tool.name).sort(), ['get_context', 'read_session', 'search_sessions']);
+  assert.deepEqual(tools.tools.map((tool) => tool.name).sort(), [
+    'get_context',
+    'native_documents',
+    'read_session',
+    'search_sessions',
+  ]);
   const found = await client.callTool({ name: 'search_sessions', arguments: { query: 'pacificoquartz' } });
   assert.ok(!found.isError);
   const searchResult = SearchOutput.parse(found.structuredContent).result;
@@ -151,7 +142,7 @@ try {
   assert.ok(!readFileSync(config, 'utf8').includes('[mcp_servers.pacifico]'));
   assert.equal(run('vault'), archiveBefore);
   process.stdout.write(
-    'Binary smoke: retired hook/skill upgrade cleanup, no prompts, install twice, foreign config preservation, MCP handshake, 3 tools, search/read, native source unchanged, durable uninstall passed.\n',
+    'Binary smoke: retired hook/skill upgrade cleanup, no prompts, install twice, foreign config preservation, MCP handshake, 4 tools, search/read, native source unchanged, durable uninstall passed.\n',
   );
 } finally {
   if (connected) await client.close();

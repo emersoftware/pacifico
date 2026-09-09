@@ -37,18 +37,6 @@ test('codex: non-zero exit_code is an error', () => {
   expect(extractErrors(lines, 'codex').errored).toBe(true);
 });
 
-test('pi: toolResult isError is an error', () => {
-  const lines = [
-    j({
-      type: 'message',
-      message: { role: 'toolResult', toolName: 'bash', isError: true, content: [{ type: 'text', text: 'nope' }] },
-    }),
-  ];
-  const r = extractErrors(lines, 'pi');
-  expect(r.errored).toBe(true);
-  expect(r.messages[0]).toContain('nope');
-});
-
 test('opencode: a tool block with state.status=error is an error', () => {
   const lines = [
     j({

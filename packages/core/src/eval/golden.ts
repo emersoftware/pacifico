@@ -100,9 +100,9 @@ export const GOLDEN: GoldenQuery[] = [
     id: 'nl-cross-tool',
     class: 'natural-language',
     query: 'rename cli flag',
-    top: ['pi-flag'],
-    first: 'pi-flag',
-    note: 'A pi session must be findable through the same engine.',
+    top: ['codex-flag'],
+    first: 'codex-flag',
+    note: 'A Codex session must be findable through the same engine.',
   },
 
   // --- ranking (order is the expectation) ---
@@ -149,14 +149,14 @@ export const GOLDEN: GoldenQuery[] = [
     absent: ['rank-tune'],
     note: 'rank-tune also matches the term but lives in /repo/sessions.',
   },
-  { id: 'filter-tool-pi', class: 'filter', query: 'rename', opts: { tool: 'pi' }, top: ['pi-flag'] },
+  { id: 'filter-tool-codex', class: 'filter', query: 'rename', opts: { tool: 'codex' }, top: ['codex-flag'] },
   {
     id: 'filter-tool-claude',
     class: 'filter',
     query: 'rename',
     opts: { tool: 'claude' },
     negative: true,
-    note: 'The only rename session is pi; a claude-scoped query must come back empty.',
+    note: 'The only rename session is Codex; a claude-scoped query must come back empty.',
   },
 
   // --- negative (must abstain: zero results) ---

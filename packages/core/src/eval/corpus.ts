@@ -184,31 +184,33 @@ function writeClaude(claudeDir: string, f: Fixture): void {
   writeFileSync(join(dir, `${f.id}.jsonl`), lines);
 }
 
-function writePi(piDir: string): void {
-  const dir = join(piDir, 'proj');
-  mkdirSync(dir, { recursive: true });
+function writeCodex(codexDir: string): void {
+  mkdirSync(codexDir, { recursive: true });
   const records: Rec[] = [
-    { type: 'session', id: 'pi-flag', timestamp: '2026-06-13T17:00:00.000Z', cwd: '/repo/cli' },
-    { type: 'model_change', id: 'm1', parentId: null, timestamp: '2026-06-13T17:00:01.000Z' },
+    { type: 'session_meta', timestamp: '2026-06-13T17:00:00.000Z', payload: { id: 'codex-flag', cwd: '/repo/cli' } },
     {
-      type: 'message',
-      id: 'u1',
-      parentId: 'm1',
+      type: 'response_item',
       timestamp: '2026-06-13T17:01:00.000Z',
-      message: { role: 'user', content: [{ type: 'text', text: 'rename the --all flag to --everywhere' }] },
+      payload: {
+        type: 'message',
+        role: 'user',
+        content: [{ type: 'input_text', text: 'rename the --all flag to --everywhere' }],
+      },
     },
     {
-      type: 'message',
-      id: 'a1',
-      parentId: 'u1',
+      type: 'response_item',
       timestamp: '2026-06-13T17:02:00.000Z',
-      message: { role: 'assistant', content: [{ type: 'text', text: 'updated the help output and completions' }] },
+      payload: {
+        type: 'message',
+        role: 'assistant',
+        content: [{ type: 'output_text', text: 'updated the help output and completions' }],
+      },
     },
   ];
-  writeFileSync(join(dir, 'pi-flag.jsonl'), records.map(j).join('\n'));
+  writeFileSync(join(codexDir, 'codex-flag.jsonl'), records.map(j).join('\n'));
 }
 
-export function seedEvalCorpus(dirs: { claudeDir: string; piDir: string }): void {
+export function seedEvalCorpus(dirs: { claudeDir: string; codexDir: string }): void {
   for (const f of CLAUDE_FIXTURES) writeClaude(dirs.claudeDir, f);
-  writePi(dirs.piDir);
+  writeCodex(dirs.codexDir);
 }

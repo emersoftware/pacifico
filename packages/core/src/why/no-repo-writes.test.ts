@@ -21,7 +21,6 @@ function git(cwd: string, args: string[], env: Record<string, string> = {}): str
 function setEnv(): void {
   process.env.SESSIONS_CACHE_DIR = join(tmp, 'cache');
   process.env.SESSIONS_CLAUDE_DIR = join(tmp, 'claude');
-  process.env.SESSIONS_PI_DIR = join(tmp, 'pi');
   process.env.SESSIONS_CODEX_DIR = join(tmp, 'codex');
   process.env.SESSIONS_OPENCODE_DB = join(tmp, 'opencode.db');
   process.env.SESSIONS_ARCHIVE_DIR = join(tmp, 'archive');

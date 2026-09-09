@@ -5,7 +5,6 @@ import { type Tool } from '@pacifico/core/types';
 import { getSessionMessages } from '@pacifico/core/parser';
 import { readSessionLines } from '@pacifico/core/session-io';
 import { isOpencodePath } from '@pacifico/core/opencode';
-import { getPiSessionsDir } from '@pacifico/core/paths';
 
 /**
  * Infer the tool from a session file path. The selector TSV now carries filePath,
@@ -17,11 +16,9 @@ function toolFromPath(filePath: string): Tool | null {
   const home = homedir();
   const claudeDir = process.env.SESSIONS_CLAUDE_DIR || join(home, '.claude/projects');
   const codexDir = process.env.SESSIONS_CODEX_DIR || join(home, '.codex/sessions');
-  const piDir = getPiSessionsDir();
   const dir = dirname(filePath);
   if (dir.startsWith(claudeDir)) return 'claude';
   if (dir.startsWith(codexDir)) return 'codex';
-  if (dir.startsWith(piDir)) return 'pi';
   return null;
 }
 
@@ -78,7 +75,7 @@ export function renderPreview(filePath: string): string {
   for (const m of page) {
     const isUser = m.role === 'user';
     const label = isUser ? `${C.bold}you ${C.reset}` : `${C.cyan}ai  ${C.reset}`;
-    const prefix = m.branch === 'abandoned' ? `${C.dim}⑂${C.reset} ` : ' ';
+    const prefix = ' ';
     const trimmed = m.text.length > 600 ? m.text.slice(0, 599) + '…' : m.text;
     const rows = wrap(trimmed, bodyWidth);
     for (let i = 0; i < Math.min(rows.length, 12); i++) {

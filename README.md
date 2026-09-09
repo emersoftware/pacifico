@@ -2,7 +2,7 @@
   <img src="docs/assets/pacifico-readme.png" alt="pacifico. Save and search your coding sessions." width="380">
 </p>
 
-Pacifico keeps a searchable local archive of Claude Code, Codex, Pi, and OpenCode conversations, and lets your agents recall them through MCP.
+Pacifico keeps a searchable local archive of Claude Code, Codex, Cursor, Antigravity, and OpenCode conversations, and lets your agents recall them through MCP.
 
 [Website](https://pacifico.emersoftware.cl/) · [Español](https://pacifico.emersoftware.cl/es/)
 

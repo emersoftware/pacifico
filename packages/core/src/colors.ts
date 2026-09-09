@@ -50,7 +50,6 @@ export interface ToolColors {
 
 export const toolColor: ToolColors = {
   claude: C.purple,
-  pi: C.green,
   codex: C.blue,
   opencode: C.yellow,
 };

@@ -6,7 +6,7 @@ export const content = {
   en: {
     title: 'pacifico: save and search your coding sessions',
     description:
-      'Save and search Claude Code, Codex, Pi, and OpenCode conversations on your computer. Give your agents access through MCP.',
+      'Save and search Claude Code, Codex, Cursor, Antigravity, and OpenCode conversations on your computer. Give your agents access through MCP.',
     skip: 'Skip to content',
     nav: ['Install', 'How it works', 'Guide'],
     language: 'Language',
@@ -24,7 +24,7 @@ export const content = {
     flow: [
       {
         title: 'Save a local copy',
-        body: 'Import conversations from Claude Code, Codex, Pi, and OpenCode into a separate archive.',
+        body: 'Import conversations from Claude Code, Codex, Cursor, Antigravity, and OpenCode into a separate archive.',
       },
       {
         title: 'Search your history',
@@ -51,7 +51,7 @@ export const content = {
     setupTitle: 'Connect your agents',
     setup: [
       'Run the installation command above. It configures Pacifico’s MCP integration.',
-      'The installer sets up MCP for detected clients, including Codex, Cursor, and Pi. It registers the Claude Code plugin when available.',
+      'The installer sets up MCP for detected clients, including Codex and Cursor. It registers the Claude Code plugin when available.',
       'Restart your agent to load the integration. Your original session files stay in place.',
     ],
     setupNote: 'Automatic imports and session-start hooks are optional. The installer leaves both off.',
@@ -117,7 +117,7 @@ export const content = {
   es: {
     title: 'pacifico: guarda y busca tus sesiones de código',
     description:
-      'Guarda y busca conversaciones de Claude Code, Codex, Pi y OpenCode en tu equipo. Dales acceso a tus agentes mediante MCP.',
+      'Guarda y busca conversaciones de Claude Code, Codex, Cursor, Antigravity y OpenCode en tu equipo. Dales acceso a tus agentes mediante MCP.',
     skip: 'Saltar al contenido',
     nav: ['Instalar', 'Cómo funciona', 'Guía'],
     language: 'Idioma',
@@ -135,7 +135,7 @@ export const content = {
     flow: [
       {
         title: 'Guarda una copia local',
-        body: 'Importa conversaciones de Claude Code, Codex, Pi y OpenCode a un archivo separado.',
+        body: 'Importa conversaciones de Claude Code, Codex, Cursor, Antigravity y OpenCode a un archivo separado.',
       },
       {
         title: 'Busca en tu historial',
@@ -169,7 +169,7 @@ export const content = {
     setupTitle: 'Conecta tus agentes',
     setup: [
       'Ejecuta el comando de instalación de arriba. Configura la integración MCP de Pacifico.',
-      'El instalador configura MCP para los clientes que detecta, incluidos Codex, Cursor y Pi. Registra el plugin de Claude Code cuando está disponible.',
+      'El instalador configura MCP para los clientes que detecta, incluidos Codex y Cursor. Registra el plugin de Claude Code cuando está disponible.',
       'Reinicia tu agente para cargar la integración. Los archivos originales de tus sesiones quedan en su lugar.',
     ],
     setupNote:

@@ -20,11 +20,14 @@ test('claude: collects thinking block text', () => {
   expect(extractThinking(lines, 'claude')).toBe('consider memoization');
 });
 
-test('pi: collects thinking from assistant content', () => {
+test('Cursor: collects thinking from assistant content', () => {
   const lines = [
-    j({ type: 'message', message: { role: 'assistant', content: [{ type: 'thinking', thinking: 'pi reasoning' }] } }),
+    j({
+      type: 'message',
+      message: { role: 'assistant', content: [{ type: 'thinking', thinking: 'recorded reasoning' }] },
+    }),
   ];
-  expect(extractThinking(lines, 'pi')).toBe('pi reasoning');
+  expect(extractThinking(lines, 'cursor')).toBe('recorded reasoning');
 });
 
 test('codex: reasoning is encrypted, returns empty', () => {

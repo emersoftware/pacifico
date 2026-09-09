@@ -281,7 +281,7 @@ const GLOSSARY = {
   byHour:
     'Assistant messages by local hour, summed across every day in the period. Midnight is the top of the dial and the day runs clockwise.',
   byWeekday: 'Assistant messages by day of week, summed across the period.',
-  byTool: 'Cost split across the coding tools whose logs were read: Claude Code, Codex, Pi, OpenCode.',
+  byTool: 'Cost split across the coding tools whose logs were read: Claude Code, Codex, OpenCode.',
   byModel:
     'Cost per model. A model with no published price is flagged in the banner above rather than counted as zero.',
   byProject: 'Cost per project directory, from each message’s working directory.',

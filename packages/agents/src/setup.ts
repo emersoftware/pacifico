@@ -1,9 +1,9 @@
-import { existsSync, lstatSync, mkdirSync, readdirSync, readlinkSync, rmSync, writeFileSync } from 'node:fs';
-import { join, dirname, sep, basename } from 'node:path';
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { join, dirname, basename } from 'node:path';
 import { C } from '@pacifico/core/colors';
 import { PLUGIN_FILES } from './plugin-files';
 import { removeLegacyHook } from './legacy-hook';
-import { getDataDir, getHome } from '@pacifico/core/paths';
+import { getDataDir } from '@pacifico/core/paths';
 import { stopDaemon } from './daemon';
 import { installedExecutable } from './executable';
 import {
@@ -70,28 +70,6 @@ function installPlugin(): boolean {
   return ok;
 }
 
-/** Older releases linked their skills into Pi; upgrades remove only those links. */
-function piSkillsDir(): string {
-  return join(getHome(), '.pi', 'agent', 'skills');
-}
-
-/** Remove only links that point into our plugin skills dir; anything else stays. */
-export function unlinkPiSkills(skillsDir = piSkillsDir(), pluginSkills = join(pluginDest(), 'skills')): string[] {
-  if (!existsSync(skillsDir)) return [];
-  const removed: string[] = [];
-  for (const name of readdirSync(skillsDir).sort()) {
-    const dest = join(skillsDir, name);
-    try {
-      if (!lstatSync(dest).isSymbolicLink()) continue;
-      const target = readlinkSync(dest);
-      if (target !== join(pluginSkills, name) && !target.startsWith(pluginSkills + sep)) continue;
-      rmSync(dest);
-      removed.push(name);
-    } catch {}
-  }
-  return removed;
-}
-
 function sessionsCommand(): string {
   // A compiled install must keep working when the invoking shell's PATH is not
   // inherited by an editor. Use the installed executable, with a stable Homebrew alias when available.
@@ -114,7 +92,7 @@ function sessionsCommand(): string {
 function wire(client: McpClient): WireResult {
   if (!client.configPath) return { status: 'unchanged' };
   const cmd = sessionsCommand();
-  return client.id === 'codex' ? wireCodex(client.configPath, cmd) : wireJsonClient(client.configPath, client.id, cmd);
+  return client.id === 'codex' ? wireCodex(client.configPath, cmd) : wireJsonClient(client.configPath, cmd);
 }
 
 function unwire(client: McpClient): WireResult {
@@ -153,7 +131,6 @@ export function runSetup(): void {
   w(`\n${C.bold}pacifico setup${C.reset}\n\n`);
 
   removeLegacyHook();
-  unlinkPiSkills();
   // This subtree contains only installer-owned skills from retired releases.
   rmSync(join(pluginDest(), 'skills'), { recursive: true, force: true });
 
@@ -171,7 +148,7 @@ export function runSetup(): void {
   const detected = detectClients().filter((t) => t.detected);
 
   if (detected.length === 0) {
-    w(`\n  ${C.dim}No AI tools detected. Install Claude Code, Cursor, Codex, or Pi first.${C.reset}\n\n`);
+    w(`\n  ${C.dim}No AI tools detected. Install Claude Code, Cursor, or Codex first.${C.reset}\n\n`);
     process.exit(0);
   }
 
@@ -235,15 +212,6 @@ export function runUninstall(): void {
 
       if (removeLegacyHook()) {
         w(`  ${C.green}✓${C.reset} Removed SessionStart auto-injection from ${C.dim}${tool.name}${C.reset}\n`);
-      }
-    }
-
-    if (tool.id === 'pi') {
-      const removed = unlinkPiSkills();
-      if (removed.length) {
-        w(
-          `  ${C.green}✓${C.reset} Removed ${removed.length} skill link${removed.length === 1 ? '' : 's'} from ${C.dim}Pi${C.reset}\n`,
-        );
       }
     }
   }

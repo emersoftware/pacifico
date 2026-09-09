@@ -20,7 +20,6 @@ let cache: typeof import('../cache');
 function setEnv(): void {
   process.env.SESSIONS_CACHE_DIR = join(tmp, 'cache');
   process.env.SESSIONS_CLAUDE_DIR = join(tmp, 'claude');
-  process.env.SESSIONS_PI_DIR = join(tmp, 'pi');
   process.env.SESSIONS_CODEX_DIR = join(tmp, 'codex');
   process.env.SESSIONS_OPENCODE_DB = join(tmp, 'opencode.db'); // absent → no OpenCode leaks in
   process.env.SESSIONS_ARCHIVE_DIR = join(tmp, 'archive');
@@ -54,7 +53,7 @@ function writeClaudeSession(): void {
 beforeAll(async () => {
   tmp = mkdtempSync(join(tmpdir(), 'sessions-vault-rebuild-'));
   setEnv();
-  for (const d of ['claude', 'pi', 'codex']) mkdirSync(join(tmp, d), { recursive: true });
+  for (const d of ['claude', 'codex']) mkdirSync(join(tmp, d), { recursive: true });
   writeClaudeSession();
   cache = await import('../cache');
   cache.closeDb();

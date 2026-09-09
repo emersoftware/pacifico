@@ -14,7 +14,6 @@ let cache: typeof import('../cache');
 function setEnv(): void {
   process.env.SESSIONS_CACHE_DIR = join(tmp, 'cache');
   process.env.SESSIONS_CLAUDE_DIR = join(tmp, 'claude');
-  process.env.SESSIONS_PI_DIR = join(tmp, 'pi');
   process.env.SESSIONS_CODEX_DIR = join(tmp, 'codex');
   process.env.SESSIONS_OPENCODE_DB = join(tmp, 'opencode.db');
   process.env.SESSIONS_ARCHIVE_DIR = join(tmp, 'archive');
@@ -40,14 +39,6 @@ function commit(gitDir: string, relPath: string, content: string, dateIso: strin
 
 function writeClaude(id: string, records: JsonObject[]): string {
   const dir = join(process.env.SESSIONS_CLAUDE_DIR!, 'proj');
-  mkdirSync(dir, { recursive: true });
-  const p = join(dir, `${id}.jsonl`);
-  writeFileSync(p, records.map(j).join('\n'));
-  return p;
-}
-
-function writePi(id: string, records: JsonObject[]): string {
-  const dir = join(process.env.SESSIONS_PI_DIR!, 'proj');
   mkdirSync(dir, { recursive: true });
   const p = join(dir, `${id}.jsonl`);
   writeFileSync(p, records.map(j).join('\n'));
@@ -132,66 +123,6 @@ beforeAll(() => {
     },
   ]);
 
-  // Pi session: disjoint file (other.ts) in the same window → time-only.
-  writePi('pi1', [
-    { type: 'session', id: 'pi1', cwd: repo, timestamp: '2026-06-15T10:10:00.000Z' },
-    {
-      type: 'message',
-      id: 'u1',
-      parentId: 'pi1',
-      timestamp: '2026-06-15T10:10:00.000Z',
-      message: { role: 'user', content: [{ type: 'text', text: 'touch other' }] },
-    },
-    {
-      type: 'message',
-      id: 'a1',
-      parentId: 'u1',
-      timestamp: '2026-06-15T10:40:00.000Z',
-      message: {
-        role: 'assistant',
-        content: [{ type: 'toolCall', id: 'edit_1', name: 'edit', arguments: { path: join(repo, 'src/other.ts') } }],
-      },
-    },
-    {
-      type: 'message',
-      id: 'a2',
-      parentId: 'a1',
-      timestamp: '2026-06-15T11:00:00.000Z',
-      message: { role: 'assistant', content: [{ type: 'text', text: 'edited other file' }] },
-    },
-  ]);
-
-  // Pi session: edited the COMMITTED file (target.ts) in the same window → files+time.
-  // Regression guard for the extract-files no-op: before Pi extraction landed this reached
-  // only time-only because files_touched was empty for every Pi session.
-  writePi('pi2', [
-    { type: 'session', id: 'pi2', cwd: repo, timestamp: '2026-06-15T10:15:00.000Z' },
-    {
-      type: 'message',
-      id: 'u1',
-      parentId: 'pi2',
-      timestamp: '2026-06-15T10:15:00.000Z',
-      message: { role: 'user', content: [{ type: 'text', text: 'extend target' }] },
-    },
-    {
-      type: 'message',
-      id: 'a1',
-      parentId: 'u1',
-      timestamp: '2026-06-15T10:45:00.000Z',
-      message: {
-        role: 'assistant',
-        content: [{ type: 'toolCall', id: 'edit_1', name: 'edit', arguments: { path: join(repo, 'src/target.ts') } }],
-      },
-    },
-    {
-      type: 'message',
-      id: 'a2',
-      parentId: 'a1',
-      timestamp: '2026-06-15T11:05:00.000Z',
-      message: { role: 'assistant', content: [{ type: 'text', text: 'edited target file' }] },
-    },
-  ]);
-
   // A session well outside the window (days earlier) → excluded entirely.
   writeClaude(
     'old',
@@ -222,25 +153,10 @@ describe('why - file form', () => {
     expect(byTool.get('claude')?.overlappingFiles).toContain('src/target.ts');
     expect(byTool.get('codex')?.confidence).toBe('files+time'); // repo-relative intersects
     expect(byTool.get('codex')?.overlappingFiles).toContain('src/target.ts');
-    // the disjoint pi session is time-only, ranked below the two file matches.
-    expect(byTool.get('pi')?.confidence).toBe('time-only');
     const filesTimeFirst = out.evidence.sessions.findIndex((s) => s.confidence === 'time-only');
     expect(out.evidence.sessions.slice(0, filesTimeFirst).every((s) => s.confidence === 'files+time')).toBe(true);
     // the days-earlier session is excluded from the window.
     expect(out.evidence.sessions.every((s) => s.headline !== 'old work')).toBe(true);
-  });
-
-  test('a Pi session that edited the committed file correlates files+time (regression for the no-op)', async () => {
-    setEnv();
-    cache.closeDb();
-    const out = await correlate.why('src/target.ts', repo);
-    expect(out.kind).toBe('evidence');
-    if (out.kind !== 'evidence') return;
-    const pi2 = out.evidence.sessions.find((s) => s.sessionId === 'pi2');
-    expect(pi2).toBeDefined();
-    expect(pi2!.tool).toBe('pi');
-    expect(pi2!.confidence).toBe('files+time');
-    expect(pi2!.overlappingFiles).toContain('src/target.ts');
   });
 
   test('file:line resolves via git blame to the line-owning commit', async () => {
@@ -331,7 +247,7 @@ describe('why - unlanded attempts', () => {
     // 'old work' (2026-06-01) touched target.ts days from any commit on it → unlanded.
     expect(attempts.map((a) => a.headline)).toContain('old work');
     // Sessions whose work landed in the file's history are not attempts.
-    expect(attempts.every((a) => !['cl1', 'cx1', 'pi2'].includes(a.sessionId))).toBe(true);
+    expect(attempts.every((a) => !['cl1', 'cx1'].includes(a.sessionId))).toBe(true);
     // Verified file overlap, but no commit window - the weaker confidence label.
     expect(attempts.every((a) => a.confidence === 'time-only')).toBe(true);
   });

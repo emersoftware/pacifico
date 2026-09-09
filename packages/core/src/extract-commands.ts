@@ -43,30 +43,6 @@ function extractCodex(lines: string[], push: (c: string) => void): void {
   }
 }
 
-// Pi: the dedicated `bashExecution` channel, plus a `bash` toolCall block.
-function extractPi(lines: string[], push: (c: string) => void): void {
-  for (const line of lines) {
-    const d = tryParse(line);
-    if (!d || d.type !== 'message') continue;
-    const msg = asJsonObject(d.message);
-    if (!msg) continue;
-    if (msg.role === 'bashExecution') {
-      const cmd = asJsonString(msg.command);
-      if (cmd?.trim()) push(cmd.trim());
-      continue;
-    }
-    const content = msg.content;
-    if (!Array.isArray(content)) continue;
-    for (const block of content) {
-      const b = asJsonObject(block);
-      if (!b) continue;
-      if (b.type !== 'toolCall' || b.name !== 'bash') continue;
-      const cmd = asJsonString(asJsonObject(b.arguments)?.command);
-      if (cmd?.trim()) push(cmd.trim());
-    }
-  }
-}
-
 // OpenCode: the `bash` tool block's `state.input.command`.
 function extractOpencode(lines: string[], push: (c: string) => void): void {
   for (const block of opencodeAssistantBlocks(lines)) {
@@ -87,7 +63,6 @@ export function extractCommands(lines: string[], tool: Tool): string[] {
   };
   if (tool === 'claude') extractClaude(lines, push);
   else if (tool === 'codex') extractCodex(lines, push);
-  else if (tool === 'pi') extractPi(lines, push);
   else if (tool === 'opencode') extractOpencode(lines, push);
   return out;
 }

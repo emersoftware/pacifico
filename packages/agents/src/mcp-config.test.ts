@@ -22,7 +22,6 @@ const {
 
 const codexPath = join(fixtureRoot, '.codex', 'config.toml');
 const cursorPath = join(fixtureRoot, '.cursor', 'mcp.json');
-const piPath = join(fixtureRoot, '.pi', 'agent', 'mcp.json');
 const CMD = '/opt/homebrew/bin/pacifico';
 
 afterAll(() => {
@@ -65,13 +64,12 @@ describe('detectClients', () => {
 
     const byId = Object.fromEntries(detectClients().map((c) => [c.id, c]));
     expect(byId.codex!.detected).toBe(true);
-    expect(byId.pi!.detected).toBe(true);
+    expect(byId.pi).toBeUndefined();
     expect(byId.cursor!.detected).toBe(false);
 
     // The paths the clients read - not the `.mcp.json` dotfiles setup used to write.
     expect(byId.codex!.configPath).toBe(codexPath);
     expect(byId.cursor!.configPath).toBe(cursorPath);
-    expect(byId.pi!.configPath).toBe(piPath);
     expect(byId.claude!.configPath).toBe(''); // wired through the plugin instead
   });
 
@@ -253,29 +251,19 @@ describe('json clients', () => {
       cursorPath,
       JSON.stringify({ mcpServers: { workos: { url: 'https://mcp.workos.com/mcp' } } }, null, 2),
     );
-    expect(wireJsonClient(cursorPath, 'cursor', CMD).status).toBe('added');
+    expect(wireJsonClient(cursorPath, CMD).status).toBe('added');
 
     const after = JSON.parse(readFileSync(cursorPath, 'utf-8'));
     expect(after.mcpServers.workos).toEqual({ url: 'https://mcp.workos.com/mcp' });
     expect(after.mcpServers.pacifico).toEqual({ command: CMD, args: ['--mcp'] });
   });
 
-  test('gives Pi the stdio type its schema expects, and keeps its other keys', () => {
-    writeFixture(piPath, JSON.stringify({ discoveryMode: 'auto', importConfigs: ['~/.claude.json'], mcpServers: {} }));
-    expect(wireJsonClient(piPath, 'pi', CMD).status).toBe('added');
-
-    const after = JSON.parse(readFileSync(piPath, 'utf-8'));
-    expect(after.mcpServers.pacifico).toEqual({ type: 'stdio', command: CMD, args: ['--mcp'] });
-    expect(after.discoveryMode).toBe('auto');
-    expect(after.importConfigs).toEqual(['~/.claude.json']);
-  });
-
   test('is idempotent', () => {
     writeFixture(cursorPath, '{}\n');
-    wireJsonClient(cursorPath, 'cursor', CMD);
+    wireJsonClient(cursorPath, CMD);
     const first = readFileSync(cursorPath, 'utf-8');
 
-    expect(wireJsonClient(cursorPath, 'cursor', CMD).status).toBe('unchanged');
+    expect(wireJsonClient(cursorPath, CMD).status).toBe('unchanged');
     expect(readFileSync(cursorPath, 'utf-8')).toBe(first);
   });
 
@@ -283,26 +271,26 @@ describe('json clients', () => {
     const broken = '{ "mcpServers": { oops\n';
     writeFixture(cursorPath, broken);
 
-    const result = wireJsonClient(cursorPath, 'cursor', CMD);
+    const result = wireJsonClient(cursorPath, CMD);
     expect(result.status).toBe('refused');
     expect(readFileSync(cursorPath, 'utf-8')).toBe(broken);
   });
 
   test('refuses a config whose mcpServers is the wrong shape', () => {
     writeFixture(cursorPath, JSON.stringify({ mcpServers: [] }));
-    expect(wireJsonClient(cursorPath, 'cursor', CMD).status).toBe('refused');
+    expect(wireJsonClient(cursorPath, CMD).status).toBe('refused');
   });
 
   test('a re-run keeps keys the user added to our entry', () => {
     writeFixture(
-      piPath,
+      cursorPath,
       JSON.stringify({
         mcpServers: { pacifico: { type: 'stdio', command: '/old/dev/build', args: ['--mcp'], cwd: '/work/pacifico' } },
       }),
     );
-    expect(wireJsonClient(piPath, 'pi', CMD).status).toBe('added');
+    expect(wireJsonClient(cursorPath, CMD).status).toBe('added');
 
-    const after = JSON.parse(readFileSync(piPath, 'utf-8'));
+    const after = JSON.parse(readFileSync(cursorPath, 'utf-8'));
     expect(after.mcpServers.pacifico.command).toBe(CMD); // stale path updated
     expect(after.mcpServers.pacifico.cwd).toBe('/work/pacifico'); // the user's, kept
   });

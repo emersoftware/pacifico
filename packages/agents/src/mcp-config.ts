@@ -8,7 +8,7 @@ import { getHome } from '@pacifico/core/paths';
 // way; every one of those guesses but Claude Code's plugin was a file no client
 // ever opens. Paths here are the ones confirmed against a real install.
 
-export type ClientId = 'claude' | 'cursor' | 'codex' | 'pi';
+export type ClientId = 'claude' | 'cursor' | 'codex';
 
 export interface McpClient {
   id: ClientId;
@@ -53,29 +53,15 @@ export function detectClients(): McpClient[] {
       detected: existsSync(join(home, '.codex')),
       configPath: join(home, '.codex', 'config.toml'),
     },
-    {
-      id: 'pi',
-      name: 'Pi',
-      detected: existsSync(join(home, '.pi', 'agent')),
-      configPath: join(home, '.pi', 'agent', 'mcp.json'),
-    },
   ];
 }
-
-/** The server entry each client expects. Pi's schema wants an explicit transport. */
-function serverEntry(id: ClientId, command: string): JsonObject {
-  if (id === 'pi') return { type: 'stdio', command, args: ARGS };
-  return { command, args: ARGS };
-}
-
-// ---- JSON clients (Cursor, Pi) ----
 
 /**
  * Merge our server into a client's JSON config, preserving every other server.
  * Refuses on anything it can't merge without guessing, so a hand-edited config is
  * never replaced by ours.
  */
-export function wireJsonClient(path: string, id: ClientId, command: string): WireResult {
+export function wireJsonClient(path: string, command: string): WireResult {
   let config: JsonObject = {};
 
   if (existsSync(path)) {
@@ -107,7 +93,7 @@ export function wireJsonClient(path: string, id: ClientId, command: string): Wir
   // Update the keys we own and keep the rest, the same way the Codex merge does:
   // a `cwd` or `env` the user added is theirs, and a re-run must not eat it.
   const previous = asJsonObject(current) ?? {};
-  const entry = { ...previous, ...serverEntry(id, command) };
+  const entry = { ...previous, command, args: ARGS };
   if (JSON.stringify(current) === JSON.stringify(entry)) return { status: 'unchanged' };
 
   servers.pacifico = entry;

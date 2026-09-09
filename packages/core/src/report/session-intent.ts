@@ -14,7 +14,6 @@ import type { ToolId } from './types.ts';
 // usage-contract id, 'claude' is the index's).
 const INDEX_TOOL = {
   'claude-code': 'claude',
-  pi: 'pi',
   codex: 'codex',
   opencode: 'opencode',
 } satisfies Record<ToolId, string>;

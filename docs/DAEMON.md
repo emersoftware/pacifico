@@ -24,6 +24,21 @@ The last result is stored at `~/.local/share/pacifico/daemon-state.json`: comple
 
 Known source and data environment overrides are saved in the plist. Relative paths become absolute. The entire shell environment is not copied. Run `start` again to change registered overrides.
 
+The source overrides are:
+
+| Variable                      | Default source                                                    |
+| ----------------------------- | ----------------------------------------------------------------- |
+| `SESSIONS_CLAUDE_DIR`         | `~/.claude/projects`                                              |
+| `SESSIONS_CODEX_DIR`          | `~/.codex/sessions`                                               |
+| `SESSIONS_CODEX_ARCHIVED_DIR` | `archived_sessions` beside the Codex sessions directory           |
+| `SESSIONS_CURSOR_DIR`         | `~/.cursor`                                                       |
+| `SESSIONS_CURSOR_IDE_DIR`     | `~/Library/Application Support/Cursor/User`                       |
+| `SESSIONS_ANTIGRAVITY_DIR`    | `~/.gemini`                                                       |
+| `SESSIONS_OPENCODE_DB`        | `~/.local/share/opencode/opencode.db`                             |
+| `SESSIONS_NATIVE_HOME`        | Home directory used to find native memories, rules, and artifacts |
+
+`SESSIONS_HOME` changes Pacifico's default home directory. When `SESSIONS_CURSOR_DIR` is set without `SESSIONS_CURSOR_IDE_DIR`, IDE discovery uses its `User` subdirectory. Document discovery uses its own home override and does not inherit individual session-directory overrides.
+
 ## Concurrency and retention
 
 MCP and background workers share a SQLite refresh lock stored separately from the rebuildable index. It protects the full manifest update across processes and is released automatically if its owner exits. A competing process waits for up to 60 seconds before reporting failure.

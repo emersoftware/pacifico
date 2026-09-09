@@ -17,7 +17,6 @@ export function makeTmp(label: string): string {
 export function setSessionEnv(tmp: string): void {
   process.env.SESSIONS_CACHE_DIR = join(tmp, 'cache');
   process.env.SESSIONS_CLAUDE_DIR = join(tmp, 'claude');
-  process.env.SESSIONS_PI_DIR = join(tmp, 'pi');
   process.env.SESSIONS_CODEX_DIR = join(tmp, 'codex');
   process.env.SESSIONS_OPENCODE_DB = join(tmp, 'opencode.db'); // absent -> no OpenCode sessions leak in
   process.env.SESSIONS_DATA_DIR = join(tmp, 'data');

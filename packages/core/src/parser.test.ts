@@ -14,9 +14,7 @@ import {
   closingMessages,
   extractSessionMetadata,
   summarizeMessages,
-  sessionParentSession,
 } from './parser';
-import { buildPiTree } from './pi-tree';
 import type { JsonObject } from './extract-util';
 
 function jsonl(...objs: JsonObject[]): string[] {
@@ -24,6 +22,38 @@ function jsonl(...objs: JsonObject[]): string[] {
 }
 
 describe('extractSessionMetadata', () => {
+  test('retains the last native Codex rename in both metadata views', () => {
+    const lines = jsonl(
+      { type: 'session_meta', payload: { id: 'named', cwd: '/repo' } },
+      { type: 'event_msg', payload: { type: 'thread_name_updated', thread_name: 'First title' } },
+      { type: 'event_msg', payload: { type: 'thread_name_updated', thread_name: 'Final title' } },
+      { type: 'event_msg', payload: { type: 'thread_name_updated', thread_name: ' ' } },
+    );
+    expect(customTitle(lines)).toBe('Final title');
+    expect(extractSessionMetadata(lines, 'codex').customTitle).toBe('Final title');
+  });
+
+  test('uses native identity and ignores unrelated message IDs', () => {
+    const lines = [
+      '{broken',
+      ...jsonl(
+        { type: 'response_item', sessionId: 'unrelated', payload: { id: 'message-id' } },
+        { type: 'session_meta', payload: { id: 'native-session', cwd: '/repo' } },
+        { type: 'session_meta', payload: { id: 'later-id' } },
+      ),
+    ];
+    expect(extractSessionMetadata(lines, 'codex').sessionId).toBe('native-session');
+    expect(extractSessionMetadata(jsonl({ type: 'user', sessionId: 'claude-id' }), 'claude').sessionId).toBe(
+      'claude-id',
+    );
+    expect(extractSessionMetadata(jsonl({ type: 'session', sessionId: 'cursor-id' }), 'cursor').sessionId).toBe(
+      'cursor-id',
+    );
+    expect(
+      extractSessionMetadata(jsonl({ type: 'session_meta', payload: { id: ' ' } }), 'codex').sessionId,
+    ).toBeUndefined();
+  });
+
   test('matches the individual Claude metadata helpers in one pass', () => {
     const lines = jsonl(
       {
@@ -261,7 +291,7 @@ describe('messageCount', () => {
     expect(messageCount(lines)).toBe(1);
   });
 
-  test('counts pi/codex style message rows', () => {
+  test('counts normalized message rows', () => {
     const lines = jsonl(
       { type: 'message', message: { role: 'user', content: 'q' } },
       { type: 'message', message: { role: 'assistant', content: 'a' } },
@@ -291,12 +321,12 @@ describe('firstPrompt', () => {
     expect(firstPrompt(lines, 'claude')).toBe('Do the thing');
   });
 
-  test('extracts first user prompt for pi sessions', () => {
+  test('extracts first user prompt for OpenCode sessions', () => {
     const lines = jsonl(
       { type: 'session', cwd: '/tmp' },
       { type: 'message', message: { role: 'user', content: [{ type: 'text', text: 'Help me debug' }] } },
     );
-    expect(firstPrompt(lines, 'pi')).toBe('Help me debug');
+    expect(firstPrompt(lines, 'opencode')).toBe('Help me debug');
   });
 
   test('extracts first user prompt for codex sessions', () => {
@@ -340,9 +370,9 @@ describe('getCwdFromSession', () => {
     expect(getCwdFromSession(lines, 'claude')).toBe('/Users/me/project');
   });
 
-  test('extracts cwd from pi session', () => {
+  test('extracts cwd from OpenCode session', () => {
     const lines = jsonl({ type: 'session', cwd: '/Users/me/project' });
-    expect(getCwdFromSession(lines, 'pi')).toBe('/Users/me/project');
+    expect(getCwdFromSession(lines, 'opencode')).toBe('/Users/me/project');
   });
 
   test('extracts cwd from codex session', () => {
@@ -380,7 +410,7 @@ describe('getSessionMessages', () => {
     expect(msgs[0]!.text).toContain('real question');
   });
 
-  test('handles pi/codex message format', () => {
+  test('handles normalized message format', () => {
     const lines = jsonl(
       { type: 'message', message: { role: 'user', content: 'hello' } },
       { type: 'message', message: { role: 'assistant', content: 'hi there' } },
@@ -579,9 +609,9 @@ describe('sessionBranch', () => {
     expect(sessionBranch(lines, 'codex')).toBe('feature/x');
   });
 
-  test('pi: always empty (no git metadata)', () => {
+  test('OpenCode: always empty (no git metadata)', () => {
     const lines = jsonl({ type: 'session', cwd: '/tmp' });
-    expect(sessionBranch(lines, 'pi')).toBe('');
+    expect(sessionBranch(lines, 'opencode')).toBe('');
   });
 });
 
@@ -755,13 +785,109 @@ describe('tool-call extraction (include_tools support)', () => {
   });
 });
 
-// Every shape below is copied from real ~/.codex/sessions rollouts. The dispatch these
-// exercise did not exist before: Codex nests messages under a `response_item` envelope,
-// so all 305 rollouts on a real machine extracted to zero messages. The pre-existing
-// `{type:'message', message:{…}}` tests elsewhere in this file are the PI shape, which
-// occurs zero times in real Codex logs - hence the duplicate coverage rather than edits
-// to those.
+// Native Codex envelopes are tested separately from normalized message records.
 describe('extractMessages: Codex', () => {
+  test('reads legacy event-only messages without requiring response copies', () => {
+    const lines = jsonl(
+      { type: 'session_meta', payload: { id: 'legacy' } },
+      { type: 'event_msg', payload: { type: 'user_message', message: 'original question' } },
+      { type: 'event_msg', payload: { type: 'agent_message', message: 'original answer' } },
+    );
+    expect(extractMessages(lines).map((m) => [m.role, m.text])).toEqual([
+      ['user', 'original question'],
+      ['assistant', 'original answer'],
+    ]);
+  });
+
+  test('completed messages deduplicate explicit IDs without collapsing equal distinct messages', () => {
+    const item = (id: string) => ({
+      type: 'event_msg',
+      payload: {
+        type: 'item_completed',
+        item: {
+          id,
+          type: 'AgentMessage',
+          content: [{ type: 'Text', text: 'same answer' }],
+        },
+      },
+    });
+    const lines = jsonl({ type: 'session_meta', payload: { id: 'native' } }, item('a'), item('a'), item('b'));
+    expect(extractMessages(lines).map((message) => message.text)).toEqual(['same answer', 'same answer']);
+    expect(lines).toHaveLength(4);
+  });
+
+  test('completed message identity stays scoped to its explicit native turn', () => {
+    const item = (turn: string) => ({
+      type: 'event_msg',
+      payload: {
+        type: 'item_completed',
+        turn_id: turn,
+        item: {
+          id: 'message-1',
+          type: 'AgentMessage',
+          content: [{ type: 'Text', text: 'repeated answer' }],
+        },
+      },
+    });
+    const lines = jsonl(
+      { type: 'session_meta', payload: { id: 'native' } },
+      item('first'),
+      item('first'),
+      item('second'),
+    );
+    expect(extractMessages(lines).map((message) => message.text)).toEqual(['repeated answer', 'repeated answer']);
+  });
+
+  test('response reconciliation respects explicit turns and accepts missing turn metadata', () => {
+    for (const [uiTurn, responseTurn, expected] of [
+      ['first', 'second', 2],
+      ['first', 'first', 1],
+      ['first', undefined, 1],
+      [undefined, 'first', 1],
+    ] as const) {
+      const lines = jsonl(
+        { type: 'session_meta', payload: { id: 'native' } },
+        {
+          type: 'event_msg',
+          payload: { type: 'agent_message', ...(uiTurn ? { turn_id: uiTurn } : {}), message: 'same answer' },
+        },
+        {
+          type: 'response_item',
+          payload: {
+            type: 'message',
+            role: 'assistant',
+            ...(responseTurn ? { turn_id: responseTurn } : {}),
+            content: [{ type: 'output_text', text: 'same answer' }],
+          },
+        },
+      );
+      expect(extractMessages(lines).map((message) => message.text)).toEqual(Array(expected).fill('same answer'));
+    }
+  });
+
+  test('reads completed UI items and reconciles response copies by occurrence', () => {
+    const item = (role: string, text: string) => ({
+      type: 'event_msg',
+      payload: { type: 'item_completed', item: { type: role, content: [{ type: 'Text', text }] } },
+    });
+    const records = jsonl(
+      { type: 'session_meta', payload: { id: 'native' } },
+      item('UserMessage', 'hello'),
+      item('AgentMessage', 'answer'),
+      {
+        type: 'response_item',
+        payload: { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'answer' }] },
+      },
+      item('AgentMessage', 'answer'),
+    );
+    expect(extractMessages(records).map(({ role, text, index }) => ({ role, text, index }))).toEqual([
+      { role: 'user', text: 'hello', index: 0 },
+      { role: 'assistant', text: 'answer', index: 1 },
+      { role: 'assistant', text: 'answer', index: 2 },
+    ]);
+    expect(JSON.parse(records[1]!).type).toBe('event_msg');
+  });
+
   /** A Codex rollout head. Present on line 1 of all 305 real rollouts. */
   const meta = { type: 'session_meta', payload: { cwd: '/repo', git: { branch: 'main' } } };
   const userItem = (text: string) => ({
@@ -882,333 +1008,5 @@ describe('extractMessages: Codex', () => {
       { type: 'assistant', message: { content: [{ type: 'text', text: 'session_meta is the tell.' }] } },
     );
     expect(extractMessages(lines).map((m) => m.role)).toEqual(['user', 'assistant']);
-  });
-});
-
-// --- Pi branch topology ---
-// Fixture shapes mirror real ~/.pi/agent/sessions files: every line carries
-// id/parentId, the session header is the root, the header-adjacent model_change has
-// parentId: null, and message text lives in content arrays of {type:'text'} blocks.
-const piSession = { type: 'session', id: 's1', timestamp: '2026-08-04T17:00:00.000Z', cwd: '/repo' };
-const piModelChange = (id: string, parentId: string | null) => ({
-  type: 'model_change',
-  id,
-  parentId,
-  timestamp: '2026-08-04T17:00:01.000Z',
-});
-const piUser = (id: string, parentId: string, text: string) => ({
-  type: 'message',
-  id,
-  parentId,
-  timestamp: '2026-08-04T17:01:00.000Z',
-  message: { role: 'user', content: [{ type: 'text', text }] },
-});
-const piAssistant = (id: string, parentId: string, text: string) => ({
-  type: 'message',
-  id,
-  parentId,
-  timestamp: '2026-08-04T17:02:00.000Z',
-  message: { role: 'assistant', content: [{ type: 'text', text }] },
-});
-
-// The canonical one-fork shape, modeled on corpus file 2026-08-04T17-05-44-093Z: a
-// /tree hop back to u1 produces an abandoned exchange, then a hop back to a1 resumes
-// what becomes the live conversation (two topology breaks: fork-out AND fork-back).
-function oneForkLines(): string[] {
-  return jsonl(
-    piSession,
-    piModelChange('m1', null),
-    piUser('u1', 'm1', 'first question'),
-    piAssistant('a1', 'u1', 'first answer'),
-    piUser('u2', 'u1', 'hello world'),
-    piAssistant('a2', 'u2', 'abandoned answer'),
-    piUser('u3', 'a1', 'the real follow-up'),
-    piAssistant('a3', 'u3', 'the live answer'),
-  );
-}
-
-describe('buildPiTree', () => {
-  test('returns null for Claude and Codex transcripts (no id/parentId shape)', () => {
-    expect(buildPiTree(jsonl({ type: 'user', message: { content: [{ type: 'text', text: 'hi' }] } }))).toBeNull();
-    expect(
-      buildPiTree(
-        jsonl(
-          { type: 'session_meta', payload: { cwd: '/repo' } },
-          {
-            type: 'response_item',
-            payload: { type: 'message', role: 'user', content: [{ type: 'input_text', text: 'go' }] },
-          },
-        ),
-      ),
-    ).toBeNull();
-  });
-
-  test('unbranched pi session: every entry active, no forks', () => {
-    const tree = buildPiTree(
-      jsonl(piSession, piModelChange('m1', null), piUser('u1', 'm1', 'first question'), piAssistant('a1', 'u1', 'a')),
-    )!;
-    expect(tree).not.toBeNull();
-    expect(tree.forks).toEqual([]);
-    expect(tree.activeIds.size).toBe(tree.entries.length);
-  });
-
-  test('parentId: null chains to the preceding entry instead of forking', () => {
-    // Every real pi file has exactly one parentId:null non-header entry - the first
-    // model_change - so this convention fires on every file and must never fork.
-    const tree = buildPiTree(jsonl(piSession, piModelChange('m1', null), piUser('u1', 'm1', 'hi')))!;
-    expect(tree.forks).toEqual([]);
-    expect(tree.activeIds.has('m1')).toBe(true);
-  });
-
-  test('one fork: the abandoned branch is excluded from the active path', () => {
-    const tree = buildPiTree(oneForkLines())!;
-    expect(tree.forks).toHaveLength(1);
-    expect(tree.forks[0]).toMatchObject({
-      fromEntryId: 'u1',
-      abandonedCount: 2, // entries u2 + a2
-      firstUserText: 'hello world',
-      timestamp: '2026-08-04T17:01:00.000Z',
-    });
-    expect(tree.activeIds.has('u2')).toBe(false);
-    expect(tree.activeIds.has('a2')).toBe(false);
-    expect(tree.activeIds.has('a3')).toBe(true);
-  });
-
-  test('three forks rooted at different active entries', () => {
-    const tree = buildPiTree(
-      jsonl(
-        piSession,
-        piModelChange('m1', null),
-        piUser('u1', 'm1', 'q1'),
-        piAssistant('a1', 'u1', 'a1'),
-        piUser('x1', 'u1', 'branch one'),
-        piAssistant('x2', 'x1', 'branch one reply'),
-        piUser('u2', 'a1', 'q2'),
-        piAssistant('a2', 'u2', 'a2'),
-        piUser('y1', 'a1', 'branch two'),
-        piUser('z1', 'u2', 'branch three'),
-        piUser('u3', 'a2', 'q3'),
-        piAssistant('a3', 'u3', 'a3'),
-      ),
-    )!;
-    expect(tree.forks).toHaveLength(3);
-    expect(tree.forks.map((f) => [f.fromEntryId, f.abandonedCount, f.firstUserText])).toEqual([
-      ['u1', 2, 'branch one'],
-      ['a1', 1, 'branch two'],
-      ['u2', 1, 'branch three'],
-    ]);
-    expect(tree.activeIds.has('a3')).toBe(true);
-  });
-
-  test('an abandoned branch re-entered and extended is still ONE fork', () => {
-    // The 24-break corpus session's actual shape: one fork whose subtree appears as
-    // disjoint runs, because /tree navigated back INTO the abandoned branch. The
-    // continuation's head has an abandoned parent, so it is not a new fork.
-    const tree = buildPiTree(
-      jsonl(
-        piSession,
-        piModelChange('m1', null),
-        piUser('u1', 'm1', 'q1'),
-        piAssistant('a1', 'u1', 'a1'),
-        piAssistant('x1', 'a1', 'abandoned 1'),
-        piAssistant('x2', 'x1', 'abandoned 2'),
-        piUser('u2', 'a1', 'q2'),
-        piAssistant('a2', 'u2', 'a2'),
-        piAssistant('x3', 'x2', 'abandoned 3'), // parent x2 is abandoned - same fork
-        piUser('u3', 'a2', 'q3'),
-        piAssistant('a3', 'u3', 'a3'),
-      ),
-    )!;
-    expect(tree.forks).toHaveLength(1);
-    expect(tree.forks[0]!.abandonedCount).toBe(3); // x1, x2, x3 across two disjoint runs
-    expect(tree.forks[0]!.firstUserText).toBe(''); // an assistant-only branch, like the real file
-  });
-
-  test('a backlink cycle is treated as fully active, never an infinite loop', () => {
-    const tree = buildPiTree(
-      jsonl(
-        piSession,
-        piModelChange('m1', null),
-        piUser('u1', 'a1', 'x'), // forward reference…
-        piAssistant('a1', 'u1', 'y'), // …that closes a corrupt A↔B cycle
-      ),
-    )!;
-    expect(tree.forks).toEqual([]);
-    expect(tree.activeIds.size).toBe(tree.entries.length);
-  });
-
-  test('an unknown parentId chains to the preceding entry (defensive, not seen in corpus)', () => {
-    const tree = buildPiTree(
-      jsonl(piSession, piModelChange('m1', null), piUser('u1', 'm1', 'hi'), piAssistant('a1', 'gone', 'yo')),
-    )!;
-    expect(tree.forks).toEqual([]);
-    expect(tree.activeIds.has('a1')).toBe(true);
-  });
-});
-
-describe('extractMessages: pi branches', () => {
-  test('unbranched pi session: no branch/fork fields at all (no-op purity)', () => {
-    const lines = jsonl(
-      piSession,
-      piModelChange('m1', null),
-      piUser('u1', 'm1', 'hi'),
-      piAssistant('a1', 'u1', 'hello'),
-    );
-    const msgs = extractMessages(lines);
-    expect(msgs.map((m) => [m.role, m.text])).toEqual([
-      ['user', 'hi'],
-      ['assistant', 'hello'],
-    ]);
-    for (const m of msgs) {
-      expect('branch' in m).toBe(false);
-      expect('fork' in m).toBe(false);
-    }
-  });
-
-  test('one fork: abandoned run labeled, first message carries the fork marker', () => {
-    const msgs = extractMessages(oneForkLines());
-    expect(msgs.map((m) => [m.role, m.text, m.branch ?? ''])).toEqual([
-      ['user', 'first question', ''],
-      ['assistant', 'first answer', ''],
-      ['user', 'hello world', 'abandoned'],
-      ['assistant', 'abandoned answer', 'abandoned'],
-      ['user', 'the real follow-up', ''],
-      ['assistant', 'the live answer', ''],
-    ]);
-    // Dense, single numbering space - abandoned messages keep their indices.
-    expect(msgs.map((m) => m.index)).toEqual([0, 1, 2, 3, 4, 5]);
-    const markers = msgs.filter((m) => m.fork);
-    expect(markers).toHaveLength(1);
-    expect(markers[0]!.index).toBe(2);
-    expect(markers[0]!.fork).toEqual({
-      fromIndex: 0, // the fork parent u1 produced message 0
-      abandonedCount: 2, // message-level: u2 + a2
-      firstUserText: 'hello world',
-      timestamp: '2026-08-04T17:01:00.000Z',
-    });
-  });
-
-  test('fork parent is a non-message entry: fromIndex maps to the nearest preceding message', () => {
-    const lines = jsonl(
-      piSession,
-      piModelChange('m1', null),
-      piUser('u1', 'm1', 'q1'),
-      piAssistant('a1', 'u1', 'a1'),
-      piModelChange('m2', 'a1'), // active, but produces no message
-      piUser('u2', 'm2', 'abandoned q'),
-      piAssistant('a2', 'u2', 'abandoned a'),
-      piUser('u3', 'm2', 'live q'),
-      piAssistant('a3', 'u3', 'live a'),
-    );
-    const msgs = extractMessages(lines);
-    const marker = msgs.find((m) => m.fork)!;
-    expect(marker.index).toBe(2);
-    expect(marker.fork!.fromIndex).toBe(1); // a1 - nearest active message at/before m2's line
-    expect(msgs.map((m) => m.branch ?? '')).toEqual(['', '', 'abandoned', 'abandoned', '', '']);
-  });
-
-  test('one fork spanning disjoint runs gets one marker and labels every run', () => {
-    // Same topology as the buildPiTree re-entry fixture: the marker lands on the
-    // branch's FIRST message and abandonedCount counts messages across both runs.
-    const lines = jsonl(
-      piSession,
-      piModelChange('m1', null),
-      piUser('u1', 'm1', 'q1'),
-      piAssistant('a1', 'u1', 'a1'),
-      piAssistant('x1', 'a1', 'abandoned 1'),
-      piAssistant('x2', 'x1', 'abandoned 2'),
-      piUser('u2', 'a1', 'q2'),
-      piAssistant('a2', 'u2', 'a2'),
-      piAssistant('x3', 'x2', 'abandoned 3'),
-      piUser('u3', 'a2', 'q3'),
-      piAssistant('a3', 'u3', 'a3'),
-    );
-    const msgs = extractMessages(lines);
-    expect(msgs.map((m) => m.branch ?? '')).toEqual(['', '', 'abandoned', 'abandoned', '', '', 'abandoned', '', '']);
-    expect(msgs.filter((m) => m.fork)).toHaveLength(1);
-    expect(msgs[2]!.fork!.abandonedCount).toBe(3); // x1 + x2 + x3, across the interleave
-    expect(msgs[2]!.fork!.firstUserText).toBe('');
-    expect(msgs.map((m) => m.index)).toEqual(msgs.map((_, i) => i)); // dense under interleaving
-  });
-
-  test('firstUserText skips injected turns and takes the first genuine one', () => {
-    // Regression guard for the sessionId gap: genuineUserTurnFromLine returns null on
-    // pi lines (they carry no sessionId), so the fork text must come from the shared
-    // isGenuineUserTurn/extractUserText logic - or every fork would report ''.
-    const lines = jsonl(
-      piSession,
-      piModelChange('m1', null),
-      piUser('u1', 'm1', 'q1'),
-      piAssistant('a1', 'u1', 'a1'),
-      piUser('x1', 'a1', 'Base directory for this skill: /x\n\nskill body'),
-      piUser('x2', 'x1', 'the genuine question'),
-      piAssistant('x3', 'x2', 'abandoned answer'),
-      piUser('u2', 'a1', 'q2'),
-      piAssistant('a2', 'u2', 'a2'),
-    );
-    const marker = extractMessages(lines).find((m) => m.fork)!;
-    expect(marker.fork!.firstUserText).toBe('the genuine question');
-  });
-
-  test('a fork whose branch holds no messages gets no marker', () => {
-    // The real 2026-08-04T17-05-44 file has this: a two-entry `custom` subtree hangs
-    // off the active path next to the message-bearing fork. There is no message to
-    // hang a marker on, and nothing to label.
-    const custom = (id: string, parentId: string) => ({
-      type: 'custom',
-      id,
-      parentId,
-      timestamp: '2026-08-04T17:03:00.000Z',
-    });
-    const lines = jsonl(
-      piSession,
-      piModelChange('m1', null),
-      piUser('u1', 'm1', 'q1'),
-      piAssistant('a1', 'u1', 'a1'),
-      custom('c1', 'a1'), // fork head, messageless subtree
-      piUser('u2', 'a1', 'q2'),
-      piAssistant('a2', 'u2', 'a2'),
-    );
-    const msgs = extractMessages(lines);
-    expect(buildPiTree(lines)!.forks).toHaveLength(1);
-    expect(msgs.filter((m) => m.fork)).toHaveLength(0);
-    expect(msgs.every((m) => !('branch' in m))).toBe(true);
-  });
-
-  test('getSessionMessages carries branch and fork through the projection', () => {
-    const msgs = getSessionMessages(oneForkLines());
-    expect(msgs[2]!.branch).toBe('abandoned');
-    expect(msgs[2]!.fork).toMatchObject({ fromIndex: 0, abandonedCount: 2, firstUserText: 'hello world' });
-    expect(msgs[3]!.branch).toBe('abandoned');
-    expect(msgs[3]!.fork).toBeUndefined();
-    expect('branch' in msgs[0]!).toBe(false);
-  });
-});
-
-describe('sessionParentSession', () => {
-  const parent = '/Users/dev/.pi/agent/sessions/--repo--/parent-file.jsonl';
-
-  test('pi /fork header: returns the raw parentSession path', () => {
-    const lines = jsonl({ ...piSession, parentSession: parent }, piModelChange('m1', null));
-    expect(sessionParentSession(lines, 'pi')).toBe(parent);
-  });
-
-  test('pi normal header (no parentSession key): returns empty', () => {
-    const lines = jsonl(piSession, piModelChange('m1', null), piUser('u1', 'm1', 'hi'));
-    expect(sessionParentSession(lines, 'pi')).toBe('');
-  });
-
-  test('non-pi tools return empty without parsing (tool guard first)', () => {
-    // Claude's line 1 is a user message, Codex's is session_meta - neither has a
-    // type:'session' header, and the guard means even a pi-shaped line 1 under a
-    // non-pi tool is never inspected.
-    expect(sessionParentSession(jsonl({ ...piSession, parentSession: parent }), 'claude')).toBe('');
-    expect(sessionParentSession(jsonl({ type: 'user', cwd: '/repo' }), 'claude')).toBe('');
-    expect(sessionParentSession(jsonl({ type: 'session_meta', payload: { cwd: '/repo' } }), 'codex')).toBe('');
-  });
-
-  test('empty lines and a corrupt line 1 return empty (never throws)', () => {
-    expect(sessionParentSession([], 'pi')).toBe('');
-    expect(sessionParentSession(['{not json'], 'pi')).toBe('');
   });
 });

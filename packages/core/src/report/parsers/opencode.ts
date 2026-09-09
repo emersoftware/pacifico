@@ -3,7 +3,7 @@
 // this reads the DB directly instead of using walkJsonl. One UsageEvent per assistant
 // message; OpenCode pre-computes `cost` for some providers (Anthropic) but reports 0
 // for others (OpenAI), so we trust its cost when positive and otherwise leave costUSD
-// unset for the downstream pricing engine - the same split Pi vs Claude/Codex make.
+// unset for the downstream pricing engine - the same convention used by the other parsers.
 import { Database } from 'bun:sqlite';
 import { existsSync } from 'node:fs';
 import { z } from 'zod';

@@ -34,18 +34,6 @@ test('codex: dual recording (function_call + exec_command_end) yields each comma
   expect(extractCommands(lines, 'codex')).toEqual(['docker compose up']);
 });
 
-test('pi: extracts bashExecution commands', () => {
-  const lines = [
-    j({
-      type: 'message',
-      id: '1',
-      parentId: null,
-      message: { role: 'bashExecution', command: 'npm run build', output: 'ok', exitCode: 0 },
-    }),
-  ];
-  expect(extractCommands(lines, 'pi')).toEqual(['npm run build']);
-});
-
 test('opencode: extracts bash tool commands, ignores non-bash tools', () => {
   const lines = [
     j({

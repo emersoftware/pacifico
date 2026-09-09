@@ -26,14 +26,12 @@ beforeAll(async () => {
   tmp = mkdtempSync(join(tmpdir(), 'sessions-eval-'));
   process.env.SESSIONS_CACHE_DIR = join(tmp, 'cache');
   process.env.SESSIONS_CLAUDE_DIR = join(tmp, 'claude');
-  process.env.SESSIONS_PI_DIR = join(tmp, 'pi');
   process.env.SESSIONS_CODEX_DIR = join(tmp, 'codex');
   process.env.SESSIONS_OPENCODE_DB = join(tmp, 'opencode.db'); // absent → no OpenCode sessions leak in
   process.env.SESSIONS_ARCHIVE_DIR = join(tmp, 'archive'); // hermetic vault; keep off the real ~/.local/share
   mkdirSync(join(tmp, 'claude'), { recursive: true });
-  mkdirSync(join(tmp, 'pi'), { recursive: true });
   mkdirSync(join(tmp, 'codex'), { recursive: true });
-  seedEvalCorpus({ claudeDir: join(tmp, 'claude'), piDir: join(tmp, 'pi') });
+  seedEvalCorpus({ claudeDir: join(tmp, 'claude'), codexDir: join(tmp, 'codex') });
 
   const cache = await import('../cache');
   cache.closeDb(); // drop any connection a prior test file opened on the shared module

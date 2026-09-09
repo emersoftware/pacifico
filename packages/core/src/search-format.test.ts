@@ -4,9 +4,10 @@ import { buildResumeCommand, formatResult, MAX_COMMANDS, MAX_FILES } from './sea
 import { formatLine } from '../../../apps/cli/src/display';
 import type { SessionResult } from './types';
 
-test('buildResumeCommand: claude resumes, pi/codex cd only', () => {
+test('buildResumeCommand: claude resumes, cursor/codex cd only', () => {
   expect(buildResumeCommand('claude', '/r', 'abc')).toBe('cd "/r" && claude --resume abc');
-  expect(buildResumeCommand('pi', '/r', 'abc')).toBe('cd "/r"');
+  expect(buildResumeCommand('claude', '/r', 'parent/subagents/agent-child')).toBe('cd "/r"');
+  expect(buildResumeCommand('cursor', '/r', 'abc')).toBe('cd "/r"');
   expect(buildResumeCommand('codex', '/r', 'abc')).toBe('cd "/r"');
 });
 
@@ -25,8 +26,6 @@ test('formatResult: shapes a SessionResult for callers, including resumeCommand'
     files: ['/r/a.ts'],
     commands: ['bun test'],
     errored: true,
-    branches: 0,
-    forkedFrom: '',
   };
   expect(formatResult(r)).toEqual({
     sessionId: 'abc',
@@ -45,8 +44,6 @@ test('formatResult: shapes a SessionResult for callers, including resumeCommand'
     exists: true,
     filePath: '/f.jsonl',
     resumeCommand: 'cd "/r" && claude --resume abc',
-    branches: 0,
-    forkedFrom: '',
   });
 });
 
@@ -66,8 +63,6 @@ const baseResult: SessionResult = {
   files: [],
   commands: [],
   errored: false,
-  branches: 0,
-  forkedFrom: '',
 };
 
 test('formatResult: passes messageHits through when present (indexed search path)', () => {
@@ -125,8 +120,6 @@ function worstCaseSession(i: number): SessionResult {
     files,
     commands,
     errored: false,
-    branches: 0,
-    forkedFrom: '',
     messageHits: Array.from({ length: 3 }, (_, n) => ({
       index: n * 7,
       role: n % 2 === 0 ? ('assistant' as const) : ('user' as const),

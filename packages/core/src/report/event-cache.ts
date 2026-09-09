@@ -23,9 +23,6 @@ import type { AgentName } from './parsers/claude-code.ts';
 
 // Bump when the stored shape changes, so an old cache is discarded rather than
 // misread. v1: per-file events blob + agent-name map.
-// v2: the Pi parser changed what it emits per file (dedupKeys, subagent-run
-// attribution, compaction usage, zero-usage skips) - a v1 pi parse served from
-// cache would silently miss all of it, so old caches are rebuilt.
 // v3: Claude events retain the Fast mode flag used for historical pricing.
 const SCHEMA_VERSION = 3;
 

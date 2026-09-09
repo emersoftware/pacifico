@@ -27,6 +27,26 @@ for (const layer of layers) {
         const spec = specifier.text;
         const target = spec.match(/^@pacifico\/([^/]+)/)?.[1];
         if (target && !layer.allowed.has(target)) failures.push(`${file}: forbidden dependency ${spec}`);
+        if (layer.directory === 'packages/core/src') {
+          const origin = path === 'vault/archive.ts' ? 'storage' : path.split('/')[0];
+          const coreRoot = resolve(layer.directory);
+          const resolved = spec.startsWith('.')
+            ? resolve(file, '..', spec)
+            : spec.startsWith('@pacifico/core/')
+              ? resolve(coreRoot, spec.slice('@pacifico/core/'.length))
+              : null;
+          if (resolved && ['sources', 'storage', 'ingestion'].includes(origin!)) {
+            const forbidden =
+              resolved === resolve(coreRoot, 'cache') ||
+              resolved === resolve(coreRoot, 'cache.ts') ||
+              resolved.startsWith(resolve(coreRoot, 'retrieval') + '/');
+            if (forbidden)
+              failures.push(`${file}: native readers, storage, and ingestion must not depend on retrieval (${spec})`);
+            if (['sources', 'storage'].includes(origin!) && resolved.startsWith(resolve(coreRoot, 'ingestion') + '/')) {
+              failures.push(`${file}: native readers and storage must not depend on ingestion (${spec})`);
+            }
+          }
+        }
         if (spec.startsWith('.')) {
           const targetPath = resolve(file, '..', spec);
           for (const other of layers) {

@@ -1,24 +1,8 @@
 /**
- * Invariants asserted against the real transcripts on THIS machine.
+ * Optional read-only checks against native Claude and Codex transcripts on this machine.
+ * Run separately from hermetic tests, allowing time to scan a multi-gigabyte corpus:
  *
- * Env-gated because it reads ~/.codex/sessions and ~/.claude/projects, which CI does not
- * have and which differ per developer. Run it with:
- *
- *     SESSIONS_LIVE_CORPUS=1 bun test src/parser.corpus.test.ts
- *
- * Why this exists rather than fixture tests alone: the Codex extraction bug was invisible
- * to fixtures for two years because parser.test.ts asserted a hand-written shape that
- * occurs zero times in real Codex logs, while the sibling extract-files/extract-commands
- * dispatchers DID understand the real envelope and kept populating files and commands.
- * Every unit test passed and every rollout still extracted to zero messages. Only reading
- * the actual corpus catches that class, so this asserts against it directly.
- *
- * The one-time main-vs-branch differential is deliberately NOT here: it compared two
- * checkouts of the same function and stops being expressible once the fix is merged. It
- * was run out-of-band over 9,112 Claude and 166 pi transcripts (108,545 and 1,542
- * messages) and found byte-identical output; what remains checkable in-repo is that the
- * non-Codex paths still produce messages at all, which `no harness extracts to zero`
- * below covers.
+ * SESSIONS_LIVE_CORPUS=1 bun test --timeout 120000 packages/core/src/parser.corpus.test.ts
  */
 import { describe, test, expect } from 'bun:test';
 import { homedir } from 'node:os';
@@ -26,8 +10,6 @@ import { join } from 'node:path';
 import { existsSync } from 'node:fs';
 import { Glob } from 'bun';
 import { extractMessages } from './parser';
-import { buildPiTree } from './pi-tree';
-import { asJsonObject, asJsonString, type JsonObject } from './extract-util';
 
 const ENABLED = process.env.SESSIONS_LIVE_CORPUS === '1';
 const describeCorpus = ENABLED ? describe : describe.skip;
@@ -35,7 +17,6 @@ const describeCorpus = ENABLED ? describe : describe.skip;
 /** Real roots, not the SESSIONS_* test redirections - the point is the actual corpus. */
 const CODEX_ROOT = join(homedir(), '.codex', 'sessions');
 const CLAUDE_ROOT = join(homedir(), '.claude', 'projects');
-const PI_ROOT = join(homedir(), '.pi', 'agent', 'sessions');
 
 // Kept in sync with the copy in parser.ts by the assertion below, which fails if a
 // non-genuine turn appears that this pattern cannot explain.
@@ -99,7 +80,6 @@ describeCorpus('live corpus', () => {
     const roots: [string, string][] = [
       [CODEX_ROOT, '**/rollout-*.jsonl'],
       [CLAUDE_ROOT, '**/*.jsonl'],
-      [PI_ROOT, '**/*.jsonl'],
     ];
     for (const [root, pattern] of roots) {
       for await (const lines of transcripts(root, pattern, 1500)) {
@@ -125,218 +105,5 @@ describeCorpus('live corpus', () => {
       if (files === 0) continue;
       expect({ label, zero: total === 0 }).toEqual({ label, zero: false });
     }
-  });
-});
-
-// --- Pi topology ---
-// The pi block follows the same differential-oracle convention as the Codex block
-// above: fork/active-path expectations are recomputed from raw lines by an
-// independent inline walk, never by calling buildPiTree - a tree bug must not be its
-// own oracle.
-
-/** Mirrors the parser's message-ness for the pi shape: a user/assistant message line
- *  whose text is non-empty. Injection-tag stripping is a Claude/Codex phenomenon and
- *  never fires on pi corpus text, so the oracle compares raw text. */
-function piMessageText(d: JsonObject): { role: string; text: string } | null {
-  let role: string | undefined;
-  if (d.type === 'user') role = 'user';
-  else if (d.type === 'message') {
-    const r = asJsonObject(d.message)?.role;
-    if (r === 'user' || r === 'assistant') role = r;
-  }
-  if (!role) return null;
-  const m = asJsonObject(d.message);
-  const content = m?.content;
-  const texts: string[] = [];
-  const contentString = asJsonString(content);
-  if (contentString !== undefined) texts.push(contentString);
-  else if (Array.isArray(content)) {
-    for (const c of content) {
-      const b = asJsonObject(c);
-      if (!b) continue;
-      if (b.type === 'text' || (role === 'user' && b.type === 'input_text')) {
-        texts.push(asJsonString(b.text) ?? '');
-      }
-    }
-  }
-  return { role, text: texts.join(' ') };
-}
-
-interface OracleEntry {
-  id: string;
-  parentId: string | null;
-  line: number;
-  producesMessage: boolean;
-}
-
-interface PiTopologyResult {
-  entries: OracleEntry[];
-  active: Set<number>;
-  forks: number[][];
-}
-
-/** Independent topology walk: entries, the active set, and each fork's subtree. */
-function piTopology(lines: string[]): PiTopologyResult {
-  const entries: OracleEntry[] = [];
-  lines.forEach((l, i) => {
-    let d: JsonObject | undefined;
-    try {
-      d = asJsonObject(JSON.parse(l));
-    } catch {
-      return;
-    }
-    const id = asJsonString(d?.id);
-    if (!d || id === undefined) return;
-    const msg = piMessageText(d);
-    entries.push({
-      id,
-      parentId: asJsonString(d.parentId) ?? null,
-      line: i,
-      producesMessage: msg !== null && msg.text.trim().length > 0,
-    });
-  });
-  const byId = new Map<string, number>();
-  entries.forEach((e, i) => {
-    if (!byId.has(e.id)) byId.set(e.id, i);
-  });
-  // The null-chain convention: null or unknown parentId chains to the preceding entry.
-  const parentIdx = entries.map((e, i) => {
-    const known = e.parentId !== null ? byId.get(e.parentId) : undefined;
-    return known !== undefined ? known : i - 1;
-  });
-  const active = new Set<number>();
-  for (let cur = entries.length - 1; cur >= 0 && !active.has(cur); cur = parentIdx[cur]!) active.add(cur);
-  const children = new Map<number, number[]>();
-  parentIdx.forEach((p, i) => {
-    if (p < 0) return;
-    const kids = children.get(p);
-    if (kids) kids.push(i);
-    else children.set(p, [i]);
-  });
-  // Fork heads: abandoned entries whose parent is ON the active path. A fork head's
-  // whole subtree is abandoned, and /tree re-entry means one fork's subtree can span
-  // several disjoint runs in file order - hence full subtree collection, not runs.
-  const forks: number[][] = [];
-  entries.forEach((_, i) => {
-    if (active.has(i)) return;
-    const p = parentIdx[i]!;
-    if (p < 0 || !active.has(p)) return;
-    const members: number[] = [];
-    const seen = new Set<number>();
-    const stack = [i];
-    while (stack.length) {
-      const c = stack.pop()!;
-      if (seen.has(c)) continue;
-      seen.add(c);
-      members.push(c);
-      for (const k of children.get(c) ?? []) stack.push(k);
-    }
-    forks.push(members.sort((a, b) => a - b));
-  });
-  return { entries, active, forks };
-}
-
-describeCorpus('live corpus - pi', () => {
-  test('every pi file with the id/parentId shape builds a tree without throwing', async () => {
-    let files = 0;
-    for await (const lines of transcripts(PI_ROOT, '**/*.jsonl', 5000)) {
-      files++;
-      // Detection is id-based: a file carrying id+parentId lines must be recognized.
-      const hasTreeIds = lines.slice(0, 20).some((l) => {
-        try {
-          const d = asJsonObject(JSON.parse(l));
-          return d !== undefined && asJsonString(d.id) !== undefined && 'parentId' in d;
-        } catch {
-          return false;
-        }
-      });
-      const tree = buildPiTree(lines); // must not throw, whatever the file holds
-      if (hasTreeIds) expect(tree).not.toBeNull();
-    }
-    if (files === 0) return; // no pi corpus on this machine
-  });
-
-  test('declared parentIds reference an earlier entry or are null (append-only invariant)', async () => {
-    // This is what makes the defensive "unknown parentId → chain to preceding" path
-    // dead code on the real corpus. If a pi version ever writes a forward or dangling
-    // reference, this fails and that path stops being theoretical.
-    let files = 0;
-    for await (const lines of transcripts(PI_ROOT, '**/*.jsonl', 5000)) {
-      files++;
-      const seen = new Set<string>();
-      for (const l of lines) {
-        let d: JsonObject | undefined;
-        try {
-          d = asJsonObject(JSON.parse(l));
-        } catch {
-          continue;
-        }
-        const id = asJsonString(d?.id);
-        if (id === undefined) continue;
-        const parentId = asJsonString(d?.parentId);
-        if (parentId !== undefined) expect(seen.has(parentId)).toBe(true);
-        seen.add(id);
-      }
-    }
-    if (files === 0) return;
-  });
-
-  test('branch labels and fork markers match an independent topology walk', async () => {
-    let files = 0;
-    let branched = 0;
-    for await (const lines of transcripts(PI_ROOT, '**/*.jsonl', 5000)) {
-      files++;
-      const { entries, active, forks } = piTopology(lines);
-      const msgs = extractMessages(lines);
-      if (forks.length === 0) {
-        // No-op purity: unbranched sessions gain no metadata at all.
-        for (const m of msgs) {
-          expect(m.branch).toBeUndefined();
-          expect(m.fork).toBeUndefined();
-        }
-        continue;
-      }
-      branched++;
-      // Every abandoned message line, and only those, is labeled.
-      const expectedAbandoned = entries.filter((e, i) => !active.has(i) && e.producesMessage).length;
-      expect(msgs.filter((m) => m.branch === 'abandoned')).toHaveLength(expectedAbandoned);
-      // Exactly the forks with at least one extracted message carry a marker - a fork
-      // whose subtree holds no messages (the real corpus has custom-only subtrees) has
-      // nothing to hang one on. The marker's abandonedCount is the branch's MESSAGE
-      // count, and interleaved runs (one fork, several disjoint runs) still count once.
-      const expectedCounts = forks
-        .map((members) => members.filter((m) => entries[m]!.producesMessage))
-        .filter((ms) => ms.length > 0)
-        .map((ms) => ({ count: ms.length, firstLine: entries[ms[0]!]!.line }))
-        .sort((a, b) => a.firstLine - b.firstLine);
-      const markers = msgs.filter((m) => m.fork);
-      expect(markers.map((m) => m.fork!.abandonedCount)).toEqual(expectedCounts.map((c) => c.count));
-    }
-    if (files === 0) return;
-    // The corpus has branched files today; zero here means the walk broke, not the data.
-    expect(branched).toBeGreaterThan(0);
-  });
-
-  test('no substantive pi transcript extracts to zero', async () => {
-    // The pi equivalent of the "no harness extracts to zero" guard: a file carrying at
-    // least one user/assistant message line must yield messages.
-    let files = 0;
-    let substantive = 0;
-    for await (const lines of transcripts(PI_ROOT, '**/*.jsonl', 5000)) {
-      files++;
-      const hasMessage = lines.some((l) => {
-        try {
-          const m = piMessageText(JSON.parse(l));
-          return m !== null && m.text.trim().length > 0;
-        } catch {
-          return false;
-        }
-      });
-      if (!hasMessage) continue;
-      substantive++;
-      expect(extractMessages(lines).length).toBeGreaterThan(0);
-    }
-    if (files === 0) return;
-    expect(substantive).toBeGreaterThan(0);
   });
 });

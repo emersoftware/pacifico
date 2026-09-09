@@ -23,7 +23,7 @@ interface SqlParams {
 interface IndexToolNames {
   [toolId: string]: string;
 }
-const INDEX_TOOL: IndexToolNames = { 'claude-code': 'claude', codex: 'codex', pi: 'pi', opencode: 'opencode' };
+const INDEX_TOOL: IndexToolNames = { 'claude-code': 'claude', codex: 'codex', opencode: 'opencode' };
 
 interface PhraseSpec {
   id: string;

@@ -21,7 +21,6 @@ function whyEnv() {
     ...process.env,
     SESSIONS_CACHE_DIR: join(tmp, 'cache'),
     SESSIONS_CLAUDE_DIR: join(tmp, 'claude'),
-    SESSIONS_PI_DIR: join(tmp, 'pi'),
     SESSIONS_CODEX_DIR: join(tmp, 'codex'),
     SESSIONS_OPENCODE_DB: join(tmp, 'opencode.db'),
     SESSIONS_ARCHIVE_DIR: join(tmp, 'archive'),

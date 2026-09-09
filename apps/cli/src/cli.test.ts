@@ -1,7 +1,7 @@
 // src/cli.test.ts
-import { test, expect, describe } from 'bun:test';
+import { test, expect } from 'bun:test';
 import { parseArgs, toSearchOptions } from './cli';
-import { formatLine, formatLineage } from './display';
+import { formatLine } from './display';
 import type { SessionResult } from '@pacifico/core/types';
 
 test('parseArgs: --errored sets the flag; query and tool still parse', () => {
@@ -28,72 +28,26 @@ test('parseArgs: --file is repeatable and maps through toSearchOptions', () => {
   expect(opts.files).toEqual(['src/auth.ts', 'docs/plan.md']);
 });
 
-// --- fork badge / lineage (pi first-class phase 2) - additive ---
-
-const piResult: SessionResult = {
-  date: '2026-08-04',
-  createdAt: '2026-08-04',
-  cwd: '/repo',
-  tool: 'pi',
-  sessionId: 'abc',
-  displayText: 'investigate the flaky tree navigation',
-  customTitle: '',
-  messageCount: 8,
-  filePath: '/f.jsonl',
-  exists: true,
-  files: [],
-  commands: [],
-  errored: false,
-  branches: 0,
-  forkedFrom: '',
-};
-
-describe('formatLine fork badge', () => {
-  test('branches 0: no badge', () => {
-    expect(formatLine(piResult, 120)).not.toContain('⑂');
-  });
-
-  test('branches 1 and 24: badge renders the count before the prompt', () => {
-    expect(formatLine({ ...piResult, branches: 1 }, 120)).toContain('⑂1');
-    expect(formatLine({ ...piResult, branches: 24 }, 120)).toContain('⑂24');
-  });
-
-  test('60-col terminal: badge survives, the prompt truncates first', () => {
-    const line = formatLine(
-      { ...piResult, branches: 3, displayText: 'a prompt long enough to be truncated at sixty columns for sure' },
-      60,
-    );
-    // Field 7 of the TSV is the display string (field 6 is the untruncated prompt,
-    // consumed positionally by index.ts - its rawness is load-bearing). filePath
-    // now leads as field 1 so fzf --preview can reference {1}.
-    const display = line.split('\t')[6]!;
-    expect(display).toContain('⑂3');
-    expect(display).toContain('…'); // the prompt absorbed the truncation, not the badge
-    expect(display).not.toContain('sixty columns for sure');
-  });
-});
-
-describe('formatLineage', () => {
-  test('no lineage: empty string (caller skips the line)', () => {
-    expect(formatLineage(piResult)).toBe('');
-  });
-
-  test('forkedFrom: basename only, never the raw absolute path', () => {
-    const line = formatLineage({
-      ...piResult,
-      forkedFrom: '/Users/dev/.pi/agent/sessions/--repo--/parent-file.jsonl',
-    });
-    expect(line).toBe('Forked from parent-file.jsonl');
-    expect(line).not.toContain('/Users/dev');
-  });
-
-  test('in-file forks: singular and plural', () => {
-    expect(formatLineage({ ...piResult, branches: 1 })).toBe('1 in-file fork');
-    expect(formatLineage({ ...piResult, branches: 24 })).toBe('24 in-file forks');
-  });
-
-  test('both: parent then fork count', () => {
-    const line = formatLineage({ ...piResult, branches: 2, forkedFrom: '/p/parent.jsonl' });
-    expect(line).toBe('Forked from parent.jsonl · 2 in-file forks');
-  });
+test('narrow display preserves the full prompt in its TSV field', () => {
+  const prompt = 'a prompt long enough to be truncated at sixty columns for sure';
+  const result: SessionResult = {
+    date: '2026-08-04',
+    createdAt: '2026-08-04',
+    cwd: '/repo',
+    tool: 'claude',
+    sessionId: 'abc',
+    displayText: prompt,
+    customTitle: '',
+    messageCount: 8,
+    filePath: '/f.jsonl',
+    exists: true,
+    files: [],
+    commands: [],
+    errored: false,
+  };
+  const fields = formatLine(result, 60).split('\t');
+  expect(fields).toHaveLength(7);
+  expect(fields[5]).toBe(prompt);
+  expect(fields[6]).toContain('…');
+  expect(fields[6]).not.toContain('sixty columns for sure');
 });

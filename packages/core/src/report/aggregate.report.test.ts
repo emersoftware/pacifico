@@ -2,7 +2,7 @@ import { describe, test, expect } from 'bun:test';
 import { aggregate } from './aggregate.ts';
 import type { UsageEvent } from './parsers/types.ts';
 
-// One Claude event + one Pi event (Pi carries a precomputed cost).
+// One Claude event + one OpenCode event (OpenCode carries a precomputed cost).
 const events: UsageEvent[] = [
   {
     tool: 'claude-code',
@@ -14,7 +14,7 @@ const events: UsageEvent[] = [
     tokens: { input: 1000, output: 500, cacheRead: 10000, cacheWrite: 200 },
   },
   {
-    tool: 'pi',
+    tool: 'opencode',
     provider: 'baseten',
     model: 'moonshotai/Kimi-K2.5',
     timestamp: '2026-06-02T09:00:00Z',
@@ -45,7 +45,7 @@ describe('aggregate (report mode)', () => {
     // Claude totalTokens = 1000+500+10000+200 = 11700.
     // Claude cost (per-token claude-opus-4-6: in 5e-6, out 25e-6, cacheRead 0.5e-6, cacheWrite 6.25e-6)
     //   = 1000*5e-6 + 500*25e-6 + 10000*0.5e-6 + 200*6.25e-6 = 0.02375 -> 0.02
-    // Pi totalTokens = 3000, cost passthrough 0.12.
+    // OpenCode totalTokens = 3000, cost passthrough 0.12.
     expect(data.summary.totalTokens).toBe(14700);
     expect(data.summary.totalCostUSD).toBe(0.14);
     expect(data.summary.sessions).toBe(2);
@@ -94,8 +94,8 @@ describe('aggregate (report mode)', () => {
   test('breakdowns + insights', () => {
     const tool = data.byTool.find((t) => t.id === 'claude-code')!;
     expect(tool.costUSD).toBe(0.02);
-    const pi = data.byTool.find((t) => t.id === 'pi')!;
-    expect(pi.costUSD).toBe(0.12);
+    const opencode = data.byTool.find((t) => t.id === 'opencode')!;
+    expect(opencode.costUSD).toBe(0.12);
     expect(data.insights.hourCounts[9]).toBe(1);
     expect(data.insights.hourCounts[14]).toBe(1);
     expect(data.insights.weekdayCounts.reduce((a, b) => a + b, 0)).toBe(2);

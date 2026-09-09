@@ -26,7 +26,6 @@ import { resolveProject } from './project.ts';
 
 const TOOL_LABEL = {
   'claude-code': 'Claude Code',
-  pi: 'Pi',
   codex: 'Codex',
   opencode: 'OpenCode', // sessions-local extension - not in upstream tokenmaxing (see header)
 } satisfies Record<ToolId, string>;
@@ -37,8 +36,6 @@ const PROVIDER_LABEL: ProviderLabels = {
   anthropic: 'Anthropic',
   openai: 'OpenAI',
   baseten: 'Baseten',
-  // sessions-local extensions - providers Pi emits that upstream does not label
-  // (see the opencode note in the header). Preserve when re-syncing.
   'openai-codex': 'OpenAI (Codex)',
   openrouter: 'OpenRouter',
 };

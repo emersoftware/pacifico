@@ -10,12 +10,10 @@ import {
   mergeAgentNames,
   type AgentName,
 } from './parsers/claude-code.ts';
-import { parsePi, parsePiFile } from './parsers/pi.ts';
 import { parseCodex, parseCodexFile } from './parsers/codex.ts';
 import { parseOpencode } from './parsers/opencode.ts';
 import { walkJsonl, pruneThreshold } from './parsers/walk.ts';
 import { getOpencodeDbPath } from '../opencode.ts';
-import { getPiSessionsDir } from '../paths.ts';
 import {
   openEventCache,
   statAll,
@@ -29,7 +27,6 @@ import {
 
 export interface ReportRoots {
   claudeCode: string;
-  pi: string;
   codex: string;
   /** OpenCode's SQLite DB path (not a directory) - its sessions live in one DB. Optional so
    *  callers that predate OpenCode support (and tests) need not supply it. */
@@ -40,9 +37,6 @@ export function defaultRoots(): ReportRoots {
   const home = homedir();
   return {
     claudeCode: join(home, '.claude', 'projects'),
-    // Same resolution (SESSIONS_PI_DIR / PI_CODING_AGENT_* overrides included) as
-    // the search index and scanner - one source of truth.
-    pi: getPiSessionsDir(),
     codex: join(home, '.codex', 'sessions'),
     // Same resolution (env override included) as the search index - one source of truth.
     opencode: getOpencodeDbPath(),
@@ -67,19 +61,6 @@ interface FileSource {
 function fileSources(roots: ReportRoots, want: (t: ToolId) => boolean): FileSource[] {
   const out: FileSource[] = [];
   if (want('claude-code')) out.push({ root: roots.claudeCode, parseFile: parseClaudeCodeFile });
-  if (want('pi'))
-    out.push({
-      root: roots.pi,
-      parseFile: async (p) => {
-        const events = await parsePiFile(p);
-        // Register each Pi dispatch under its own (already final) type, so the
-        // cross-file resolveAgentTypes pass confirms it instead of renaming it
-        // to 'unknown' - Pi has no parent-record naming step to wait for.
-        const agentTypes: Record<string, AgentName> = {};
-        for (const e of events) if (e.agent) agentTypes[e.agent.id] = { type: e.agent.type, strong: true };
-        return { events, agentTypes };
-      },
-    });
   if (want('codex'))
     out.push({ root: roots.codex, parseFile: async (p) => ({ events: await parseCodexFile(p), agentTypes: {} }) });
   return out;
@@ -90,7 +71,6 @@ async function gatherDirect(roots: ReportRoots, want: (t: ToolId) => boolean, si
   const walk = { since };
   const tasks: Promise<UsageEvent[]>[] = [];
   if (want('claude-code')) tasks.push(parseClaudeCode(roots.claudeCode, walk));
-  if (want('pi')) tasks.push(parsePi(roots.pi, walk));
   if (want('codex')) tasks.push(parseCodex(roots.codex, walk));
   return (await Promise.all(tasks)).flat();
 }

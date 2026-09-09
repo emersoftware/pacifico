@@ -282,7 +282,7 @@ describe('family fallback', () => {
     expect(drainPricingWarnings()).toEqual([]);
   });
 
-  // Pi records bare OpenRouter model ids ('moonshotai/kimi-k3'); the snapshot
+  // Logs may record bare OpenRouter model ids ('moonshotai/kimi-k3'); the snapshot
   // keys those families with a provider prefix, so the fallback must draw
   // candidates from the full map, not just BUILTIN_OVERRIDES.
   test('an unreleased kimi is billed at the newest kimi rate, and flagged', () => {

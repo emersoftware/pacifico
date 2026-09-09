@@ -3,12 +3,12 @@ import { type Tool, type CliArgs } from '@pacifico/core/types';
 import type { SearchOptions } from '@pacifico/core/cache';
 import { resolveRepo } from '@pacifico/core/repo';
 
-const VALID_TOOLS = new Set<string>(['claude', 'codex', 'pi', 'opencode']);
+const VALID_TOOLS = new Set<string>(['claude', 'codex', 'opencode', 'cursor', 'antigravity']);
 
 function usage(): never {
   process.stderr.write(`${C.bold}pacifico${C.reset} - find and resume AI coding sessions
 
-Browse sessions from Claude Code, Codex, Pi, and OpenCode with fuzzy search.
+Browse sessions from Claude Code, Codex, Cursor, Antigravity, and OpenCode with fuzzy search.
 Scoped to the current git repo.
 
 ${C.bold}Usage:${C.reset}
@@ -18,7 +18,7 @@ ${C.bold}Usage:${C.reset}
 
 ${C.bold}Options:${C.reset}
   --here           Scope to current git repo (default: all projects)
-  --tool <name>    Filter: claude, codex, pi, opencode
+  --tool <name>    Filter: claude, codex, cursor, antigravity, opencode
   --errored        Only sessions that hit an error
   --file <path>    Only sessions that touched or read this path (substring
                    match; repeatable - every path must match). Newest first
@@ -83,7 +83,7 @@ export function parseArgs(argv: string[]): CliArgs {
       case '--tool':
         i++;
         if (!argv[i] || !VALID_TOOLS.has(argv[i]!)) {
-          die(`--tool requires one of: claude, codex, pi, opencode`);
+          die(`--tool requires one of: claude, codex, opencode`);
         }
         // SAFETY: VALID_TOOLS.has() above proves argv[i] is a Tool.
         args.toolFilter = argv[i] as Tool;

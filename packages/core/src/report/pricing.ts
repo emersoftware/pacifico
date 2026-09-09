@@ -316,7 +316,7 @@ interface FamilyMatch {
 
 const FAMILY_STEMS = ['claude-fable', 'claude-opus', 'claude-sonnet', 'claude-haiku', 'gpt-5'];
 
-// Families Pi reaches through OpenRouter (`moonshotai/kimi-k3`, `z-ai/glm-5.2`).
+// Model families available through OpenRouter (`moonshotai/kimi-k3`, `z-ai/glm-5.2`).
 // Their released versions live in the LiteLLM snapshot under provider-prefixed
 // keys (`openrouter/moonshotai/kimi-k2.5`), not in BUILTIN_OVERRIDES, so these
 // stems draw candidates from the full map instead. The stem must sit at a

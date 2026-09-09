@@ -99,7 +99,7 @@ describe('archiveFile', () => {
     expect(entry!.tool).toBe('claude');
     expect(entry!.cwd).toBe('/repo');
     expect(entry!.sessionId).toBe('one');
-    // Encoded filename: slashes → dashes, leading dash stripped, one .jsonl suffix.
+    // The archive filename is a stable digest with one JSONL suffix.
     expect(basename(entry!.vaultPath)).not.toContain('/');
     expect(basename(entry!.vaultPath).endsWith('.jsonl')).toBe(true);
     expect(basename(entry!.vaultPath).endsWith('.jsonl.jsonl')).toBe(false);
@@ -109,12 +109,12 @@ describe('archiveFile', () => {
   test('skips an unchanged file (same mtime+size) without rewriting the copy', async () => {
     const manifest: Manifest = {};
     const src = writeSource('two.jsonl', 'body');
-    archiveFile({ path: src, tool: 'pi' }, { cwd: '/r', sessionId: 'two' }, { mtime: 5, size: 4 }, manifest, dir);
+    archiveFile({ path: src, tool: 'claude' }, { cwd: '/r', sessionId: 'two' }, { mtime: 5, size: 4 }, manifest, dir);
     const vaultPath = manifest[src]!.vaultPath;
     const mtimeBefore = statSync(vaultPath).mtimeMs;
     await Bun.sleep(5);
     const wrote = archiveFile(
-      { path: src, tool: 'pi' },
+      { path: src, tool: 'claude' },
       { cwd: '/r', sessionId: 'two' },
       { mtime: 5, size: 4 },
       manifest,
@@ -127,11 +127,11 @@ describe('archiveFile', () => {
   test('overwrites when the source grew (mtime/size changed)', () => {
     const manifest: Manifest = {};
     const src = writeSource('three.jsonl', 'old');
-    archiveFile({ path: src, tool: 'pi' }, { cwd: '/r', sessionId: 'three' }, { mtime: 1, size: 3 }, manifest, dir);
+    archiveFile({ path: src, tool: 'claude' }, { cwd: '/r', sessionId: 'three' }, { mtime: 1, size: 3 }, manifest, dir);
     const vaultPath = manifest[src]!.vaultPath;
     writeFileSync(src, 'old and new');
     const wrote = archiveFile(
-      { path: src, tool: 'pi' },
+      { path: src, tool: 'claude' },
       { cwd: '/r', sessionId: 'three' },
       { mtime: 2, size: 11 },
       manifest,
@@ -242,3 +242,44 @@ describe('opencode export round-trip', () => {
     expect(getCwdFromSession(lines, 'opencode')).toBe('/repo/oc');
   });
 });
+
+test('archives paths that previously collided without overwriting either transcript', () => {
+  const root = join(tmp, 'collision');
+  mkdirSync(join(root, 'a'), { recursive: true });
+  const paths = [join(root, 'a', 'b.jsonl'), join(root, 'a-b.jsonl')];
+  const manifest: Manifest = {};
+  for (const [index, path] of paths.entries()) {
+    writeFileSync(path, `message ${index}`);
+    archiveFile(
+      { path, tool: 'claude' },
+      { cwd: '/project', sessionId: String(index) },
+      { mtime: 1, size: 9 },
+      manifest,
+      dir,
+    );
+  }
+  expect(manifest[paths[0]!]!.vaultPath).not.toBe(manifest[paths[1]!]!.vaultPath);
+  expect(paths.map((path) => readFileSync(manifest[path]!.vaultPath, 'utf8'))).toEqual(['message 0', 'message 1']);
+});
+
+for (const tool of ['opencode', 'cursor', 'antigravity', 'claude', 'codex'] as const) {
+  test(`${tool} archives the indexed snapshot even if the native source has changed`, () => {
+    const source = writeSource(`${tool}-snapshot.jsonl`, 'changed native content');
+    const manifest: Manifest = {};
+    const captured = Buffer.from(
+      '  ' + JSON.stringify({ type: 'source_records', source: tool, data: 'original' }) + '\r\n\n',
+    );
+    expect(
+      archiveFile(
+        { path: source, tool },
+        { cwd: '/repo', sessionId: 'captured' },
+        { mtime: 1, size: 1 },
+        manifest,
+        dir,
+        captured,
+      ),
+    ).toBe(true);
+    expect(readFileSync(manifest[source]!.vaultPath)).toEqual(captured);
+    expect(readFileSync(source, 'utf8')).toBe('changed native content');
+  });
+}

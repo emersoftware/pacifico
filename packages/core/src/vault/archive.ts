@@ -1,17 +1,7 @@
-// The transcript vault: an append-only, user-owned archive of session transcripts.
-//
-// The index (src/cache.ts) is a disposable cache over mortal files - it prunes rows
-// when source files vanish and drops every table on a SCHEMA_VERSION bump. Vendors
-// garbage-collect transcripts on a rolling schedule (Claude Code after 30 days), so
-// history is lost regardless of the index. The vault is the durable copy: during
-// every refresh, each parseable transcript is copied here raw, and the vault then
-// becomes a discovery source so a session whose source file is gone stays indexed,
-// searchable, and readable from its vault copy under its ORIGINAL file_path.
-//
-// One directory per tool, one file per archived transcript, one manifest mapping the
-// original file_path to its metadata. OpenCode is the one deliberate exception to
-// raw-bytes: its sessions are SQLite rows with no file, so a normalized JSONL export
-// (the same shape the live materializer emits) is the rawest form there is to keep.
+import { readCodexRollout } from '../sources/codex-rollout';
+// Durable transcript snapshots outlive native source cleanup and index rebuilds.
+// The manifest retains source identity; each file stores the latest archived content.
+// File-backed sessions retain native bytes. OpenCode exports its database records.
 
 import {
   existsSync,
@@ -23,7 +13,8 @@ import {
   statSync,
   rmSync,
 } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative, isAbsolute } from 'node:path';
+import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { type Tool } from '../types';
 import { getArchiveDir } from '../paths';
@@ -32,7 +23,7 @@ import { serializeOpencodeSession } from '../opencode';
 export { getArchiveDir };
 
 export interface VaultEntry {
-  tool: Tool;
+  tool: Tool | 'pi';
   cwd: string;
   sessionId: string;
   mtime: number; // source mtime at archive time
@@ -49,14 +40,9 @@ export function getManifestPath(dir: string): string {
   return join(dir, 'manifest.json');
 }
 
-/**
- * Encode an original file_path into a single vault filename: `/` → `-`, same lossy
- * trick Claude Code uses for its project dirs. The manifest stores the absolute
- * vaultPath, so nothing ever decodes this back - it only needs to be stable.
- */
+/** A path digest avoids collisions between directory separators and literal dashes. */
 function encodePath(originalPath: string): string {
-  const base = originalPath.replace(/\//g, '-').replace(/^-+/, '');
-  return base.endsWith('.jsonl') ? base : base + '.jsonl';
+  return createHash('sha256').update(originalPath).digest('hex') + '.jsonl';
 }
 
 /**
@@ -66,7 +52,7 @@ function encodePath(originalPath: string): string {
  * untouched by the manifest being unreadable.
  */
 const vaultEntrySchema = z.object({
-  tool: z.enum(['claude', 'pi', 'codex', 'opencode']),
+  tool: z.enum(['claude', 'pi', 'codex', 'opencode', 'cursor', 'antigravity']),
   cwd: z.string(),
   sessionId: z.string(),
   mtime: z.number(),
@@ -128,8 +114,10 @@ export function archiveFile(
   stat: { mtime: number; size: number },
   manifest: Manifest,
   dir: string = getArchiveDir(),
+  snapshot?: string | Buffer,
 ): boolean {
-  if (entry.path.startsWith(dir)) return false; // never archive a vault file into itself
+  const inside = relative(dir, entry.path);
+  if (inside === '' || (inside !== '..' && !inside.startsWith('../') && !isAbsolute(inside))) return false;
 
   const existing = manifest[entry.path];
   if (existing && existing.mtime === stat.mtime && existing.size === stat.size) return false;
@@ -141,7 +129,14 @@ export function archiveFile(
   // Readers keep seeing the previous complete copy until the rename commits it.
   const temporary = `${vaultPath}.tmp-${process.pid}`;
   try {
-    if (entry.tool === 'opencode') {
+    if (snapshot !== undefined) {
+      if (!snapshot.length) throw new Error('Native transcript is empty');
+      writeFileSync(temporary, snapshot);
+    } else if (entry.tool === 'cursor' || entry.tool === 'antigravity') {
+      throw new Error('A captured transcript is required for this source.');
+    } else if (entry.tool === 'codex') {
+      writeFileSync(temporary, readCodexRollout(entry.path));
+    } else if (entry.tool === 'opencode') {
       writeFileSync(temporary, serializeOpencodeSession(entry.path));
     } else {
       copyFileSync(entry.path, temporary);
@@ -168,9 +163,9 @@ export function archiveFile(
  * An entry whose vaultPath was deleted is skipped: with both the source and the
  * vault copy gone, the index row is genuinely prunable.
  */
-export function listArchived(dir: string): Array<{ path: string; tool: Tool; vaultPath: string }> {
+export function listArchived(dir: string): Array<{ path: string; tool: Tool | 'pi'; vaultPath: string }> {
   const manifest = loadManifest(dir);
-  const out: Array<{ path: string; tool: Tool; vaultPath: string }> = [];
+  const out: Array<{ path: string; tool: Tool | 'pi'; vaultPath: string }> = [];
   for (const [path, entry] of Object.entries(manifest)) {
     if (existsSync(entry.vaultPath)) out.push({ path, tool: entry.tool, vaultPath: entry.vaultPath });
   }

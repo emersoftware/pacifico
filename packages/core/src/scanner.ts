@@ -7,7 +7,6 @@ import { extractSessionMetadata, getCwdFromSession, firstPrompt, contentMatches,
 import { cwdUnder } from './repo';
 import { discoverOpencodeSessions } from './opencode';
 import { readSessionLines } from './session-io';
-import { getPiSessionsDir } from './paths';
 
 const home = homedir();
 const CLAUDE_DIR = join(home, '.claude/projects');
@@ -56,10 +55,6 @@ async function processSession(
       files: [],
       commands: [],
       errored: false,
-      // The no-index fallback does not parse pi topology or headers for lineage;
-      // fork visibility is an indexed-search feature (zero-value defaults).
-      branches: 0,
-      forkedFrom: '',
     };
   }
 
@@ -78,8 +73,6 @@ async function processSession(
     files: [],
     commands: [],
     errored: false,
-    branches: 0,
-    forkedFrom: '',
   };
 }
 
@@ -139,13 +132,6 @@ export async function scanSessions(
 
   if (toolFilter === '' || toolFilter === 'claude') {
     scans.push(scanDir(CLAUDE_DIR, claudePrefix, 'claude', repoRoot, searchAll, normalizedQuery));
-  }
-  if (toolFilter === '' || toolFilter === 'pi') {
-    const piPrefix = repoRoot ? `-${claudePrefix}-` : '--';
-    // Resolved per call (not frozen at import) via the shared resolver so the
-    // scanner honors the same SESSIONS_PI_DIR / PI_CODING_AGENT_* overrides as
-    // the index and the report.
-    scans.push(scanDir(getPiSessionsDir(), piPrefix, 'pi', repoRoot, searchAll, normalizedQuery));
   }
   if (toolFilter === '' || toolFilter === 'codex') {
     scans.push(scanDir(CODEX_DIR, '', 'codex', repoRoot, searchAll, normalizedQuery));
