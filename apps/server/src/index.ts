@@ -1,6 +1,9 @@
 import { Store } from './store';
 import { handler } from './http';
-const database = process.env.DATABASE_URL;
+import { readFileSync } from 'node:fs';
+const database = process.env.DATABASE_URL_FILE
+  ? readFileSync(process.env.DATABASE_URL_FILE, 'utf8').trim()
+  : process.env.DATABASE_URL;
 if (!database) throw new Error('DATABASE_URL is required');
 const store = new Store(database);
 await store.migrate();

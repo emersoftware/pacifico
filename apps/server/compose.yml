@@ -4,6 +4,11 @@ services:
       context: ../..
       dockerfile: apps/server/Dockerfile
     restart: unless-stopped
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    mem_limit: 1g
+    cpus: 1.0
     environment:
       DATABASE_URL: postgres://pacifico:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@db:5432/pacifico
       PUBLIC_URL: ${PUBLIC_URL:-http://localhost:8787}
@@ -15,10 +20,23 @@ services:
         condition: service_healthy
     read_only: true
     tmpfs:
-      - /tmp
+      - /tmp:size=64m,mode=1777
+    logging: &logging
+      driver: local
+      options: { max-size: 10m, max-file: '3' }
   db:
     image: postgres:17-bookworm
     restart: unless-stopped
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    mem_limit: 512m
+    cpus: 1.0
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+      - /var/run/postgresql:size=16m,uid=999,gid=999,mode=0755
     environment:
       POSTGRES_USER: pacifico
       POSTGRES_DB: pacifico
@@ -30,5 +48,9 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    logging: *logging
+networks:
+  default:
+    internal: true
 volumes:
   postgres_data:

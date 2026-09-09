@@ -20,7 +20,17 @@ docker compose --env-file apps/server/.env -f apps/server/compose.yml up -d --bu
 
 The Compose stack runs Bun and PostgreSQL 17. The `postgres_data` volume stores snapshots, previous uploaded versions, search indexes, users and hashed credentials. PostgreSQL has no published host port. The HTTP service binds to `127.0.0.1:8787` by default. Set `SERVER_PORT` to change the host port.
 
+Containers have memory, CPU, process and log limits, read-only root filesystems and restricted Linux capabilities. Their shared network is internal. The API runs as an unprivileged user. For deployments with mounted secrets, `DATABASE_URL_FILE` takes precedence over `DATABASE_URL`; the file must be readable by UID 10001. Use a database role that owns only Pacifico's database and cannot create users or other databases.
+
 For access from other computers, put the service behind your HTTPS reverse proxy or a private network. Set `BIND_ADDRESS` to the server's private interface when necessary. If your reverse proxy is another container, connect it to the Compose network and proxy to `server:8787`. The proxy must forward `Authorization` and support requests up to the upload limit. Check readiness at `/health`.
+
+An SSH tunnel can keep the API off public interfaces:
+
+```sh
+ssh -N -L 127.0.0.1:18787:127.0.0.1:8787 pacifico-tunnel@your-server
+```
+
+Connect the CLI to `http://127.0.0.1:18787`. Restrict the tunnel account to local forwarding to `127.0.0.1:8787`, with no shell, PTY, agent forwarding or remote forwarding. Keep SSH host-key verification enabled. The loopback HTTP connection travels to the server inside SSH encryption.
 
 ## Add your computers
 
