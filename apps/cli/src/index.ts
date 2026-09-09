@@ -9,7 +9,7 @@ import { copyToClipboard } from './clipboard';
 import { buildResumeCommand } from '@pacifico/core/search-format';
 import type { Tool } from '@pacifico/core/types';
 
-if (Bun.argv.includes('--version') || Bun.argv.includes('-v')) {
+if (Bun.argv[2] === '--version' || Bun.argv[2] === '-v') {
   process.stdout.write(`pacifico ${version}\n`);
   process.exit(0);
 }
@@ -32,6 +32,17 @@ if (Bun.argv[2] === '--preview' && Bun.argv[3]) {
 // (the old behavior) let a flag VALUE fire a command - `pacifico wrapped
 // --out cleanup` would have uninstalled the plugin and wiped the index.
 const command = Bun.argv[2];
+
+if (command === 'remote') {
+  try {
+    const { runRemoteCommand } = await import('@pacifico/agents/remote-cli');
+    await runRemoteCommand(Bun.argv.slice(3));
+  } catch (error) {
+    process.stderr.write(`pacifico remote: ${error instanceof Error ? error.message : String(error)}\n`);
+    process.exit(1);
+  }
+  process.exit(0);
+}
 
 if (command === 'daemon') {
   try {

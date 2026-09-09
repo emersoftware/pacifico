@@ -50,3 +50,5 @@ Transcripts are copied to temporary files and published by rename. An interrupte
 ## Checks
 
 Coverage includes concurrent workers, lock-owner termination, XML escaping, environment isolation, archive reconstruction after source removal, and native launchd bootstrap/update/bootout using temporary sources and a unique label. The launchd smoke test allows 45 seconds for cold startup and system scheduling.
+
+When a [remote server](SERVER.md) is configured, each pass uploads new or changed archive snapshots after local import. Server failures are recorded as failed runs and retried on the next pass; local indexing has already completed. `daemon status` includes upload counts on a successful run.

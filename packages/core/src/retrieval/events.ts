@@ -9,10 +9,20 @@ export function readSessionEvents(
   characterOffset = 0,
   expectedVersion?: string,
 ) {
+  return pageSessionEvents(readSessionLines(filePath), offset, limit, characterOffset, expectedVersion);
+}
+
+/** Shared record pagination for local archives and server snapshots. */
+export function pageSessionEvents(
+  lines: string[],
+  offset = 0,
+  limit = 20,
+  characterOffset = 0,
+  expectedVersion?: string,
+) {
   if (!Number.isSafeInteger(offset) || offset < 0 || !Number.isSafeInteger(characterOffset) || characterOffset < 0)
     throw new Error('Offsets must be nonnegative integers.');
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) throw new Error('limit must be between 1 and 100.');
-  const lines = readSessionLines(filePath);
   if (lines.length === 0) throw new Error('Session is missing or unreadable.');
   const records = lines.filter((line) => line.trim());
   const version = createHash('sha256').update(JSON.stringify(records)).digest('hex');

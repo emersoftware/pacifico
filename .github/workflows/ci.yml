@@ -36,6 +36,31 @@ jobs:
       - run: bun run test:binary
       - run: bun run format:check
 
+  server:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-bookworm
+        env:
+          POSTGRES_USER: fixture
+          POSTGRES_PASSWORD: fixture
+          POSTGRES_DB: pacifico_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U fixture -d pacifico_test"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - run: bun install --frozen-lockfile
+      - run: bun test apps/server/src/server.test.ts
+        env:
+          PACIFICO_TEST_DATABASE_URL: postgres://fixture:fixture@127.0.0.1:5432/pacifico_test
+      - run: bun run test:server:docker
+
   site:
     runs-on: ubuntu-latest
     defaults:

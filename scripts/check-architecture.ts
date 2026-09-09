@@ -5,6 +5,7 @@ import ts from 'typescript';
 // Production dependencies point toward the session engine. Integration tests may
 // cross these boundaries because they verify the assembled product.
 const layers = [
+  { directory: 'apps/server/src', allowed: new Set(['core', 'agents']) },
   { directory: 'packages/core/src', allowed: new Set(['core']) },
   { directory: 'packages/agents/src', allowed: new Set(['core', 'agents']) },
   { directory: 'apps/cli/src', allowed: new Set(['core', 'agents', 'cli']) },

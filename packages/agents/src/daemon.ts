@@ -1,3 +1,4 @@
+import { syncArchive } from '@pacifico/core/sync/upload';
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { join, dirname, resolve, basename } from 'node:path';
 import { getHome, getDataDir } from '@pacifico/core/paths';
@@ -14,6 +15,9 @@ const runSchema = z.object({
   total: z.number().optional(),
   updated: z.number().optional(),
   error: z.string().optional(),
+  sync: z
+    .object({ uploaded: z.number(), unchanged: z.number(), configured: z.boolean(), busy: z.boolean().optional() })
+    .optional(),
 });
 
 function plistPath(): string {
@@ -86,7 +90,8 @@ export async function runDaemonPass(): Promise<void> {
       throw new Error(
         'Index refreshed, but some transcripts could not be archived. Check archive storage permissions and free space.',
       );
-    result = { completedAt: new Date().toISOString(), ok: true, durationMs: Date.now() - started, ...refreshed };
+    const sync = await syncArchive();
+    result = { sync, completedAt: new Date().toISOString(), ok: true, durationMs: Date.now() - started, ...refreshed };
   } catch (error) {
     result = {
       completedAt: new Date().toISOString(),

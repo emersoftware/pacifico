@@ -18,6 +18,8 @@
 // interfaces is recorded as a future item in the contract.
 import { z } from 'zod';
 
+export const Origin = z.object({ deviceId: z.string(), device: z.string(), sourcePath: z.string() });
+export const RemoteStatus = z.object({ available: z.boolean(), error: z.string().optional() });
 const toolName = z.enum(['claude', 'codex', 'opencode', 'cursor', 'antigravity']);
 const role = z.enum(['user', 'assistant']);
 const period = z.object({ start: z.string(), end: z.string() });
@@ -34,6 +36,7 @@ const messageHit = z.object({
 
 /** Mirrors FormattedResult (src/search-format.ts), including the two truncation counts. */
 const formattedResult = z.object({
+  origin: Origin.optional(),
   sessionId: z.string(),
   tool: toolName,
   date: z.string(),
@@ -74,6 +77,7 @@ export const GrepSessionsOutput = z.object({
       filePath: z.string(),
       date: z.string(),
       role,
+      origin: Origin.optional(),
       msgIndex: z.number(),
       snippet: z.string(),
       resumeCommand: z.string(),
@@ -119,6 +123,7 @@ const digestSessionDetail = z.object({
 });
 
 const digestProjectGroup = z.object({
+  truncated: z.boolean().optional(),
   project: z.string(),
   sessions: z.number(),
   totalMessages: z.number(),
@@ -130,6 +135,7 @@ const digestProjectGroup = z.object({
 });
 
 export const GetActivityDigestOutput = z.object({
+  truncated: z.boolean().optional(),
   period,
   totalSessions: z.number(),
   totalMessages: z.number(),
@@ -164,6 +170,8 @@ export const GetContextPrimerOutput = z.object({
       date: z.string(),
       messageCount: z.number(),
       intent: z.string(),
+      filePath: z.string().optional(),
+      origin: Origin.optional(),
       files: z.array(z.string()),
       fileCount: z.number(),
       opening: z.string(),
@@ -210,6 +218,7 @@ export const WhyDidThisChangeOutput = z.object({
 
 // A discriminated result inside an object keeps MCP's output schema object-shaped.
 export const SearchOutput = z.object({
+  remote: RemoteStatus.optional(),
   result: z.discriminatedUnion('mode', [
     z.object({ mode: z.literal('ranked'), data: SearchSessionsOutput }),
     z.object({ mode: z.literal('literal'), data: GrepSessionsOutput }),
@@ -217,6 +226,7 @@ export const SearchOutput = z.object({
   ]),
 });
 export const ReadSessionOutput = z.object({
+  origin: Origin.optional(),
   result: z.discriminatedUnion('mode', [
     z.object({ mode: z.literal('digest'), data: GetSessionDigestOutput }),
     z.object({ mode: z.literal('messages'), data: GetSessionMessagesOutput }),
@@ -234,6 +244,7 @@ export const ReadSessionOutput = z.object({
   ]),
 });
 export const ContextOutput = z.object({
+  remote: RemoteStatus.optional(),
   result: z.discriminatedUnion('mode', [
     z.object({ mode: z.literal('project'), data: GetContextPrimerOutput }),
     z.object({ mode: z.literal('activity'), data: GetActivityDigestOutput }),

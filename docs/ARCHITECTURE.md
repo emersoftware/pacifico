@@ -1,9 +1,10 @@
 # Architecture
 
-Pacifico is a TypeScript/Bun monorepo with three production packages and a static website.
+Pacifico is a TypeScript/Bun monorepo with four production packages and a static website.
 
 ```text
 apps/
+  server/src/       Authenticated HTTP/MCP server and PostgreSQL archive
   cli/src/          Executable entry point, arguments, selection, and terminal output
   site/             Bilingual Astro website with React and Tailwind CSS
 packages/
@@ -72,3 +73,15 @@ See [native source coverage](SOURCES.md), [MCP](MCP.md), [background indexing](D
 ### Native events and message offsets
 
 `read_session` message offsets and FTS message hit indices currently share `extractMessages`, which numbers non-empty user and assistant messages. Native tool, system and unknown events remain in the durable projection but are not returned by that message view. Adding them to message pagination alone would break search-hit offsets. `read_session` events mode returns archived JSONL records with separate record offsets. Responses contain at most 20,000 text characters and return a next cursor with record and character offsets, allowing large records to be reconstructed without truncation loss. The event cursor also carries a content version; passing it on subsequent requests rejects changed records, including same-length rewrites. Existing message numbering is unchanged.
+
+## Self-hosted archive
+
+`apps/server` owns HTTP authentication, account/device isolation, PostgreSQL storage and remote queries. It shares pure transcript parsers, pagination and the MCP registration contract with the local application. It does not discover native files on the server.
+
+`core/sync` owns remote configuration and uploading durable local snapshots. Server inventory acts as the acknowledgement record, while the local archive acts as the retry queue. Sync has its own process lock and never holds the local index lock across a network request. Each server update requires the prior hash and preserves an immutable uploaded version.
+
+`agents/remote.ts` routes the four MCP tools to local or remote execution and merges combined queries. Server execution injects an account-bound query implementation into the MCP factory and disables local resources. Missing remote connectivity is explicit in combined results and does not hide local data. No remote snapshot is imported into native harness directories.
+
+See [server deployment and synchronization](SERVER.md).
+
+Agents such as Pancora use the same `pacifico remote` CLI as other clients. `agents/remote-cli.ts` handles shell arguments, JSON output and exit statuses; the shared remote client handles the authenticated transport. No harness-specific connection or role is required.

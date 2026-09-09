@@ -29,6 +29,14 @@ ${C.bold}Options:${C.reset}
   -h, --help       Show this help
 
 ${C.bold}Commands:${C.reset}
+  remote connect  Connect this computer to a self-hosted server
+  remote sync     Import and upload pending local snapshots
+  remote status   Show the configured endpoint and device
+  remote search   Search the remote archive
+  remote read     Read a remote session by its returned identifier
+  remote context  Get project context or activity from the remote archive
+  remote documents Search and read archived native memories and instructions
+  remote --help   Show remote query options
   daemon start     Enable background import every 30 seconds (macOS)
   daemon stop      Stop background import and disable it at login
   daemon status    Print service state and the last import result as JSON

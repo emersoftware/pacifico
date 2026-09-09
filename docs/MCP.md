@@ -25,3 +25,7 @@ Search returns `{ "mode": "search", "results": [] }`. Read returns `{ "mode": "r
 The complete input and output schemas are defined in [mcp.ts](../packages/agents/src/mcp.ts) and [mcp-schemas.ts](../packages/agents/src/mcp-schemas.ts).
 
 The `read_session` format `events` reads archived JSONL records, including metadata and tool results. Its `offset` counts records, independently of message search indices. Responses contain at most 20,000 text characters. Pass the returned `next.offset`, `next.characterOffset`, and `next.version` to continue; concatenate chunks with the same record index before parsing JSON. `limit` bounds the number of record chunks (default 20, maximum 100). `includeTools` applies only to messages mode. The version identifies the captured records. If those records change between requests, a continuation with the previous version fails; restart at offset 0 without a version. Omitting the version leaves the read unpinned.
+
+## Remote sources
+
+All tools accept optional `scope` (`local`, `remote`, `all`) and `device` (UUID) selectors. Without a configured server the default is local; with a server the default combines both. Remote search results carry `origin` with the device name, ID and original path. Read their returned `pacifico://` identifiers directly. Combined responses include remote availability, so an offline server is not mistaken for an empty archive. Native-document and session reads fetch the selected remote record without downloading the entire archive. See [server setup](SERVER.md).
