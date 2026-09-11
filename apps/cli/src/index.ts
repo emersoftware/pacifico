@@ -33,6 +33,28 @@ if (Bun.argv[2] === '--preview' && Bun.argv[3]) {
 // --out cleanup` would have uninstalled the plugin and wiped the index.
 const command = Bun.argv[2];
 
+if (command === 'decisions' || command === 'read' || command === 'sync' || command === 'usage') {
+  try {
+    if (command === 'decisions') {
+      const { runDecisions } = await import('./decisions');
+      await runDecisions(Bun.argv.slice(3));
+    } else if (command === 'read') {
+      const { runRead } = await import('./read');
+      await runRead(Bun.argv.slice(3));
+    } else if (command === 'sync') {
+      const { runConfigSync } = await import('@pacifico/agents/config-sync/cli');
+      await runConfigSync(Bun.argv.slice(3));
+    } else {
+      const { runUsage } = await import('./usage');
+      await runUsage(Bun.argv.slice(3));
+    }
+  } catch (error) {
+    process.stderr.write(`pacifico ${command}: ${error instanceof Error ? error.message : String(error)}\n`);
+    process.exit(1);
+  }
+  process.exit(process.exitCode ?? 0);
+}
+
 if (command === 'remote') {
   try {
     const { runRemoteCommand } = await import('@pacifico/agents/remote-cli');

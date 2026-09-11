@@ -42,8 +42,12 @@ test('hook upgrade removes only Pacifico commands, including mixed matcher group
   }
 });
 
-test('embedded integrations ship MCP configuration without skills or prompts', () => {
-  expect(Object.keys(PLUGIN_FILES).some((path) => path.startsWith('skills/'))).toBe(false);
+test('embedded integrations ship the ADR skill, examples, and MCP configuration', () => {
+  expect(Object.keys(PLUGIN_FILES).filter((path) => path.startsWith('skills/'))).toEqual([
+    'skills/adr/SKILL.md',
+    'skills/adr/references/pacifico.md',
+    'skills/sync/SKILL.md',
+  ]);
   expect(PLUGIN_FILES['.mcp.json']).toContain('pacifico');
   expect(JSON.parse(PLUGIN_FILES['.codex-plugin/plugin.json']!).skills).toBeUndefined();
 });

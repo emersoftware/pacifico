@@ -29,6 +29,10 @@ ${C.bold}Options:${C.reset}
   -h, --help       Show this help
 
 ${C.bold}Commands:${C.reset}
+  decisions        List, save, or explicitly export project decisions (--help)
+  read <session>   Read numbered messages as JSON (--offset / --limit)
+  sync             Preview skills/MCP differences across harnesses (--help)
+  usage            Print token totals, periods and streaks (--json / --help)
   remote connect  Connect this computer to a self-hosted server
   remote sync     Import and upload pending local snapshots
   remote status   Show the configured endpoint and device

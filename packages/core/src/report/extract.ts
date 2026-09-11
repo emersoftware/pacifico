@@ -1,4 +1,4 @@
-import { homedir } from 'node:os';
+import { getHome } from '../paths';
 import { join } from 'node:path';
 import type { UsageEvent } from './parsers/types.ts';
 import type { ToolId } from './types.ts';
@@ -28,16 +28,18 @@ import {
 export interface ReportRoots {
   claudeCode: string;
   codex: string;
+  codexArchived?: string;
   /** OpenCode's SQLite DB path (not a directory) - its sessions live in one DB. Optional so
    *  callers that predate OpenCode support (and tests) need not supply it. */
   opencode?: string;
 }
 
 export function defaultRoots(): ReportRoots {
-  const home = homedir();
+  const home = getHome();
   return {
-    claudeCode: join(home, '.claude', 'projects'),
-    codex: join(home, '.codex', 'sessions'),
+    claudeCode: join(process.env.CLAUDE_CONFIG_DIR || join(home, '.claude'), 'projects'),
+    codex: join(process.env.CODEX_HOME || join(home, '.codex'), 'sessions'),
+    codexArchived: join(process.env.CODEX_HOME || join(home, '.codex'), 'archived_sessions'),
     // Same resolution (env override included) as the search index - one source of truth.
     opencode: getOpencodeDbPath(),
   };
@@ -55,14 +57,21 @@ export interface GatherOptions {
 /** A file-tree source: how to enumerate it, and how to parse one of its files. */
 interface FileSource {
   root: string;
+  compressed?: boolean;
   parseFile: (path: string) => Promise<FileParse>;
 }
 
 function fileSources(roots: ReportRoots, want: (t: ToolId) => boolean): FileSource[] {
   const out: FileSource[] = [];
   if (want('claude-code')) out.push({ root: roots.claudeCode, parseFile: parseClaudeCodeFile });
-  if (want('codex'))
-    out.push({ root: roots.codex, parseFile: async (p) => ({ events: await parseCodexFile(p), agentTypes: {} }) });
+  if (want('codex')) {
+    for (const root of [roots.codex, roots.codexArchived].filter((root): root is string => !!root))
+      out.push({
+        root,
+        compressed: true,
+        parseFile: async (p) => ({ events: await parseCodexFile(p), agentTypes: {} }),
+      });
+  }
   return out;
 }
 
@@ -72,7 +81,8 @@ async function gatherDirect(roots: ReportRoots, want: (t: ToolId) => boolean, si
   const tasks: Promise<UsageEvent[]>[] = [];
   if (want('claude-code')) tasks.push(parseClaudeCode(roots.claudeCode, walk));
   if (want('codex')) tasks.push(parseCodex(roots.codex, walk));
-  return (await Promise.all(tasks)).flat();
+  if (want('codex') && roots.codexArchived) tasks.push(parseCodex(roots.codexArchived, walk));
+  return dedupeEvents((await Promise.all(tasks)).flat());
 }
 
 export async function gatherEvents(
@@ -101,7 +111,7 @@ export async function gatherEvents(
       // Enumerate the whole tree, not just the period: cheap (one stat per file)
       // and it keeps the cache complete, so today's bounded run does not throw
       // away the parse that tomorrow's unbounded run needs.
-      const files = await statAll(walkJsonl(source.root));
+      const files = await statAll(walkJsonl(source.root, { compressed: source.compressed }));
       for (const f of files) livePaths.add(f.path);
 
       const { stale, fresh } = planRefresh(db, files);
@@ -110,9 +120,16 @@ export async function gatherEvents(
       // the first run whose window includes it.
       const toParse = threshold === undefined ? stale : stale.filter((f) => f.mtimeMs >= threshold);
 
-      const parsed = await Promise.all(
-        toParse.map(async (f): Promise<[FileStat, FileParse]> => [f, await source.parseFile(f.path)]),
-      );
+      const parsed: [FileStat, FileParse][] = [];
+      for (let index = 0; index < toParse.length; index += 4) {
+        parsed.push(
+          ...(await Promise.all(
+            toParse
+              .slice(index, index + 4)
+              .map(async (f): Promise<[FileStat, FileParse]> => [f, await source.parseFile(f.path)]),
+          )),
+        );
+      }
       db.transaction(() => {
         for (const [f, p] of parsed) putFile(db, f, p);
       })();

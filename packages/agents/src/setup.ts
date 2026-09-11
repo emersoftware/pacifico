@@ -5,6 +5,7 @@ import { PLUGIN_FILES } from './plugin-files';
 import { removeLegacyHook } from './legacy-hook';
 import { getDataDir } from '@pacifico/core/paths';
 import { stopDaemon } from './daemon';
+import { bundledSkills } from './bundled-skills';
 import { installedExecutable } from './executable';
 import {
   cleanDeadConfigs,
@@ -28,7 +29,7 @@ function pluginDest(): string {
 function ownedInstallPaths(): string[] {
   return [pluginDest(), join(sessionsDir(), '.claude-plugin')];
 }
-const PLUGIN_VERSION = '0.3.0';
+const PLUGIN_VERSION = '0.4.0';
 const MARKETPLACE_NAME = 'pacifico';
 const PLUGIN_NAME = 'pacifico';
 
@@ -136,6 +137,7 @@ export function runSetup(): void {
 
   if (installPlugin()) {
     w(`  ${C.green}✓${C.reset} Plugin installed to ${C.dim}${pluginDest()}${C.reset}\n`);
+    for (const path of bundledSkills()) w(`  Skill linked: ${path}\n`);
   } else {
     w(`  ${C.red}✗${C.reset} Failed to install plugin to ${pluginDest()}\n`);
     process.exit(1);
@@ -190,6 +192,7 @@ export function runSetup(): void {
 
 export function runUninstall(): void {
   stopDaemon();
+  bundledSkills(true);
   const w = (s: string) => process.stderr.write(s);
 
   w(`\n${C.bold}pacifico uninstall${C.reset}\n\n`);

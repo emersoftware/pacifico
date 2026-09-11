@@ -436,6 +436,45 @@ async function connect(): Promise<Client> {
 
 const TOOL_NAMES = ['get_context', 'native_documents', 'read_session', 'search_sessions'];
 
+test('saved decisions are readable through the existing context tool and remain local', async () => {
+  const { saveDecision } = await import('@pacifico/core/decisions');
+  const { getDb } = await import('@pacifico/core/storage/index');
+  const { extractMessages } = await import('@pacifico/core/parser');
+  const { readSessionLines } = await import('@pacifico/core/session-io');
+  const client = await connect();
+  try {
+    await client.callTool({ name: 'search_sessions', arguments: { query: 'mangowurzel', scope: 'local' } });
+    const path = join(tmp, 'claude', 'proj', 'b.jsonl');
+    const row = getDb().query<{ cwd: string }, [string]>('SELECT cwd FROM sessions WHERE file_path = ?').get(path)!;
+    const message = extractMessages(readSessionLines(path)).find(
+      (message) => message.role === 'user' && message.genuine,
+    )!;
+    const saved = saveDecision({
+      project: row.cwd,
+      title: 'Fixture decision',
+      decision: 'Fixture interpretation',
+      decidedAt: '2026-06-01',
+      evidence: [{ filePath: path, messageIndex: message.index, quote: message.text }],
+    });
+    const response = await client.callTool({
+      name: 'get_context',
+      arguments: { mode: 'decisions', cwd: row.cwd, scope: 'local' },
+    });
+    expect(response.isError).not.toBe(true);
+    const result = ContextOutput.parse(response.structuredContent).result;
+    expect(result.mode).toBe('decisions');
+    if (result.mode === 'decisions')
+      expect(result.data.decisions.some((decision) => decision.id === saved.id)).toBe(true);
+    const remote = await client.callTool({
+      name: 'get_context',
+      arguments: { mode: 'decisions', cwd: row.cwd, scope: 'remote' },
+    });
+    expect(remote.isError).toBe(true);
+  } finally {
+    await client.close();
+  }
+});
+
 test('MCP advertises exactly four tools, their object schemas, and no prompts', async () => {
   const client = await connect();
   try {

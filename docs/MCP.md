@@ -1,5 +1,10 @@
 # MCP
 
+`get_context` also accepts `mode: "decisions"` with `scope: "local"`, `cwd`,
+optional `query`, `limit`, and `offset` to read saved project decisions. Decision
+extraction uses the existing search/read tools; optional persistence and Markdown
+export use the CLI. See [decisions](FEATURES.md#project-decisions).
+
 ## Tools
 
 | Tool               | Modes                                    | Purpose                                                               |

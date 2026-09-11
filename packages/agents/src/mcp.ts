@@ -444,7 +444,7 @@ function registerTools(server: McpServer, executor?: ToolExecutor): void {
     {
       title: 'Recover project or period context',
       description:
-        'Recover where work left off. Project mode returns recent session details and older headlines for a repository. Activity mode returns work grouped by day and project for an explicit date range. Summarize the evidence in your own words and use read_session for details.',
+        'Recover where work left off. Project mode returns recent sessions and older headlines. Activity mode groups work by day and project. Decisions mode reads saved local decisions and their evidence; use scope local. Summarize evidence in your own words and use read_session for details.',
       inputSchema: {
         scope: z
           .enum(['local', 'remote', 'all'])
@@ -453,7 +453,9 @@ function registerTools(server: McpServer, executor?: ToolExecutor): void {
             'Defaults to local and remote when connected. Remote identifiers can be read from any connected computer.',
           ),
         device: z.string().uuid().optional(),
-        mode: z.enum(['project', 'activity']).default('project'),
+        mode: z.enum(['project', 'activity', 'decisions']).default('project'),
+        query: z.string().optional().describe('Decisions mode: filter saved decisions by text.'),
+        offset: z.number().int().min(0).optional().describe('Decisions mode: pagination offset.'),
         cwd: z
           .string()
           .optional()
@@ -486,6 +488,38 @@ function registerTools(server: McpServer, executor?: ToolExecutor): void {
         args,
         async () => {
           const { mode, cwd, tool, limit, days, worktree, startDate, endDate, detail } = args;
+          if (mode === 'decisions') {
+            if (tool || days || worktree !== undefined || startDate || endDate || detail)
+              return toolError('Decisions mode accepts cwd, query, limit, and offset only.');
+            const { listDecisions } = await import('@pacifico/core/decisions');
+            const records = listDecisions(cwd ?? process.cwd(), {
+              query: args.query,
+              limit: limit ?? 10,
+              offset: args.offset,
+            });
+            const summaries = records.map((record) => ({
+              ...record,
+              decision: record.decision.slice(0, 1500),
+              rationale: record.rationale.slice(0, 500),
+              evidence: record.evidence.map((item) => ({ ...item, quote: item.quote.slice(0, 300) })),
+              truncated:
+                record.decision.length > 1500 ||
+                record.rationale.length > 500 ||
+                record.evidence.some((item) => item.quote.length > 300),
+            }));
+            const decisions: typeof summaries = [];
+            for (const record of summaries) {
+              if (decisions.length && JSON.stringify([...decisions, record]).length > 20000) break;
+              decisions.push(record);
+            }
+            const nextOffset =
+              decisions.length < records.length || records.length === (limit ?? 10)
+                ? (args.offset ?? 0) + decisions.length
+                : null;
+            return modeResult(mode, toolResult({ decisions, count: decisions.length, nextOffset }));
+          }
+          if (args.query !== undefined || args.offset !== undefined)
+            return toolError('query and offset require decisions mode.');
           if (mode === 'activity') {
             if (!startDate || !endDate || startDate > endDate)
               return toolError('Activity requires startDate and endDate in chronological order.');

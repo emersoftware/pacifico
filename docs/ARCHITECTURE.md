@@ -70,6 +70,13 @@ Homebrew installs use a verified stable `opt/pacifico/bin/pacifico` alias for MC
 
 See [native source coverage](SOURCES.md), [MCP](MCP.md), [background indexing](DAEMON.md), [testing](TESTING.md), and [releases](RELEASING.md).
 
+`decisions.ts` validates citations against indexed session messages and stores
+accepted decision records in a separate durable SQLite database only when explicitly saved. `usage.ts`
+retains measured usage events and calculates CLI summaries; it reuses the report
+parsers. Neither database is part of the disposable FTS index. Agent configuration
+translation and preview/apply logic live in `agents/config-sync`. The CLI owns
+their arguments and output. See [feature commands](FEATURES.md).
+
 ### Native events and message offsets
 
 `read_session` message offsets and FTS message hit indices currently share `extractMessages`, which numbers non-empty user and assistant messages. Native tool, system and unknown events remain in the durable projection but are not returned by that message view. Adding them to message pagination alone would break search-hit offsets. `read_session` events mode returns archived JSONL records with separate record offsets. Responses contain at most 20,000 text characters and return a next cursor with record and character offsets, allowing large records to be reconstructed without truncation loss. The event cursor also carries a content version; passing it on subsequent requests rejects changed records, including same-length rewrites. Existing message numbering is unchanged.

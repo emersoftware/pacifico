@@ -246,6 +246,14 @@ export const ReadSessionOutput = z.object({
 export const ContextOutput = z.object({
   remote: RemoteStatus.optional(),
   result: z.discriminatedUnion('mode', [
+    z.object({
+      mode: z.literal('decisions'),
+      data: z.object({
+        decisions: z.array(z.record(z.string(), z.unknown())),
+        count: z.number(),
+        nextOffset: z.number().nullable(),
+      }),
+    }),
     z.object({ mode: z.literal('project'), data: GetContextPrimerOutput }),
     z.object({ mode: z.literal('activity'), data: GetActivityDigestOutput }),
   ]),

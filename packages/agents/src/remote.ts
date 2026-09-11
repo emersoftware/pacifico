@@ -79,6 +79,11 @@ export async function routeTool(
   local: () => Promise<ToolResponse>,
   executor?: ToolExecutor,
 ): Promise<ToolResponse> {
+  if (name === 'get_context' && args.mode === 'decisions') {
+    if (executor || args.scope === 'remote' || args.scope === 'all' || args.device)
+      return failure('Saved decisions are local. Use scope local without a device filter.');
+    return local();
+  }
   if (executor) return executor(name, args);
   const remoteRead =
     (name === 'read_session' && String(args.filePath).startsWith('pacifico://')) ||

@@ -24,7 +24,7 @@ import type { AgentName } from './parsers/claude-code.ts';
 // Bump when the stored shape changes, so an old cache is discarded rather than
 // misread. v1: per-file events blob + agent-name map.
 // v3: Claude events retain the Fast mode flag used for historical pricing.
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 
 export function getEventCachePath(): string {
   return join(getCacheDir(), 'usage.db');

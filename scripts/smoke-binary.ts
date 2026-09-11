@@ -78,7 +78,11 @@ try {
   run('install');
   assert.ok(!readFileSync(settings, 'utf8').includes('pacifico context --hook'));
   assert.ok(readFileSync(settings, 'utf8').includes('echo keep-other-hook'));
-  assert.ok(!existsSync(join(data, 'plugin', 'skills')));
+  assert.ok(!existsSync(oldSkill));
+  assert.ok(existsSync(join(data, 'plugin', 'skills', 'adr', 'SKILL.md')));
+  assert.ok(existsSync(join(dir, '.agents', 'skills', 'adr', 'SKILL.md')));
+  assert.ok(existsSync(join(data, 'plugin', 'skills', 'sync', 'SKILL.md')));
+  assert.ok(existsSync(join(dir, '.agents', 'skills', 'sync', 'SKILL.md')));
   const installed = readFileSync(config, 'utf8');
   assert.ok(installed.includes('[mcp_servers.pacifico]'));
   assert.ok(installed.includes(binary));
@@ -128,6 +132,54 @@ try {
   assert.ok(!context.isError);
   assert.ok(!JSON.stringify(context.structuredContent).includes('memory'));
   assert.ok(!existsSync(join(data, 'memory.db')));
+  const numbered = JSON.parse(run('read', hit.filePath, '--json'));
+  assert.equal(numbered.messages[0].index, 0);
+  const decisionInput = join(dir, 'decision.json');
+  writeFileSync(
+    decisionInput,
+    JSON.stringify({
+      project: dir,
+      title: 'Archive fixture',
+      decision: 'Retain the source archive.',
+      decidedAt: '2026-09-01',
+      evidence: [{ filePath: hit.filePath, messageIndex: 0, quote: 'pacificoquartz archive decision' }],
+    }),
+  );
+  const decision = JSON.parse(run('decisions', 'save', '--file', decisionInput));
+  assert.equal(JSON.parse(run('decisions', 'list', '--project', dir))[0].id, decision.id);
+  const savedContext = await client.callTool({
+    name: 'get_context',
+    arguments: { mode: 'decisions', cwd: dir, scope: 'local' },
+  });
+  assert.ok(!savedContext.isError);
+  assert.ok(JSON.stringify(savedContext.structuredContent).includes(decision.id));
+  assert.equal(JSON.parse(run('decisions', 'export', '--project', dir, '--out', join(dir, 'adr'))).files.length, 1);
+  writeFileSync(
+    join(dir, '.claude.json'),
+    JSON.stringify({ mcpServers: { fixture: { command: 'fixture-server', args: [] } } }),
+  );
+  const preview = JSON.parse(run('sync', '--from', 'claude', '--to', 'codex', '--kind', 'mcp'));
+  assert.equal(preview.applied, false);
+  assert.ok(!readFileSync(config, 'utf8').includes('fixture-server'));
+  assert.equal(JSON.parse(run('sync', '--from', 'claude', '--to', 'codex', '--kind', 'mcp', '--apply')).applied, true);
+  assert.ok(readFileSync(config, 'utf8').includes('fixture-server'));
+  const usageInput = join(dir, 'usage.json');
+  writeFileSync(
+    usageInput,
+    JSON.stringify({
+      usageEventsDisplay: [
+        {
+          conversationId: 'usage-fixture',
+          model: 'test',
+          timestamp: 1577880000000,
+          tokenUsage: { inputTokens: 100, outputTokens: 50, cacheReadTokens: 200 },
+        },
+      ],
+    }),
+  );
+  run('usage', 'import', '--harness', 'cursor', '--file', usageInput);
+  const usage = JSON.parse(run('usage', '--cached', '--json'));
+  assert.equal(usage.periods.all.tokens, 350);
   const retired = Bun.spawnSync([binary, 'memory', 'mine'], { env, stdin: 'ignore' });
   assert.equal(retired.exitCode, 1);
   assert.ok(new TextDecoder().decode(retired.stderr).includes('removed'));

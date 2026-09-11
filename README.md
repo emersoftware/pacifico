@@ -21,8 +21,13 @@ Restart your agent client after installation. You can also download a standalone
 ```sh
 pacifico "database migration"
 pacifico context
+pacifico usage
 pacifico --help
 ```
+
+Recover project decisions with the `adr` skill, sync skills and MCP
+configuration between harnesses, or query token usage in your terminal.
+See [commands and source coverage](docs/FEATURES.md).
 
 For optional background indexing on macOS:
 

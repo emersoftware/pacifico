@@ -3,7 +3,7 @@
 import { z } from 'zod';
 
 import type { UsageEvent } from './types.ts';
-import { readJsonlLines } from './util.ts';
+import { readCodexRollout } from '../../sources/codex-rollout';
 import { walkJsonl, type WalkOptions } from './walk.ts';
 
 const codexEnvelopeSchema = z.object({
@@ -21,6 +21,7 @@ const tokenCountPayloadSchema = z.object({
   type: z.literal('token_count'),
   info: z
     .object({
+      total_token_usage: z.record(z.string(), z.number()).optional(),
       last_token_usage: z
         .object({
           input_tokens: z.number().optional(),
@@ -35,7 +36,7 @@ const tokenCountPayloadSchema = z.object({
 
 export async function parseCodex(root: string, opts: WalkOptions = {}): Promise<UsageEvent[]> {
   const events: UsageEvent[] = [];
-  for await (const path of walkJsonl(root, opts)) events.push(...(await parseCodexFile(path)));
+  for await (const path of walkJsonl(root, { ...opts, compressed: true })) events.push(...(await parseCodexFile(path)));
   return events;
 }
 
@@ -46,7 +47,14 @@ export async function parseCodexFile(path: string): Promise<UsageEvent[]> {
   {
     let meta: z.infer<typeof sessionMetaPayloadSchema> | null = null;
     let model: string | null = null;
-    for await (const line of readJsonlLines(path)) {
+    let previousTotals: Record<string, number> | undefined;
+    for (const raw of readCodexRollout(path).toString('utf8').split('\n')) {
+      let line: unknown;
+      try {
+        line = JSON.parse(raw);
+      } catch {
+        continue;
+      }
       const envelope = codexEnvelopeSchema.safeParse(line);
       if (!envelope.success) continue;
       const { payload } = envelope.data;
@@ -64,9 +72,25 @@ export async function parseCodexFile(path: string): Promise<UsageEvent[]> {
       const tokenCount = tokenCountPayloadSchema.safeParse(payload);
       if (!tokenCount.success) continue;
       const info = tokenCount.data.info;
-      if (!info?.last_token_usage) continue;
+      if (!info) continue;
       if (!meta || !model) continue;
-      const u = info.last_token_usage;
+      const totals = info.total_token_usage;
+      const signature = totals ? JSON.stringify(Object.entries(totals).sort()) : undefined;
+      const previousSignature = previousTotals ? JSON.stringify(Object.entries(previousTotals).sort()) : undefined;
+      if (totals && signature === previousSignature) continue;
+      const reset = totals && previousTotals && (totals.input_tokens ?? 0) < (previousTotals.input_tokens ?? 0);
+      const u =
+        info.last_token_usage ??
+        (totals
+          ? Object.fromEntries(
+              Object.entries(totals).map(([key, count]) => [
+                key,
+                Math.max(0, count - (reset ? 0 : (previousTotals?.[key] ?? 0))),
+              ]),
+            )
+          : undefined);
+      previousTotals = totals ?? previousTotals;
+      if (!u) continue;
       events.push({
         tool: 'codex',
         provider: 'openai',
@@ -74,6 +98,7 @@ export async function parseCodexFile(path: string): Promise<UsageEvent[]> {
         timestamp: envelope.data.timestamp,
         sessionId: meta.id,
         projectPath: meta.cwd,
+        dedupKey: `codex:${meta.id}:${envelope.data.timestamp}:${signature ?? JSON.stringify(u)}`,
         tokens: {
           // input_tokens is inclusive of cached_input_tokens; subtract so cache reads aren't double-counted.
           input: Math.max(0, (u.input_tokens ?? 0) - (u.cached_input_tokens ?? 0)),

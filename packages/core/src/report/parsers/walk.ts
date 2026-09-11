@@ -7,6 +7,7 @@
 // timestamps inside it, so a file untouched since before the window cannot hold
 // an in-range event and never needs to be opened.
 import { stat } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import { walkJsonl as walkAll } from './util.ts';
 
 /** Clock skew, timezone offsets, and restored-from-backup mtimes all shift a file's
@@ -15,6 +16,7 @@ import { walkJsonl as walkAll } from './util.ts';
 export const MTIME_SLACK_MS = 2 * 24 * 60 * 60 * 1000;
 
 export interface WalkOptions {
+  compressed?: boolean;
   /** Local YYYY-MM-DD lower bound of the report period. Undefined means no bound,
    *  in which case every file is read. */
   since?: string;
@@ -39,5 +41,10 @@ export async function* walkJsonl(root: string, opts: WalkOptions = {}): AsyncGen
       }
     }
     yield path;
+  }
+  if (opts.compressed && existsSync(root)) {
+    for await (const path of new Bun.Glob('**/*.jsonl.zst').scan({ cwd: root, absolute: true })) {
+      if (!existsSync(path.slice(0, -4))) yield path;
+    }
   }
 }
