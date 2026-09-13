@@ -24,11 +24,16 @@ ${C.bold}Options:${C.reset}
                    match; repeatable - every path must match). Newest first
                    when no query is given
   --mcp            Start as an MCP server (stdio transport)
+  --session-control Add live session tools to local --mcp (opt-in)
   --clear-cache    Remove the search index (rebuilds on next use)
   -v, --version    Print the CLI version
   -h, --help       Show this help
 
 ${C.bold}Commands:${C.reset}
+  start <harness> <message> Create a Claude/Codex session (--wait / --help)
+  send <session> <message>  Send to a connected session (--wait / --help)
+  result <request>         Read a task response (--wait / --json)
+  sessions                 List connected sessions; close <session> disconnects
   decisions        List, save, or explicitly export project decisions (--help)
   read <session>   Read numbered messages as JSON (--offset / --limit)
   sync             Preview skills/MCP differences across harnesses (--help)

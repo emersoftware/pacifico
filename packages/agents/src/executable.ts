@@ -1,5 +1,12 @@
 import { realpathSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, basename } from 'node:path';
+
+/** Relaunch the current CLI in source and compiled installations. */
+export function currentProgram(): string[] {
+  return ['bun', 'bun.exe'].includes(basename(process.execPath))
+    ? [process.execPath, Bun.argv[1]!]
+    : [process.execPath];
+}
 
 /** Keep client configs and launchd jobs valid after Homebrew removes an old keg. */
 export function installedExecutable(executable: string): string {

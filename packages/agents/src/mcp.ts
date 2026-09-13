@@ -698,6 +698,11 @@ export function createServer(options: { execute?: ToolExecutor; resources?: bool
 
 export async function startMcpServer() {
   const server = createServer();
+  if (Bun.argv.includes('--session-control')) {
+    const { registerSessionTools } = await import('./sessions/mcp');
+    const { currentProgram } = await import('./executable');
+    registerSessionTools(server, currentProgram());
+  }
   const transport = new StdioServerTransport();
   await server.connect(transport);
   // The SDK transport only listens for stdin 'data'/'error', so when the parent

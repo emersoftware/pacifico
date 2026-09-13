@@ -31,6 +31,12 @@ The private Bun workspaces declare their dependencies and use package-name impor
 
 ## Module boundaries
 
+`agents/sessions` owns optional live execution through official Claude/Codex
+transports, private local IPC and request/result tracking. CLI commands and the
+opt-in local MCP share that service. See [start and send](SESSIONS.md) for scope,
+permissions, delivery semantics and the remaining external-session attachment
+work. Session execution is independent of archive ingestion and remote sync.
+
 Agent integrations own client-specific configuration, plugin registration, MCP schemas, and launchd details. Core owns native formats, archive retention, indexing, and retrieval. The CLI owns arguments and terminal interaction. Interfaces should hide a meaningful implementation decision; avoid adding layers that only forward calls.
 
 The core currently has these boundaries:

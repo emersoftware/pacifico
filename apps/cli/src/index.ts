@@ -33,6 +33,29 @@ if (Bun.argv[2] === '--preview' && Bun.argv[3]) {
 // --out cleanup` would have uninstalled the plugin and wiped the index.
 const command = Bun.argv[2];
 
+if (command === 'channel') {
+  const { serveClaudeChannel } = await import('@pacifico/agents/sessions/channel');
+  await serveClaudeChannel(Bun.argv[3] ?? process.env.CLAUDE_SESSION_ID ?? '');
+  await new Promise(() => {});
+}
+
+if (command === '--session-host') {
+  const { serveControl } = await import('@pacifico/agents/sessions/connection');
+  await serveControl();
+  await new Promise(() => {});
+}
+
+if (['start', 'send', 'result', 'sessions'].includes(command ?? '')) {
+  try {
+    const { runSessions } = await import('./sessions');
+    await runSessions(command!, Bun.argv.slice(3));
+  } catch (error) {
+    process.stderr.write(`pacifico ${command}: ${error instanceof Error ? error.message : String(error)}\n`);
+    process.exitCode = 1;
+  }
+  process.exit(process.exitCode ?? 0);
+}
+
 if (command === 'decisions' || command === 'read' || command === 'sync' || command === 'usage') {
   try {
     if (command === 'decisions') {
