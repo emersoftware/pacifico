@@ -39,6 +39,4 @@ Your archive stays in `~/.local/share/pacifico`. Uninstalling the integrations p
 
 Share your archive between computers or give another agent access with the [self-hosted server](docs/SERVER.md).
 
-## Credits
-
-Inspired by and built on [nicknisi/sessions](https://github.com/nicknisi/sessions), by Nick Nisi and its contributors. [MIT license](LICENSE).
+[MIT license](LICENSE).
