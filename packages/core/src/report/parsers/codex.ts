@@ -43,12 +43,35 @@ export async function parseCodex(root: string, opts: WalkOptions = {}): Promise<
 /** Parse one rollout file. Self-contained (session meta and model are declared
  *  inside it), so the result is cacheable against the file's mtime. */
 export async function parseCodexFile(path: string): Promise<UsageEvent[]> {
+  return parseCodexLines(readCodexRollout(path).toString('utf8').split('\n'));
+}
+
+export function parseCodexLines(lines: string[]): UsageEvent[] {
   const events: UsageEvent[] = [];
   {
+    // Match per-response receipts to their cumulative UI twins without dropping
+    // older usage in sessions that span a native format upgrade.
+    const counterKey = (u: Record<string, number>) =>
+      JSON.stringify([
+        u.input_tokens ?? 0,
+        u.output_tokens ?? 0,
+        u.cached_input_tokens ?? 0,
+        u.cache_write_input_tokens ?? 0,
+      ]);
+    const receiptTotals = new Set<string>();
+    const receiptTimes = new Set<string>();
+    for (const raw of lines) {
+      try {
+        const row = JSON.parse(raw);
+        if (row.type !== 'token_usage_record' || !row.payload?.response_id || !row.payload?.usage) continue;
+        if (row.payload.thread_token_usage) receiptTotals.add(counterKey(row.payload.thread_token_usage));
+        receiptTimes.add(JSON.stringify([row.timestamp, counterKey(row.payload.usage)]));
+      } catch {}
+    }
     let meta: z.infer<typeof sessionMetaPayloadSchema> | null = null;
     let model: string | null = null;
     let previousTotals: Record<string, number> | undefined;
-    for (const raw of readCodexRollout(path).toString('utf8').split('\n')) {
+    for (const raw of lines) {
       let line: unknown;
       try {
         line = JSON.parse(raw);
@@ -66,6 +89,30 @@ export async function parseCodexFile(path: string): Promise<UsageEvent[]> {
       if (envelope.data.type === 'turn_context') {
         const turnContext = turnContextPayloadSchema.safeParse(payload);
         if (turnContext.success) model = turnContext.data.model;
+        continue;
+      }
+      if (envelope.data.type === 'token_usage_record' && meta && model) {
+        const receipt = z
+          .object({ response_id: z.string(), usage: z.record(z.string(), z.number()) })
+          .safeParse(payload);
+        if (receipt.success) {
+          const u = receipt.data.usage;
+          events.push({
+            tool: 'codex',
+            provider: 'openai',
+            model,
+            timestamp: envelope.data.timestamp,
+            sessionId: meta.id,
+            projectPath: meta.cwd,
+            dedupKey: `codex:response:${receipt.data.response_id}`,
+            tokens: {
+              input: Math.max(0, (u.input_tokens ?? 0) - (u.cached_input_tokens ?? 0)),
+              output: u.output_tokens ?? 0,
+              cacheRead: u.cached_input_tokens ?? 0,
+              cacheWrite: u.cache_write_input_tokens ?? 0,
+            },
+          });
+        }
         continue;
       }
       if (envelope.data.type !== 'event_msg') continue;
@@ -91,6 +138,11 @@ export async function parseCodexFile(path: string): Promise<UsageEvent[]> {
           : undefined);
       previousTotals = totals ?? previousTotals;
       if (!u) continue;
+      if (
+        (totals && receiptTotals.has(counterKey(totals))) ||
+        receiptTimes.has(JSON.stringify([envelope.data.timestamp, counterKey(u)]))
+      )
+        continue;
       events.push({
         tool: 'codex',
         provider: 'openai',

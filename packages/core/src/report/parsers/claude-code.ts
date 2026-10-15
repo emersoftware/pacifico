@@ -116,7 +116,6 @@ async function readAgentMeta(jsonlPath: string): Promise<string | undefined> {
 /** Parse one transcript. Self-contained: no cross-file state, so the result is
  *  cacheable against the file's mtime. */
 export async function parseClaudeCodeFile(path: string): Promise<ParsedFile> {
-  const events: UsageEvent[] = [];
   const agentTypes: Record<string, AgentName> = {};
 
   const inSubagentDir = SUBAGENT_PATH.test(path);
@@ -128,7 +127,20 @@ export async function parseClaudeCodeFile(path: string): Promise<ParsedFile> {
     if (metaType) agentTypes[fileAgentId] = { type: metaType, strong: true };
   }
 
-  for await (const line of readJsonlLines(path)) {
+  const lines: unknown[] = [];
+  for await (const line of readJsonlLines(path)) lines.push(line);
+  const parsed = parseClaudeCodeLines(lines, fileAgentId, agentTypes);
+  return parsed;
+}
+
+export function parseClaudeCodeLines(
+  lines: unknown[],
+  fileAgentId?: string,
+  agentTypes: Record<string, AgentName> = {},
+): ParsedFile {
+  const events: UsageEvent[] = [];
+  const inSubagentDir = !!fileAgentId;
+  for (const line of lines) {
     const userLine = claudeUserLineSchema.safeParse(line);
     if (userLine.success) {
       const r = userLine.data.toolUseResult;

@@ -1,3 +1,5 @@
+import { readArchive } from './blob';
+import { compactTranscript } from './compact';
 import { test, expect, describe, beforeAll, afterAll } from 'bun:test';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, statSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -83,7 +85,7 @@ describe('manifest persistence', () => {
 });
 
 describe('archiveFile', () => {
-  test('copies raw bytes under an encoded filename and records the manifest entry', () => {
+  test('compresses unrecognized bytes under a content-addressed filename and records the manifest entry', () => {
     const manifest: Manifest = {};
     const src = writeSource('one.jsonl', 'line1\nline2');
     const wrote = archiveFile(
@@ -101,9 +103,9 @@ describe('archiveFile', () => {
     expect(entry!.sessionId).toBe('one');
     // The archive filename is a stable digest with one JSONL suffix.
     expect(basename(entry!.vaultPath)).not.toContain('/');
-    expect(basename(entry!.vaultPath).endsWith('.jsonl')).toBe(true);
+    expect(basename(entry!.vaultPath).endsWith('.jsonl.gz')).toBe(true);
     expect(basename(entry!.vaultPath).endsWith('.jsonl.jsonl')).toBe(false);
-    expect(readFileSync(entry!.vaultPath, 'utf-8')).toBe('line1\nline2');
+    expect(readArchive(entry!.vaultPath)).toBe('line1\nline2');
   });
 
   test('skips an unchanged file (same mtime+size) without rewriting the copy', async () => {
@@ -124,11 +126,10 @@ describe('archiveFile', () => {
     expect(statSync(vaultPath).mtimeMs).toBe(mtimeBefore); // copy untouched
   });
 
-  test('overwrites when the source grew (mtime/size changed)', () => {
+  test('publishes a new object when the source grew (mtime/size changed)', () => {
     const manifest: Manifest = {};
     const src = writeSource('three.jsonl', 'old');
     archiveFile({ path: src, tool: 'claude' }, { cwd: '/r', sessionId: 'three' }, { mtime: 1, size: 3 }, manifest, dir);
-    const vaultPath = manifest[src]!.vaultPath;
     writeFileSync(src, 'old and new');
     const wrote = archiveFile(
       { path: src, tool: 'claude' },
@@ -138,7 +139,7 @@ describe('archiveFile', () => {
       dir,
     );
     expect(wrote).toBe(true);
-    expect(readFileSync(vaultPath, 'utf-8')).toBe('old and new');
+    expect(readArchive(manifest[src]!.vaultPath)).toBe('old and new');
   });
 
   test('never archives a file that is itself inside the vault (self-copy guard)', () => {
@@ -259,7 +260,7 @@ test('archives paths that previously collided without overwriting either transcr
     );
   }
   expect(manifest[paths[0]!]!.vaultPath).not.toBe(manifest[paths[1]!]!.vaultPath);
-  expect(paths.map((path) => readFileSync(manifest[path]!.vaultPath, 'utf8'))).toEqual(['message 0', 'message 1']);
+  expect(paths.map((path) => readArchive(manifest[path]!.vaultPath))).toEqual(['message 0', 'message 1']);
 });
 
 for (const tool of ['opencode', 'cursor', 'antigravity', 'claude', 'codex'] as const) {
@@ -279,7 +280,7 @@ for (const tool of ['opencode', 'cursor', 'antigravity', 'claude', 'codex'] as c
         captured,
       ),
     ).toBe(true);
-    expect(readFileSync(manifest[source]!.vaultPath)).toEqual(captured);
+    expect(readArchive(manifest[source]!.vaultPath)).toEqual(compactTranscript(captured.toString(), tool, source));
     expect(readFileSync(source, 'utf8')).toBe('changed native content');
   });
 }

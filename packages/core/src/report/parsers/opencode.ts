@@ -50,34 +50,7 @@ export async function parseOpencode(dbPath: string): Promise<UsageEvent[]> {
       )
       .all();
 
-    for (const row of rows) {
-      const msg = tryParse(row.data);
-      if (!msg || msg.role !== 'assistant') continue;
-      const { modelID, providerID, tokens } = msg;
-      if (!modelID || !providerID || !tokens) continue;
-
-      const created = msg.time?.completed ?? msg.time?.created;
-      if (created === undefined) continue;
-
-      const event: UsageEvent = {
-        tool: 'opencode',
-        provider: providerID,
-        model: modelID,
-        timestamp: new Date(created).toISOString(),
-        sessionId: row.session_id,
-        projectPath: msg.path?.cwd ?? row.directory,
-        tokens: {
-          input: tokens.input ?? 0,
-          // Reasoning tokens are billed as completion output, so fold them in.
-          output: (tokens.output ?? 0) + (tokens.reasoning ?? 0),
-          cacheRead: tokens.cache?.read ?? 0,
-          cacheWrite: tokens.cache?.write ?? 0,
-        },
-      };
-      // Trust OpenCode's own cost only when it computed one; otherwise price downstream.
-      if (msg.cost !== undefined && msg.cost > 0) event.costUSD = msg.cost;
-      events.push(event);
-    }
+    events.push(...parseOpencodeRows(rows));
   } catch {
     // A schema drift or read error yields no OpenCode events rather than aborting the report.
   } finally {
@@ -96,4 +69,38 @@ function tryParse(text: string): z.infer<typeof opencodeMessageSchema> | null {
   } catch {
     return null;
   }
+}
+
+/** Parse captured database rows without reopening the live database. */
+export function parseOpencodeRows(rows: { session_id: string; data: string; directory: string }[]): UsageEvent[] {
+  const events: UsageEvent[] = [];
+  for (const row of rows) {
+    const msg = tryParse(row.data);
+    if (!msg || msg.role !== 'assistant') continue;
+    const { modelID, providerID, tokens } = msg;
+    if (!modelID || !providerID || !tokens) continue;
+
+    const created = msg.time?.completed ?? msg.time?.created;
+    if (created === undefined) continue;
+
+    const event: UsageEvent = {
+      tool: 'opencode',
+      provider: providerID,
+      model: modelID,
+      timestamp: new Date(created).toISOString(),
+      sessionId: row.session_id,
+      projectPath: msg.path?.cwd ?? row.directory,
+      tokens: {
+        input: tokens.input ?? 0,
+        // Reasoning tokens are billed as completion output, so fold them in.
+        output: (tokens.output ?? 0) + (tokens.reasoning ?? 0),
+        cacheRead: tokens.cache?.read ?? 0,
+        cacheWrite: tokens.cache?.write ?? 0,
+      },
+    };
+    // Trust OpenCode's own cost only when it computed one; otherwise price downstream.
+    if (msg.cost !== undefined && msg.cost > 0) event.costUSD = msg.cost;
+    events.push(event);
+  }
+  return events;
 }

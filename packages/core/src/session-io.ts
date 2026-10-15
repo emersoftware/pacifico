@@ -1,7 +1,8 @@
+import { readArchive } from './vault/blob';
 import { antigravityGitVersion } from './sources/antigravity-git';
 import { codexRolloutPath, readCodexRollout } from './sources/codex-rollout';
 import { cursorIdeLocation, cursorIdeSessionExists } from './sources/cursor-ide';
-import { readFileSync, statSync } from 'node:fs';
+import { statSync } from 'node:fs';
 import { antigravityHistoryPath, antigravityDatabasePath } from './sources/antigravity-history';
 import { readImportedSession } from './ingestion/imported-session';
 import { type Tool } from './types';
@@ -47,7 +48,16 @@ function vaultEntry(filePath: string): VaultEntry | null {
  * path shape. Falls back to the vault copy when the live source is gone.
  */
 export function readSessionLines(filePath: string, tool?: Tool): string[] {
-  const archivedTool = vaultEntry(filePath)?.tool;
+  const cached = vaultEntry(filePath);
+  const archivedTool = cached?.tool;
+  if (cached?.storageVersion === 1 && cached.tool !== 'pi') {
+    const live = statSession(filePath, cached.tool);
+    if (live && live.mtimeMs === cached.mtime && live.size === cached.size) {
+      try {
+        return readArchive(cached.vaultPath).trimEnd().split('\n');
+      } catch {}
+    }
+  }
   if (archivedTool !== 'pi') tool ??= archivedTool;
   if (tool === 'cursor' || tool === 'antigravity') {
     try {
@@ -55,7 +65,7 @@ export function readSessionLines(filePath: string, tool?: Tool): string[] {
       const archived = vaultEntry(filePath);
       if (tool === 'antigravity' && archived) {
         try {
-          previous = readFileSync(archived.vaultPath, 'utf8').split('\n');
+          previous = readArchive(archived.vaultPath).split('\n');
         } catch {}
       }
       const lines = readImportedSession(filePath, tool, previous);
@@ -71,7 +81,7 @@ export function readSessionLines(filePath: string, tool?: Tool): string[] {
     // Missing or unreadable native records fall back to the vault export below.
   } else {
     try {
-      const content = tool === 'codex' ? readCodexRollout(filePath).toString('utf8') : readFileSync(filePath, 'utf-8');
+      const content = tool === 'codex' ? readCodexRollout(filePath).toString('utf8') : readArchive(filePath);
       return content.trimEnd().split('\n');
     } catch {
       // Live source missing - fall back to the vault copy below.
@@ -80,7 +90,7 @@ export function readSessionLines(filePath: string, tool?: Tool): string[] {
   const entry = vaultEntry(filePath);
   if (entry) {
     try {
-      return readFileSync(entry.vaultPath, 'utf-8').trimEnd().split('\n');
+      return readArchive(entry.vaultPath).trimEnd().split('\n');
     } catch {}
   }
   return [];

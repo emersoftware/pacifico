@@ -43,7 +43,7 @@ The source overrides are:
 
 MCP and background workers share a SQLite refresh lock stored separately from the rebuildable index. It protects the full manifest update across processes and is released automatically if its owner exits. A competing process waits for up to 60 seconds before reporting failure.
 
-Transcripts are copied to temporary files and published by rename. An interrupted write preserves the previous complete copy. The archive retains the latest snapshot, not an unlimited version history.
+Transcripts are copied to temporary files and published by rename. An interrupted write preserves the previous complete copy. The archive retains the latest snapshot, not an unlimited version history. Each refresh also applies [archive maintenance](ARCHIVE.md): compacted gzip objects, content deduplication, incremental migration and collection of replaced objects.
 
 `stop` removes the scheduled job and its plist. `uninstall` also stops it. Both preserve the archive. Managed-service operations refuse to replace or delete an unrelated plist without Pacifico's ownership marker.
 

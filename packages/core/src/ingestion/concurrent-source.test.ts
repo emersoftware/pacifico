@@ -1,6 +1,8 @@
+import { readArchive } from '../vault/blob';
+import { compactTranscript } from '../vault/compact';
 import { test, expect, spyOn } from 'bun:test';
 import { Database } from 'bun:sqlite';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import * as sessionIo from '../session-io';
@@ -64,7 +66,7 @@ test('a source changed during reading keeps its previous index and archive until
     restore();
     expect(calls).toBeGreaterThanOrEqual(3);
     const archived = loadManifest(env.SESSIONS_ARCHIVE_DIR)[path]!;
-    expect(readFileSync(archived.vaultPath, 'utf8')).toBe(original);
+    expect(readArchive(archived.vaultPath)).toBe(compactTranscript(original, 'claude', path));
     const db = new Database(join(env.SESSIONS_CACHE_DIR, 'index.db'), { readonly: true });
     try {
       expect(db.query('SELECT first_prompt FROM sessions WHERE file_path = ?').get(path)).toEqual({
@@ -74,7 +76,7 @@ test('a source changed during reading keeps its previous index and archive until
       db.close();
     }
     await refreshIndex();
-    expect(readFileSync(archived.vaultPath, 'utf8')).toContain('finalquartz');
+    expect(readArchive(loadManifest(env.SESSIONS_ARCHIVE_DIR)[path]!.vaultPath)).toContain('finalquartz');
   } finally {
     restore();
     closeDb();

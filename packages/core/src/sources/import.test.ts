@@ -1,3 +1,5 @@
+import { readArchive } from '../vault/blob';
+import { compactTranscript } from '../vault/compact';
 import { zstdCompressSync } from 'node:zlib';
 import { test, expect } from 'bun:test';
 import { Database } from 'bun:sqlite';
@@ -159,7 +161,9 @@ test('Cursor and Antigravity survive native deletion and an index rebuild', asyn
     expect(await searchSessions('compressedquartz')).toMatchObject([{ sessionId: 'compressed' }]);
     expect(loadManifest(env.SESSIONS_ARCHIVE_DIR)[codexPlain]?.sessionId).toBe('compressed');
     expect(await searchSessions('childquartz')).toMatchObject([{ sessionId: 'parent/subagents/agent-child' }]);
-    expect(readFileSync(loadManifest(env.SESSIONS_ARCHIVE_DIR)[child]!.vaultPath, 'utf8')).toBe(childContent);
+    expect(readArchive(loadManifest(env.SESSIONS_ARCHIVE_DIR)[child]!.vaultPath)).toBe(
+      compactTranscript(childContent, 'claude', child),
+    );
     rmSync(env.SESSIONS_CLAUDE_DIR, { recursive: true });
     writeFileSync(codexPlain, codexContent);
     await refreshIndex();
@@ -231,7 +235,7 @@ test('Cursor and Antigravity survive native deletion and an index rebuild', asyn
     expect(statSession(found.find((row) => row.tool === 'antigravity')!.filePath, 'antigravity')).toEqual(
       beforeHistoryChange,
     );
-    expect(readFileSync(archivedAg.vaultPath, 'utf8')).toContain('databasequartz');
+    expect(readArchive(archivedAg.vaultPath)).toContain('databasequartz');
     rmSync(env.SESSIONS_ANTIGRAVITY_DIR, { recursive: true });
     rmSync(memory, { recursive: true });
     closeDb();
@@ -240,29 +244,22 @@ test('Cursor and Antigravity survive native deletion and an index rebuild', asyn
     expect(await searchSessions('compressedquartz')).toMatchObject([{ sessionId: 'compressed' }]);
     expect(loadManifest(env.SESSIONS_ARCHIVE_DIR)[codexPlain]?.sessionId).toBe('compressed');
     expect(await searchSessions('childquartz')).toMatchObject([{ sessionId: 'parent/subagents/agent-child' }]);
-    expect(readSessionLines(child, 'claude').join('\n')).toBe(childContent);
+    expect(readSessionLines(child, 'claude').join('\n')).toBe(
+      compactTranscript(childContent, 'claude', child).trimEnd(),
+    );
     const rebuilt = await searchSessions('quartzretention');
     expect(rebuilt).toHaveLength(4);
     const recoveredWorkspace = (await searchSessions('workspacequartz'))[0]!;
     expect(recoveredWorkspace.sessionId).toBe('workspace:workspace-session');
     expect(readSessionLines(recoveredWorkspace.filePath, 'cursor')).toEqual(workspaceSnapshot);
-    expect(JSON.parse(workspaceSnapshot[0]!).metadata).toEqual(workspaceComposer);
+    expect(workspaceSnapshot.some((line) => JSON.parse(line).metadata !== undefined)).toBe(false);
+    expect(workspaceSnapshot.join('\n')).toContain('Native workspace title');
     const rebuiltCursor = rebuilt.find((row) => row.sessionId === 'ide-session')!;
     const toolRecord = readSessionLines(rebuiltCursor.filePath, 'cursor')
       .map((line) => JSON.parse(line))
       .find((record) => record.source?.id === 'tool');
     expect(toolRecord.message.content).toEqual([{ type: 'tool_use', name: 'read_file', input: { path: 'legacy.ts' } }]);
-    expect(toolRecord.source.raw).toEqual({ type: 2, capabilityType: 15 });
-    expect(toolRecord.source.variants).toEqual([
-      {
-        source: 'cursor-capability',
-        record: {
-          name: 'read_file',
-          rawArgs: '{"path":"legacy.ts"}',
-          nativeExtra: 'preserve',
-        },
-      },
-    ]);
+    expect(toolRecord.source).toEqual({ id: 'tool' });
     expect((await searchSessions('databasequartz'))[0]?.sessionId).toBe('ag-session');
     const index = new Database(join(env.SESSIONS_CACHE_DIR, 'index.db'), { readonly: true });
     expect(

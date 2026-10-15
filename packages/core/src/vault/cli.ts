@@ -1,3 +1,6 @@
+import { compactArchive } from './maintenance';
+import { readArchive } from './blob';
+import { archiveSummary } from './compact';
 // Arg parsing and dispatch for the `vault` command group: `status` and `inspect`.
 //
 // Prose on stdout, progress/errors on stderr, non-zero exit on a bad invocation or an
@@ -25,6 +28,7 @@ session survives its source file being garbage-collected by the vendor. The vaul
 lives at ~/.local/share/pacifico/archive (override: SESSIONS_ARCHIVE_DIR).
 
 Usage:
+  pacifico vault compact [--apply]   Preview or apply archive maintenance
   pacifico vault status              Per-tool counts, total bytes, vault-only count
   pacifico vault inspect <target>    Show one entry by original path or session id
 
@@ -48,8 +52,10 @@ export function statusReport(dir: string): string {
   const perTool = new Map<string, { count: number; bytes: number }>();
   let totalBytes = 0;
   let vaultOnly = 0;
+  const counted = new Set<string>();
   for (const [path, entry] of entries) {
-    const bytes = vaultFileSize(entry.vaultPath);
+    const bytes = counted.has(entry.vaultPath) ? 0 : vaultFileSize(entry.vaultPath);
+    counted.add(entry.vaultPath);
     totalBytes += bytes;
     const t = perTool.get(entry.tool) ?? { count: 0, bytes: 0 };
     t.count++;
@@ -87,8 +93,12 @@ export function inspectReport(dir: string, target: string): InspectReport {
   const archived = existsSync(entry.vaultPath);
   const location =
     live && archived ? 'live + archived' : archived ? 'archived (source gone)' : 'source only (vault copy missing)';
+  const summary = archived ? archiveSummary(readArchive(entry.vaultPath).trimEnd().split('\n')) : undefined;
   return {
     text: [
+      ...(summary
+        ? [`summary:    ${JSON.stringify({ ...summary, usage: undefined, usageRecords: summary.usage.length })}`]
+        : []),
       `path:       ${path}`,
       `tool:       ${entry.tool}`,
       `sessionId:  ${entry.sessionId}`,
@@ -130,6 +140,14 @@ export async function runVault(argv: string[]): Promise<void> {
   const sub = argv[0];
   if (!sub || sub === '-h' || sub === '--help') help();
 
+  if (sub === 'compact') {
+    if (argv.slice(1).some((arg) => arg !== '--apply')) die('compact accepts only --apply');
+    process.stdout.write(
+      JSON.stringify(await compactArchive(getArchiveDir(), argv.includes('--apply')), null, 2) + '\n',
+    );
+    return;
+  }
+
   if (sub === 'status') {
     process.stdout.write(statusReport(getArchiveDir()) + '\n');
     return;
@@ -147,5 +165,5 @@ export async function runVault(argv: string[]): Promise<void> {
     return;
   }
 
-  die(`unknown vault subcommand: ${sub} (expected status or inspect)`);
+  die(`unknown vault subcommand: ${sub} (expected status, inspect or compact)`);
 }

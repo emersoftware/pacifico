@@ -1,3 +1,6 @@
+import { collectArchiveObjects } from '../vault/maintenance';
+import { migrateArchive } from '../vault/archive';
+import { readArchive } from '../vault/blob';
 import { antigravityGitVersion } from '../sources/antigravity-git';
 import { tryParse, asJsonObject } from '../extract-util';
 import { codexRolloutPath, readCodexRollout } from '../sources/codex-rollout';
@@ -328,7 +331,7 @@ function indexFile(db: Database, filePath: string, tool: Tool, ctx: RefreshCtx, 
   if (entry && existsSync(entry.vaultPath)) {
     let vaultLines: string[] = [];
     try {
-      vaultLines = readFileSync(entry.vaultPath, 'utf-8').trimEnd().split('\n');
+      vaultLines = readArchive(entry.vaultPath).trimEnd().split('\n');
     } catch {}
     if (writeSessionRow(db, filePath, tool, stat, vaultLines, !!existing)) return true;
   }
@@ -343,7 +346,7 @@ async function runRefreshIndex(): Promise<RefreshResult> {
   // archiveFile mutates this map in place during the batches, and a per-file save
   // could persist an archive whose index write later rolled back. One write follows.
   const ctx: RefreshCtx = {
-    manifest: loadManifest(getArchiveDir()),
+    manifest: loadManifest(getArchiveDir(), true),
     dir: getArchiveDir(),
     warned: false,
     deferred: new Set(),
@@ -448,7 +451,9 @@ async function runRefreshIndex(): Promise<RefreshResult> {
   }
 
   // One atomic manifest write for the whole refresh (see the ctx comment above).
+  migrateArchive(ctx.dir, ctx.manifest);
   saveManifest(ctx.dir, ctx.manifest);
+  collectArchiveObjects(ctx.dir, ctx.manifest);
   importDocuments(db, process.env.SESSIONS_NATIVE_HOME || getHome(), join(ctx.dir, 'native-documents'));
 
   return ctx.warned ? { total: files.length, updated, archiveWarning: true } : { total: files.length, updated };

@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { getArchiveDir, loadManifest } from '../vault/archive';
+import type { ArchiveSummary } from '../vault/compact';
 import { getHome } from '../paths';
 import { join } from 'node:path';
 import type { UsageEvent } from './parsers/types.ts';
@@ -52,6 +55,8 @@ export interface GatherOptions {
   since?: string;
   /** Skip the incremental parse cache and read every file. */
   noCache?: boolean;
+  /** Include compact archive accounting. Defaults to true only for native default roots. */
+  archiveDir?: string;
 }
 
 /** A file-tree source: how to enumerate it, and how to parse one of its files. */
@@ -85,7 +90,7 @@ async function gatherDirect(roots: ReportRoots, want: (t: ToolId) => boolean, si
   return dedupeEvents((await Promise.all(tasks)).flat());
 }
 
-export async function gatherEvents(
+async function gatherNativeEvents(
   roots: ReportRoots = defaultRoots(),
   tools?: Set<ToolId>,
   opts: GatherOptions = {},
@@ -165,4 +170,34 @@ export async function gatherEvents(
       db.close();
     } catch {}
   }
+}
+
+/** Archived accounting survives native history cleanup without counting live sessions twice. */
+export async function gatherEvents(
+  roots: ReportRoots = defaultRoots(),
+  tools?: Set<ToolId>,
+  opts: GatherOptions = {},
+): Promise<UsageEvent[]> {
+  const events = await gatherNativeEvents(roots, tools, opts);
+  const dir =
+    opts.archiveDir ?? (JSON.stringify(roots) === JSON.stringify(defaultRoots()) ? getArchiveDir() : undefined);
+  if (!dir) return events;
+  const identity = (event: UsageEvent) => JSON.stringify([event.tool, event.sessionId, event.agent?.id]);
+  const live = new Set(events.map(identity));
+  const seen = new Set<string>();
+  for (const entry of Object.values(loadManifest(dir))) {
+    if (entry.storageVersion !== 1 || seen.has(entry.vaultPath)) continue;
+    seen.add(entry.vaultPath);
+    let summary: ArchiveSummary;
+    try {
+      summary = JSON.parse(readFileSync(entry.vaultPath + '.summary.json', 'utf8'));
+    } catch {
+      continue;
+    }
+    if (summary.type !== 'pacifico_summary' || summary.version !== 1 || !Array.isArray(summary.usage)) continue;
+    for (const event of summary.usage) {
+      if ((!tools || tools.has(event.tool)) && !live.has(identity(event))) events.push(event);
+    }
+  }
+  return dedupeEvents(events);
 }

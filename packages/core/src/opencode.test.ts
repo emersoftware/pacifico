@@ -273,7 +273,7 @@ describe('opencode cache integration', () => {
   });
 });
 
-test('OpenCode child source records survive database deletion and index rebuild', async () => {
+test('OpenCode child conversations survive database deletion and index rebuild', async () => {
   const root = mkdtempSync(join(tmpdir(), 'pacifico-opencode-recovery-'));
   const environment = {
     SESSIONS_OPENCODE_DB: join(root, 'opencode.db'),
@@ -305,9 +305,6 @@ test('OpenCode child source records survive database deletion and index rebuild'
     const recovered = recoveredResults.find((row) => row.sessionId === 'ses_child')!;
     expect(recovered).toBeDefined();
     expect(readSessionLines(recovered.filePath, 'opencode')).toEqual(original);
-    const source = JSON.parse(original[0]!);
-    expect(source.session.parent_id).toBe('ses_parent');
-    expect(source.parts[0].session_id).toBe('ses_child');
   } finally {
     cache.closeDb();
     closeOpencodeDb();

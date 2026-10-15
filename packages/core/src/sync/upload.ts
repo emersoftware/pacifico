@@ -1,5 +1,6 @@
+import { readArchive } from '../vault/blob';
 import { Database } from 'bun:sqlite';
-import { readFileSync, mkdirSync, statSync } from 'node:fs';
+import { mkdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { getDataDir } from '../paths';
 import { getArchiveDir, loadManifest } from '../vault/archive';
@@ -28,7 +29,7 @@ function* snapshots(): Generator<Candidate> {
     yield {
       key: snapshotKey(metadata),
       fingerprint: JSON.stringify([metadata, stat.size, stat.mtimeMs, stat.ctimeMs]),
-      read: () => ({ ...metadata, content: readFileSync(entry.vaultPath, 'utf8') }),
+      read: () => ({ ...metadata, content: readArchive(entry.vaultPath) }),
     };
   }
   for (const document of readArchivedDocuments(join(archive, 'native-documents'))) {
