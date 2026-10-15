@@ -123,6 +123,7 @@ interface RefreshCtx {
   dir: string;
   warned: boolean;
   deferred: Set<string>;
+  messageRows?: Map<string, number[]>;
 }
 
 // Archive one transcript into the vault, best-effort. Indexing must never be blocked
@@ -191,6 +192,7 @@ function writeSessionRow(
   stat: { mtimeMs: number; size: number },
   lines: string[],
   hasExisting: boolean,
+  messageRows?: Map<string, number[]>,
 ): { cwd: string; sessionId: string } | null {
   if (lines.length === 0) return null;
 
@@ -224,7 +226,13 @@ function writeSessionRow(
   const contextText = errors.messages.join('\n');
   if (hasExisting) {
     db.run('DELETE FROM session_fts WHERE file_path = ?', [filePath]);
-    db.run('DELETE FROM message_fts WHERE file_path = ?', [filePath]);
+    const rowids = messageRows?.get(filePath);
+    if (rowids) {
+      for (let i = 0; i < rowids.length; i += 500) {
+        const batch = rowids.slice(i, i + 500);
+        db.run(`DELETE FROM message_fts WHERE rowid IN (${batch.map(() => '?').join(',')})`, batch);
+      }
+    } else db.run('DELETE FROM message_fts WHERE file_path = ?', [filePath]);
   }
   db.run('DELETE FROM ignored_files WHERE file_path = ?', [filePath]);
   db.run(
@@ -264,15 +272,18 @@ function writeSessionRow(
   // numbering (extractMessages counts them), they just get no FTS row. db.query()
   // caches the prepared statement, which matters at ~74 rows/session; the calls run
   // inside refreshIndex's per-batch transaction, never autocommit.
+  const newRowids: number[] = [];
   const insertMessage = db.query('INSERT INTO message_fts (file_path, msg_index, role, text) VALUES (?, ?, ?, ?)');
   for (const m of messages) {
     if (m.role === 'user' && !m.genuine) continue;
-    insertMessage.run(filePath, m.index, m.role, m.text);
+    const inserted = insertMessage.run(filePath, m.index, m.role, m.text);
+    newRowids.push(Number(inserted.lastInsertRowid));
   }
   // Subagent transcripts have no place in the parent's message numbering, so their
   // user text rides in a single sentinel row (msg_index -1): it keeps the session
   // findable by subagent-only terms but is excluded from messageHits.
-  if (subagentContent) insertMessage.run(filePath, -1, 'user', subagentContent);
+  if (subagentContent) newRowids.push(Number(insertMessage.run(filePath, -1, 'user', subagentContent).lastInsertRowid));
+  messageRows?.set(filePath, newRowids);
   return { cwd: metadata.cwd, sessionId };
 }
 
@@ -308,7 +319,7 @@ function indexFile(db: Database, filePath: string, tool: Tool, ctx: RefreshCtx, 
     ctx.deferred.add(filePath);
     return false;
   }
-  const indexed = writeSessionRow(db, filePath, tool, stat, lines, !!existing);
+  const indexed = writeSessionRow(db, filePath, tool, stat, lines, !!existing, ctx.messageRows);
   if (indexed) {
     // Archive only when the LIVE source is present. `stat` is the live stat in that
     // case (statSession tries the original path before the vault fallback).
@@ -333,7 +344,7 @@ function indexFile(db: Database, filePath: string, tool: Tool, ctx: RefreshCtx, 
     try {
       vaultLines = readArchive(entry.vaultPath).trimEnd().split('\n');
     } catch {}
-    if (writeSessionRow(db, filePath, tool, stat, vaultLines, !!existing)) return true;
+    if (writeSessionRow(db, filePath, tool, stat, vaultLines, !!existing, ctx.messageRows)) return true;
   }
 
   ignoreSession(db, filePath, stat, !!existing);
@@ -379,8 +390,12 @@ async function runRefreshIndex(): Promise<RefreshResult> {
       for (const path of removedPaths) {
         db.run('DELETE FROM sessions WHERE file_path = ?', [path]);
         db.run('DELETE FROM session_fts WHERE file_path = ?', [path]);
-        db.run('DELETE FROM message_fts WHERE file_path = ?', [path]);
+
         db.run('DELETE FROM ignored_files WHERE file_path = ?', [path]);
+      }
+      for (let i = 0; i < removedPaths.length; i += 500) {
+        const batch = removedPaths.slice(i, i + 500);
+        db.run(`DELETE FROM message_fts WHERE file_path IN (${batch.map(() => '?').join(',')})`, batch);
       }
       db.exec('COMMIT');
     } catch (error) {
@@ -407,6 +422,17 @@ async function runRefreshIndex(): Promise<RefreshResult> {
     if (!indexedMatches && !ignoredMatches) {
       candidates.push(file);
     }
+  }
+
+  // file_path is UNINDEXED in FTS5. Resolve rowids in one scan rather than
+  // scanning every stored message again for each changed session.
+  if (candidates.length > 1) {
+    const paths = new Set(candidates.map((file) => file.path));
+    ctx.messageRows = new Map([...paths].map((path) => [path, []]));
+    for (const row of db
+      .query<{ rowid: number; file_path: string }, []>('SELECT rowid, file_path FROM message_fts')
+      .iterate())
+      ctx.messageRows.get(row.file_path)?.push(row.rowid);
   }
 
   let updated = 0;
