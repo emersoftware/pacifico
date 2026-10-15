@@ -35,6 +35,8 @@ export interface VaultEntry {
   archivedAt: string; // ISO
   vaultPath: string; // absolute path of the copy
   storageVersion?: number;
+  vaultMtime?: number;
+  vaultSize?: number;
 }
 
 /** original file_path → its vault entry. */
@@ -60,6 +62,8 @@ const vaultEntrySchema = z.object({
   archivedAt: z.string(),
   vaultPath: z.string(),
   storageVersion: z.number().optional(),
+  vaultMtime: z.number().optional(),
+  vaultSize: z.number().optional(),
 });
 
 const manifestFileSchema = z.record(z.string(), z.unknown());
@@ -157,6 +161,8 @@ export function archiveFile(
     archivedAt: new Date().toISOString(),
     vaultPath,
     storageVersion: 1,
+    vaultMtime: stat.mtime,
+    vaultSize: stat.size,
   };
   return true;
 }
@@ -220,9 +226,13 @@ export function migrateArchive(dir: string, manifest: Manifest, limit = 4): numb
     if (entry.storageVersion === 1 || entry.tool === 'pi') continue;
     if (!existsSync(entry.vaultPath)) continue;
     const old = entry.vaultPath;
+    const priorStat = statSync(old);
     const text = readArchive(old);
     entry.vaultPath = writeCompactArchive(dir, text, entry.tool, path);
     entry.storageVersion = 1;
+    // A representation change does not invalidate already indexed messages.
+    entry.vaultMtime = priorStat.mtimeMs;
+    entry.vaultSize = priorStat.size;
     retire(manifest, old);
     migrated++;
     if (migrated >= limit) break;

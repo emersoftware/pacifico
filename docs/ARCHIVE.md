@@ -50,6 +50,9 @@ copies are removed only after no manifest entry references them. Unknown legacy
 orphans remain untouched. An invalid manifest aborts maintenance rather than treating
 the archive as empty. A failed or interrupted migration can be retried.
 
+Representation-only migrations preserve the index change signal, avoiding a full
+reindex of sessions whose conversation did not change.
+
 Every refresh also migrates up to four legacy entries. The background service and MCP
 imports use the same policy and refresh lock. Maintenance does not require a separate
 cron job. The archive still grows with new conversation content; this policy removes

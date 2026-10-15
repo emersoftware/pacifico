@@ -1,3 +1,4 @@
+import { statSession } from '../session-io';
 import { test, expect } from 'bun:test';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync, utimesSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -273,6 +274,30 @@ test('invalid manifests abort maintenance without collecting existing evidence',
     writeFileSync(join(dir, 'manifest.json'), '{invalid');
     await expect(compactArchive(dir, true)).rejects.toThrow();
   } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('archive migration preserves the index change signal when the source is gone', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'pacifico-stable-index-'));
+  const previous = process.env.SESSIONS_ARCHIVE_DIR;
+  process.env.SESSIONS_ARCHIVE_DIR = dir;
+  try {
+    const path = join(dir, 'legacy.jsonl');
+    writeFileSync(path, codex([token]));
+    const source = join(dir, 'missing-native.jsonl');
+    const manifest: Manifest = {
+      [source]: { tool: 'codex', cwd: '/repo', sessionId: 's1', mtime: 1, size: 2, archivedAt: stamp, vaultPath: path },
+    };
+    saveManifest(dir, manifest);
+    const before = statSession(source, 'codex');
+    migrateArchive(dir, manifest);
+    saveManifest(dir, manifest);
+    expect(statSession(source, 'codex')).toEqual(before);
+    expect(manifest[source]!.vaultPath).not.toBe(path);
+  } finally {
+    if (previous === undefined) delete process.env.SESSIONS_ARCHIVE_DIR;
+    else process.env.SESSIONS_ARCHIVE_DIR = previous;
     rmSync(dir, { recursive: true, force: true });
   }
 });

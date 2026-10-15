@@ -149,7 +149,7 @@ export function statSession(filePath: string, tool: Tool): { mtimeMs: number; si
   if (entry) {
     try {
       const s = statSync(entry.vaultPath);
-      return { mtimeMs: s.mtimeMs, size: s.size };
+      return { mtimeMs: entry.vaultMtime ?? s.mtimeMs, size: entry.vaultSize ?? s.size };
     } catch {}
   }
   return null;
