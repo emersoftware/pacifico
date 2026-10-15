@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { extractMessages, extractSessionMetadata } from '../parser';
-import { parseCodexLines } from '../report/parsers/codex';
+import { parseCodexRecords } from '../report/parsers/codex';
 import { parseClaudeCodeLines, dedupeEvents } from '../report/parsers/claude-code';
 import { parseOpencodeRows } from '../report/parsers/opencode';
 import { computeCost, find } from '../report/pricing';
@@ -44,8 +44,8 @@ export function archiveSummary(lines: string[]): ArchiveSummary | undefined {
   }
 }
 
-function usageEvents(records: RecordValue[], lines: string[], tool: Tool, sourcePath: string): UsageEvent[] {
-  if (tool === 'codex') return dedupeEvents(parseCodexLines(lines));
+function usageEvents(records: RecordValue[], tool: Tool, sourcePath: string): UsageEvent[] {
+  if (tool === 'codex') return dedupeEvents(parseCodexRecords(records));
   if (tool === 'claude') {
     const agentId = /\/subagents\/agent-([^/]+)\.jsonl$/.exec(sourcePath)?.[1];
     return dedupeEvents(parseClaudeCodeLines(records, agentId).events);
@@ -175,7 +175,7 @@ export function compactTranscript(text: string, tool: Tool, sourcePath = ''): st
     records.push(value);
   }
   const metadata = extractSessionMetadata(lines, tool);
-  const usage = usageEvents(records, lines, tool, sourcePath);
+  const usage = usageEvents(records, tool, sourcePath);
   const tokens: UsageEvent['tokens'] = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, cacheWrite1h: 0 };
   let recordedCostUSD = 0,
     estimatedCostUSD = 0;
@@ -264,6 +264,8 @@ export function compactTranscript(text: string, tool: Tool, sourcePath = ''): st
     usage,
   };
   output.push(JSON.stringify(summary));
+  // Release raw record trees before the independent message-preservation pass.
+  records.length = 0;
   // Preserve search-hit numbering, text and tool summaries across migration.
   if (JSON.stringify(extractMessages(lines)) !== JSON.stringify(extractMessages(output)))
     throw new Error('Compaction changed searchable messages');

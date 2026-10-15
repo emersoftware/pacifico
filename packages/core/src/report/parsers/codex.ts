@@ -47,6 +47,21 @@ export async function parseCodexFile(path: string): Promise<UsageEvent[]> {
 }
 
 export function parseCodexLines(lines: string[]): UsageEvent[] {
+  const records: unknown[] = [];
+  for (const raw of lines) {
+    try {
+      const record = JSON.parse(raw);
+      if (
+        ['session_meta', 'turn_context', 'token_usage_record'].includes(record.type) ||
+        (record.type === 'event_msg' && record.payload?.type === 'token_count')
+      )
+        records.push(record);
+    } catch {}
+  }
+  return parseCodexRecords(records);
+}
+
+export function parseCodexRecords(records: unknown[]): UsageEvent[] {
   const events: UsageEvent[] = [];
   {
     // Match per-response receipts to their cumulative UI twins without dropping
@@ -60,9 +75,19 @@ export function parseCodexLines(lines: string[]): UsageEvent[] {
       ]);
     const receiptTotals = new Set<string>();
     const receiptTimes = new Set<string>();
-    for (const raw of lines) {
+    for (const record of records) {
       try {
-        const row = JSON.parse(raw);
+        const row = z
+          .object({
+            type: z.string(),
+            timestamp: z.string(),
+            payload: z.object({
+              response_id: z.string().optional(),
+              usage: z.record(z.string(), z.number()).optional(),
+              thread_token_usage: z.record(z.string(), z.number()).optional(),
+            }),
+          })
+          .parse(record);
         if (row.type !== 'token_usage_record' || !row.payload?.response_id || !row.payload?.usage) continue;
         if (row.payload.thread_token_usage) receiptTotals.add(counterKey(row.payload.thread_token_usage));
         receiptTimes.add(JSON.stringify([row.timestamp, counterKey(row.payload.usage)]));
@@ -71,13 +96,7 @@ export function parseCodexLines(lines: string[]): UsageEvent[] {
     let meta: z.infer<typeof sessionMetaPayloadSchema> | null = null;
     let model: string | null = null;
     let previousTotals: Record<string, number> | undefined;
-    for (const raw of lines) {
-      let line: unknown;
-      try {
-        line = JSON.parse(raw);
-      } catch {
-        continue;
-      }
+    for (const line of records) {
       const envelope = codexEnvelopeSchema.safeParse(line);
       if (!envelope.success) continue;
       const { payload } = envelope.data;

@@ -46,7 +46,11 @@ export async function compactArchive(dir: string, apply: boolean) {
     }
     migrated += count;
     if (!count) break;
-    if (migrated % 25 === 0) process.stderr.write(`Compacted ${migrated}/${pending.length} archive entries\n`);
+    if (migrated % 25 === 0) {
+      // Long one-shot migrations should release transcript trees between batches.
+      Bun.gc(true);
+      process.stderr.write(`Compacted ${migrated}/${pending.length} archive entries\n`);
+    }
     await Bun.sleep(0);
   }
   return { pending: pending.length, migrated, removedObjects, dryRun: false };
