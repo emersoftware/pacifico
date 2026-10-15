@@ -111,3 +111,61 @@ test('sync retains pending uploads, detects archive changes, restores remote dat
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test('compressed archives upload retained JSONL and accounting, not gzip bytes', async () => {
+  const { archiveFile, saveManifest } = await import('../vault/archive');
+  const root = mkdtempSync(join(tmpdir(), 'pacifico-compressed-upload-'));
+  const previousData = process.env.SESSIONS_DATA_DIR;
+  const previousArchive = process.env.SESSIONS_ARCHIVE_DIR;
+  process.env.SESSIONS_DATA_DIR = join(root, 'data');
+  process.env.SESSIONS_ARCHIVE_DIR = join(root, 'archive');
+  let uploaded: Snapshot | undefined;
+  const server = Bun.serve({
+    port: 0,
+    hostname: '127.0.0.1',
+    fetch: async (request) => {
+      if (request.method === 'GET') return Response.json([]);
+      uploaded = ((await request.json()) as { snapshot: Snapshot }).snapshot;
+      return Response.json({});
+    },
+  });
+  try {
+    const manifest = {};
+    const content = JSON.stringify({
+      type: 'user',
+      sessionId: 'one',
+      cwd: '/repo',
+      message: { content: 'retained question' },
+    });
+    archiveFile(
+      { path: join(root, 'native.jsonl'), tool: 'claude' },
+      { cwd: '/repo', sessionId: 'one' },
+      { mtime: 1, size: content.length },
+      manifest,
+      process.env.SESSIONS_ARCHIVE_DIR,
+      content,
+    );
+    saveManifest(process.env.SESSIONS_ARCHIVE_DIR, manifest);
+    const result = await syncArchive({
+      endpoint: server.url.toString(),
+      token: 'fixture',
+      allowHttp: false,
+      identity: { userId: 'fixture', user: 'fixture', deviceId: 'fixture', device: 'Mac', scope: 'sync' },
+    });
+    expect(result.uploaded).toBe(1);
+    const records = uploaded!.content
+      .trim()
+      .split('\n')
+      .map((line) => JSON.parse(line));
+    expect(records.some((record) => record.message?.content === 'retained question')).toBe(true);
+    expect(records.at(-1).type).toBe('pacifico_summary');
+    expect(uploaded!.sessionId).toBe('one');
+  } finally {
+    await server.stop(true);
+    if (previousData === undefined) delete process.env.SESSIONS_DATA_DIR;
+    else process.env.SESSIONS_DATA_DIR = previousData;
+    if (previousArchive === undefined) delete process.env.SESSIONS_ARCHIVE_DIR;
+    else process.env.SESSIONS_ARCHIVE_DIR = previousArchive;
+    rmSync(root, { recursive: true, force: true });
+  }
+});
