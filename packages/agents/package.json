@@ -1,6 +1,6 @@
 {
   "name": "@pacifico/agents",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@pacifico/core": "workspace:*",

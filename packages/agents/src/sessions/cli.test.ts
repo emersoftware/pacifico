@@ -44,6 +44,7 @@ test('CLI and opt-in MCP share a persistent session host', async () => {
   Object.assign(env, {
     PATH: `${root}:${env.PATH}`,
     SESSIONS_HOME: root,
+    CODEX_HOME: join(root, '.codex'),
     SESSIONS_DATA_DIR: join(root, 'data'),
     SESSIONS_CACHE_DIR: join(root, 'cache'),
   });
