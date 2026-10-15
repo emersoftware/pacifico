@@ -24,7 +24,7 @@ Missing native sources do not remove archived copies. The index can be rebuilt f
 
 - Antigravity standalone legacy `.pb` conversations are not imported. Some SQLite tool payloads are preserved only as raw records. Native Git transcript snapshots require `git` on the machine; Pacifico reads committed blobs without checkout or changes to the native repository.
 - Cursor conversations represented in multiple native stores can appear separately. Historical Cursor memory storage has not been verified; rules are not labeled as memories.
-- OpenCode JSON storage is read beside the configured database at `storage/session`, `storage/message` and `storage/part`. JSON and SQLite copies are preserved separately when both exist. Unknown part types remain in raw records.
+- OpenCode JSON storage is read beside the configured database at `storage/session`, `storage/message` and `storage/part`. JSON and SQLite copies are preserved separately when both exist. Unknown part types remain in raw records. Change detection for JSON sessions uses file metadata (inode, size, mtime and ctime), so unchanged sessions are not read during each import.
 - Project instructions are discovered at indexed working directories; nested instruction scopes are not recursively inferred.
 - Codex diagnostic logs and external title-index files are not session sources. Mixed legacy event formats can require further reconciliation.
 

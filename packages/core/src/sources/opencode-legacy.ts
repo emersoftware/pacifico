@@ -66,15 +66,32 @@ function stableSnapshot(path: string): ReturnType<typeof capture> {
   throw new Error('OpenCode files changed during import');
 }
 
+/**
+ * Change signal computed from file metadata alone, so unchanged sessions are never
+ * read. Every write updates ctime, including same-length edits whose mtime was
+ * restored. Part directories are located by message filename: OpenCode stores each
+ * message as `message/<session>/<id>.json`, and full reads still use the record ID.
+ */
 export function statLegacyOpencode(path: string): { mtimeMs: number; size: number } | null {
   try {
-    const snapshot = stableSnapshot(path);
-    const files = [snapshot.session, ...snapshot.messages, ...snapshot.parts];
-    return {
-      mtimeMs: Math.max(...files.map((file) => file.mtimeMs)),
-      // A content fingerprint detects part edits even when file lengths and mtimes are unchanged.
-      size: Number.parseInt(createHash('sha256').update(signature(snapshot)).digest('hex').slice(0, 12), 16),
-    };
+    const session = tryParse(readFileSync(path, 'utf8'));
+    if (!session) return null;
+    const id = safeId(asJsonString(session.id) ?? basename(path, '.json'));
+    const storage = dirname(dirname(dirname(path)));
+    const messages = list(join(storage, 'message', id), '*.json');
+    const files = [
+      path,
+      ...messages,
+      ...messages.flatMap((message) => list(join(storage, 'part', safeId(basename(message, '.json'))), '*.json')),
+    ];
+    const hash = createHash('sha256');
+    let mtimeMs = 0;
+    for (const file of files) {
+      const stat = statSync(file, { bigint: true });
+      mtimeMs = Math.max(mtimeMs, Number(stat.mtimeMs));
+      hash.update(`${file}\0${stat.ino}\0${stat.size}\0${stat.mtimeNs}\0${stat.ctimeNs}\n`);
+    }
+    return { mtimeMs, size: Number.parseInt(hash.digest('hex').slice(0, 12), 16) };
   } catch {
     return null;
   }
