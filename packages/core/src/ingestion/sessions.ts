@@ -124,6 +124,7 @@ interface RefreshCtx {
   warned: boolean;
   deferred: Set<string>;
   messageRows?: Map<string, number[]>;
+  sessionRows?: Map<string, number[]>;
 }
 
 // Archive one transcript into the vault, best-effort. Indexing must never be blocked
@@ -182,6 +183,24 @@ function ignoreSession(
   ]);
 }
 
+/** FTS equality on an UNINDEXED path scans the full table; cached rowids avoid it. */
+function deleteFtsRows(
+  db: Database,
+  table: 'message_fts' | 'session_fts',
+  path: string,
+  rows?: Map<string, number[]>,
+): void {
+  const rowids = rows?.get(path);
+  if (!rowids) {
+    db.run(`DELETE FROM ${table} WHERE file_path = ?`, [path]);
+    return;
+  }
+  for (let i = 0; i < rowids.length; i += 500) {
+    const batch = rowids.slice(i, i + 500);
+    db.run(`DELETE FROM ${table} WHERE rowid IN (${batch.map(() => '?').join(',')})`, batch);
+  }
+}
+
 // Parse `lines` and write the session row + FTS rows, returning the session cwd on
 // success or null when the lines are unusable (empty, no cwd, or an excluded worktree
 // log). The caller owns ignored_files; this only writes on success.
@@ -193,6 +212,7 @@ function writeSessionRow(
   lines: string[],
   hasExisting: boolean,
   messageRows?: Map<string, number[]>,
+  sessionRows?: Map<string, number[]>,
 ): { cwd: string; sessionId: string } | null {
   if (lines.length === 0) return null;
 
@@ -225,14 +245,8 @@ function writeSessionRow(
   // Error text is searchable without counting it as a conversational turn.
   const contextText = errors.messages.join('\n');
   if (hasExisting) {
-    db.run('DELETE FROM session_fts WHERE file_path = ?', [filePath]);
-    const rowids = messageRows?.get(filePath);
-    if (rowids) {
-      for (let i = 0; i < rowids.length; i += 500) {
-        const batch = rowids.slice(i, i + 500);
-        db.run(`DELETE FROM message_fts WHERE rowid IN (${batch.map(() => '?').join(',')})`, batch);
-      }
-    } else db.run('DELETE FROM message_fts WHERE file_path = ?', [filePath]);
+    deleteFtsRows(db, 'session_fts', filePath, sessionRows);
+    deleteFtsRows(db, 'message_fts', filePath, messageRows);
   }
   db.run('DELETE FROM ignored_files WHERE file_path = ?', [filePath]);
   db.run(
@@ -262,10 +276,11 @@ function writeSessionRow(
       metadata.branch,
     ],
   );
-  db.run(
+  const insertedSession = db.run(
     'INSERT INTO session_fts (file_path, headline, commands, paths, context_text, thinking) VALUES (?, ?, ?, ?, ?, ?)',
     [filePath, headline, commandsText, pathsText, contextText, thinking],
   );
+  sessionRows?.set(filePath, [Number(insertedSession.lastInsertRowid)]);
   // Message rows: assistant turns always; user turns only when genuine - injected
   // skill bodies and tool results match everything and are exactly the noise the
   // trust fixes eliminated elsewhere. Their indices are still consumed by the
@@ -319,7 +334,7 @@ function indexFile(db: Database, filePath: string, tool: Tool, ctx: RefreshCtx, 
     ctx.deferred.add(filePath);
     return false;
   }
-  const indexed = writeSessionRow(db, filePath, tool, stat, lines, !!existing, ctx.messageRows);
+  const indexed = writeSessionRow(db, filePath, tool, stat, lines, !!existing, ctx.messageRows, ctx.sessionRows);
   if (indexed) {
     // Archive only when the LIVE source is present. `stat` is the live stat in that
     // case (statSession tries the original path before the vault fallback).
@@ -344,7 +359,8 @@ function indexFile(db: Database, filePath: string, tool: Tool, ctx: RefreshCtx, 
     try {
       vaultLines = readArchive(entry.vaultPath).trimEnd().split('\n');
     } catch {}
-    if (writeSessionRow(db, filePath, tool, stat, vaultLines, !!existing, ctx.messageRows)) return true;
+    if (writeSessionRow(db, filePath, tool, stat, vaultLines, !!existing, ctx.messageRows, ctx.sessionRows))
+      return true;
   }
 
   ignoreSession(db, filePath, stat, !!existing);
@@ -389,13 +405,13 @@ async function runRefreshIndex(): Promise<RefreshResult> {
     try {
       for (const path of removedPaths) {
         db.run('DELETE FROM sessions WHERE file_path = ?', [path]);
-        db.run('DELETE FROM session_fts WHERE file_path = ?', [path]);
 
         db.run('DELETE FROM ignored_files WHERE file_path = ?', [path]);
       }
       for (let i = 0; i < removedPaths.length; i += 500) {
         const batch = removedPaths.slice(i, i + 500);
         db.run(`DELETE FROM message_fts WHERE file_path IN (${batch.map(() => '?').join(',')})`, batch);
+        db.run(`DELETE FROM session_fts WHERE file_path IN (${batch.map(() => '?').join(',')})`, batch);
       }
       db.exec('COMMIT');
     } catch (error) {
@@ -429,10 +445,16 @@ async function runRefreshIndex(): Promise<RefreshResult> {
   if (candidates.length > 1) {
     const paths = new Set(candidates.map((file) => file.path));
     ctx.messageRows = new Map([...paths].map((path) => [path, []]));
-    for (const row of db
-      .query<{ rowid: number; file_path: string }, []>('SELECT rowid, file_path FROM message_fts')
-      .iterate())
-      ctx.messageRows.get(row.file_path)?.push(row.rowid);
+    ctx.sessionRows = new Map([...paths].map((path) => [path, []]));
+    for (const [table, rows] of [
+      ['message_fts', ctx.messageRows],
+      ['session_fts', ctx.sessionRows],
+    ] as const) {
+      for (const row of db
+        .query<{ rowid: number; file_path: string }, []>(`SELECT rowid,file_path FROM ${table}`)
+        .iterate())
+        rows.get(row.file_path)?.push(row.rowid);
+    }
   }
 
   let updated = 0;
